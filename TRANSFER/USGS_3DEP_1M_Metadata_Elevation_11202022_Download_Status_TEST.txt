@@ -1,0 +1,7 @@
+sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus
+60d2c0dcd34e840986528ada,USGS 1 Meter 19 x45y515 ME_CrownofMaine_2018_A18,/data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_1M_19_x45y515_ME_CrownofMaine_2018_A18.tif,1,56916329,11232022 16:19:43,True
+5eacf54a82cefae35a24e177,USGS one meter x44y515 ME Eastern B1 2017,/data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_one_meter_x44y515_ME_Eastern_B1_2017.tif,1,62690309,11232022 16:19:44,True
+60d2c0bdd34e840986528a84,USGS 1 Meter 19 x49y513 ME_CrownofMaine_2018_A18,/data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_1M_19_x49y513_ME_CrownofMaine_2018_A18.tif,1,70497958,11232022 16:19:44,True
+60d2c0d7d34e840986528ac8,USGS 1 Meter 19 x46y515 ME_CrownofMaine_2018_A18,/data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_1M_19_x46y515_ME_CrownofMaine_2018_A18.tif,1,72510512,11232022 16:19:43,True
+60d2c0c2d34e840986528ab4,USGS 1 Meter 19 x47y515 ME_CrownofMaine_2018_A18,/data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_1M_19_x47y515_ME_CrownofMaine_2018_A18.tif,1,72252368,11232022 16:19:44,True
+5eacf91c82cefae35a24f924,USGS one meter x51y505 ME Eastern B2 2017,/data02/gisdata/elev/01/0102/010200/01020001/1m,0,0,11232022 16:42:52,False

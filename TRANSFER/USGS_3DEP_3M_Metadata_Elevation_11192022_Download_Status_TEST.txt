@@ -1,0 +1,5 @@
+sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus
+5d0aeaabe4b0e3d31160256f,USGS NED ned19_n46x75_w068x50_me_aroostook_2012 1/9 arc-second 2013 15 x 15 minute IMG,/data04/gisdata/elev/01/0101/010100/01010003/3m/ned19_n46x75_w068x50_me_aroostook_2012.zip,1,23016045,11302022 15:34:43,True
+5d0aeaade4b0e3d311602575,USGS NED ned19_n47x00_w068x50_me_aroostook_2012 1/9 arc-second 2013 15 x 15 minute IMG,/data04/gisdata/elev/01/0101/010100/01010003/3m/ned19_n47x00_w068x50_me_aroostook_2012.zip,1,39841229,11302022 15:34:43,True
+5d0aeab0e4b0e3d311602579,USGS NED ned19_n47x25_w068x25_me_aroostook_2012 1/9 arc-second 2013 15 x 15 minute IMG,/data04/gisdata/elev/01/0101/010100/01010003/3m/ned19_n47x25_w068x25_me_aroostook_2012.zip,1,99447534,11302022 15:34:43,True
+5d0aeab0e4b0e3d31160257b,USGS NED ned19_n47x25_w068x50_me_aroostook_2012 1/9 arc-second 2013 15 x 15 minute IMG,/data04/gisdata/elev/01/0101/010100/01010003/3m/ned19_n47x25_w068x50_me_aroostook_2012.zip,1,102345506,11302022 15:34:43,True

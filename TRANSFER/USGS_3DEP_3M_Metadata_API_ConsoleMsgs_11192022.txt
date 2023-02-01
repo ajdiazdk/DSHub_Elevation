@@ -1,0 +1,4821 @@
+Executing: Create_USGS_API_URL_Reports_multiThreading Script 11192022
+
+User Selected Parameters:
+	TNM Product: National Elevation Dataset (NED) 1/9 arc-second
+	HUC 8 Boundary Dataset: E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU8
+	Metadata File Path: E:\DSHub\Elevation
+
+
+COMPILING USGS API URL REQUESTS FOR 2,400 HUC-8 Watershed(s)
+	8-digit HUC 01010002: Allagash River
+		There are NO 3M elevation tiles
+	8-digit HUC 01010003: Fish River
+		Number of 3M elevation tiles: 8
+	8-digit HUC 01010004: Aroostook River
+		Number of 3M elevation tiles: 12
+	8-digit HUC 01010005: Meduxnekeag River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 01010006: Headwaters Saint John River
+		Bad Request
+	8-digit HUC 01010007: Big Black River-Saint John River
+		Bad Request
+	8-digit HUC 01010008: Saint Francis River-Saint John River
+		Bad Request
+	8-digit HUC 01010009: Little River-Saint John River
+		Bad Request
+	8-digit HUC 01010010: Becaguimec Stream-Saint John River
+		Bad Request
+	8-digit HUC 01010011: Keswick River-Saint John River
+		Bad Request
+	8-digit HUC 01020001: West Branch Penobscot River
+		There are NO 3M elevation tiles
+	8-digit HUC 01020002: East Branch Penobscot River
+		There are NO 3M elevation tiles
+	8-digit HUC 01020003: Mattawamkeag River
+		Number of 3M elevation tiles: 4
+	8-digit HUC 01020004: Piscataquis River
+		Number of 3M elevation tiles: 3
+	8-digit HUC 01020005: Penobscot River
+		Number of 3M elevation tiles: 16
+	8-digit HUC 01030001: Upper Kennebec River
+		There are NO 3M elevation tiles
+	8-digit HUC 01030002: Dead River
+		There are NO 3M elevation tiles
+	8-digit HUC 01030003: Lower Kennebec River
+		Number of 3M elevation tiles: 18
+	8-digit HUC 01040001: Upper Androscoggin River
+		Number of 3M elevation tiles: 1
+	8-digit HUC 01040002: Lower Androscoggin River
+		Number of 3M elevation tiles: 17
+	8-digit HUC 01050001: Saint Croix River
+		Number of 3M elevation tiles: 3
+	8-digit HUC 01050002: Maine Coastal
+		Number of 3M elevation tiles: 38
+	8-digit HUC 01050003: St. George-Sheepscot
+		Number of 3M elevation tiles: 20
+	8-digit HUC 01050004: Passamaquoddy Bay-Bay of Fundy
+		Bad Request
+	8-digit HUC 01060001: Presumpscot
+		Number of 3M elevation tiles: 21
+	8-digit HUC 01060002: Saco River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 01060003: Piscataqua-Salmon Falls
+		Number of 3M elevation tiles: 22
+	8-digit HUC 01070001: Pemigewasset River
+		There are NO 3M elevation tiles
+	8-digit HUC 01070002: Winnipesaukee River
+		Number of 3M elevation tiles: 15
+	8-digit HUC 01070003: Contoocook River
+		There are NO 3M elevation tiles
+	8-digit HUC 01070004: Nashua River
+		Number of 3M elevation tiles: 3
+	8-digit HUC 01070005: Concord River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 01070006: Merrimack River
+		Bad Request
+	8-digit HUC 01080101: Headwaters Connecticut River
+		Number of 3M elevation tiles: 9
+	8-digit HUC 01080102: Passumpsic River
+		Number of 3M elevation tiles: 4
+	8-digit HUC 01080103: Ammonoosuc River-Connecticut River
+		There are NO 3M elevation tiles
+	8-digit HUC 01080104: Waits River-Connecticut River
+		Number of 3M elevation tiles: 4
+	8-digit HUC 01080105: White River
+		Number of 3M elevation tiles: 2
+	8-digit HUC 01080106: Black River-Connecticut River
+		Number of 3M elevation tiles: 2
+	8-digit HUC 01080107: West River-Connecticut River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 01080201: Ashuelot River-Connecticut River
+		Number of 3M elevation tiles: 5
+	8-digit HUC 01080202: Millers River
+		Number of 3M elevation tiles: 3
+	8-digit HUC 01080203: Deerfield River
+		Number of 3M elevation tiles: 12
+	8-digit HUC 01080204: Chicopee River
+		Number of 3M elevation tiles: 3
+	8-digit HUC 01080205: Outlet Connecticut River
+		There are NO 3M elevation tiles
+	8-digit HUC 01080206: Westfield River
+		Number of 3M elevation tiles: 4
+	8-digit HUC 01080207: Farmington River
+		Number of 3M elevation tiles: 1
+	8-digit HUC 01090001: Charles
+		Number of 3M elevation tiles: 17
+	8-digit HUC 01090002: Cape Cod
+		Number of 3M elevation tiles: 19
+	8-digit HUC 01090003: Blackstone River
+		Number of 3M elevation tiles: 12
+	8-digit HUC 01090004: Narragansett
+		Number of 3M elevation tiles: 21
+	8-digit HUC 01090006: Point Judith-Block Island
+		Bad Request
+	8-digit HUC 01100001: Quinebaug River
+		Number of 3M elevation tiles: 9
+	8-digit HUC 01100002: Shetucket River
+		Number of 3M elevation tiles: 1
+	8-digit HUC 01100003: Thames
+		Number of 3M elevation tiles: 2
+	8-digit HUC 01100004: Quinnipiac
+		Number of 3M elevation tiles: 2
+	8-digit HUC 01100005: Housatonic
+		Number of 3M elevation tiles: 9
+	8-digit HUC 01100006: Saugatuck
+		Number of 3M elevation tiles: 8
+	8-digit HUC 01100007: Pawcatuck River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 02020001: Upper Hudson
+		Number of 3M elevation tiles: 3
+	8-digit HUC 02020002: Sacandaga
+		Number of 3M elevation tiles: 4
+	8-digit HUC 02020003: Hudson-Hoosic
+		Number of 3M elevation tiles: 21
+	8-digit HUC 02020004: Mohawk
+		Number of 3M elevation tiles: 6
+	8-digit HUC 02020005: Schoharie
+		Number of 3M elevation tiles: 2
+	8-digit HUC 02020006: Middle Hudson
+		Number of 3M elevation tiles: 9
+	8-digit HUC 02020007: Rondout
+		Number of 3M elevation tiles: 9
+	8-digit HUC 02020008: Hudson-Wappinger
+		Number of 3M elevation tiles: 4
+	8-digit HUC 02030101: Lower Hudson
+		Number of 3M elevation tiles: 16
+	8-digit HUC 02030102: Bronx
+		Number of 3M elevation tiles: 8
+	8-digit HUC 02030103: Hackensack-Passaic
+		Number of 3M elevation tiles: 18
+	8-digit HUC 02030104: Sandy Hook-Staten Island
+		Number of 3M elevation tiles: 16
+	8-digit HUC 02030105: Raritan
+		Number of 3M elevation tiles: 31
+	8-digit HUC 02030201: Northern Long Island
+		Number of 3M elevation tiles: 11
+	8-digit HUC 02030202: Southern Long Island
+		Number of 3M elevation tiles: 8
+	8-digit HUC 02030203: Long Island Sound
+		Bad Request
+	8-digit HUC 02040101: Upper Delaware
+		Number of 3M elevation tiles: 11
+	8-digit HUC 02040102: East Branch Delaware
+		Number of 3M elevation tiles: 3
+	8-digit HUC 02040103: Lackawaxen
+		Number of 3M elevation tiles: 19
+	8-digit HUC 02040104: Middle Delaware-Mongaup-Brodhead
+		Number of 3M elevation tiles: 25
+	8-digit HUC 02040105: Middle Delaware-Musconetcong
+		Number of 3M elevation tiles: 41
+	8-digit HUC 02040106: Lehigh
+		Number of 3M elevation tiles: 41
+	8-digit HUC 02040201: Crosswicks-Neshaminy
+		Number of 3M elevation tiles: 20
+	8-digit HUC 02040202: Lower Delaware
+		Number of 3M elevation tiles: 41
+	8-digit HUC 02040203: Schuylkill
+		Number of 3M elevation tiles: 51
+	8-digit HUC 02040204: Delaware Bay
+		Number of 3M elevation tiles: 25
+	8-digit HUC 02040205: Brandywine-Christina
+		Number of 3M elevation tiles: 32
+	8-digit HUC 02040206: Cohansey-Maurice
+		Number of 3M elevation tiles: 31
+	8-digit HUC 02040207: Broadkill-Smyrna
+		Number of 3M elevation tiles: 16
+	8-digit HUC 02040301: Mullica-Toms
+		Number of 3M elevation tiles: 31
+	8-digit HUC 02040302: Great Egg Harbor
+		Number of 3M elevation tiles: 24
+	8-digit HUC 02040303: Chincoteague
+		Bad Request
+	8-digit HUC 02040304: Eastern Lower Delmarva
+		Bad Request
+	8-digit HUC 02050101: Upper Susquehanna
+		Number of 3M elevation tiles: 6
+	8-digit HUC 02050102: Chenango
+		Number of 3M elevation tiles: 2
+	8-digit HUC 02050103: Owego-Wappasening
+		Number of 3M elevation tiles: 8
+	8-digit HUC 02050104: Tioga
+		Number of 3M elevation tiles: 15
+	8-digit HUC 02050105: Chemung
+		Number of 3M elevation tiles: 9
+	8-digit HUC 02050106: Upper Susquehanna-Tunkhannock
+		Number of 3M elevation tiles: 32
+	8-digit HUC 02050107: Upper Susquehanna-Lackawanna
+		Number of 3M elevation tiles: 52
+	8-digit HUC 02050201: Upper West Branch Susquehanna
+		Number of 3M elevation tiles: 21
+	8-digit HUC 02050202: Sinnemahoning
+		Number of 3M elevation tiles: 12
+	8-digit HUC 02050203: Middle West Branch Susquehanna
+		Number of 3M elevation tiles: 9
+	8-digit HUC 02050204: Bald Eagle
+		Number of 3M elevation tiles: 19
+	8-digit HUC 02050205: Pine
+		Number of 3M elevation tiles: 12
+	8-digit HUC 02050206: Lower West Branch Susquehanna
+		Number of 3M elevation tiles: 45
+	8-digit HUC 02050301: Lower Susquehanna-Penns
+		Number of 3M elevation tiles: 44
+	8-digit HUC 02050302: Upper Juniata
+		Number of 3M elevation tiles: 24
+	8-digit HUC 02050303: Raystown
+		Number of 3M elevation tiles: 20
+	8-digit HUC 02050304: Lower Juniata
+		Number of 3M elevation tiles: 26
+	8-digit HUC 02050305: Lower Susquehanna-Swatara
+		Number of 3M elevation tiles: 34
+	8-digit HUC 02050306: Lower Susquehanna
+		Number of 3M elevation tiles: 51
+	8-digit HUC 02060001: Upper Chesapeake Bay
+		Number of 3M elevation tiles: 67
+	8-digit HUC 02060002: Chester-Sassafras
+		Number of 3M elevation tiles: 40
+	8-digit HUC 02060003: Gunpowder-Patapsco
+		Number of 3M elevation tiles: 49
+	8-digit HUC 02060004: Severn
+		Number of 3M elevation tiles: 28
+	8-digit HUC 02060005: Choptank
+		Number of 3M elevation tiles: 28
+	8-digit HUC 02060006: Patuxent
+		Number of 3M elevation tiles: 36
+	8-digit HUC 02070001: South Branch Potomac
+		Number of 3M elevation tiles: 23
+	8-digit HUC 02070002: North Branch Potomac
+		Number of 3M elevation tiles: 20
+	8-digit HUC 02070003: Cacapon-Town
+		Number of 3M elevation tiles: 22
+	8-digit HUC 02070004: Conococheague-Opequon
+		Number of 3M elevation tiles: 62
+	8-digit HUC 02070005: South Fork Shenandoah
+		Number of 3M elevation tiles: 18
+	8-digit HUC 02070006: North Fork Shenandoah
+		Number of 3M elevation tiles: 21
+	8-digit HUC 02070007: Shenandoah
+		Number of 3M elevation tiles: 29
+	8-digit HUC 02070008: Middle Potomac-Catoctin
+		Number of 3M elevation tiles: 54
+	8-digit HUC 02070009: Monocacy
+		Number of 3M elevation tiles: 36
+	8-digit HUC 02070010: Middle Potomac-Anacostia-Occoquan
+		Number of 3M elevation tiles: 32
+	8-digit HUC 02070011: Lower Potomac
+		Number of 3M elevation tiles: 44
+	8-digit HUC 02080101: Lower Chesapeake Bay
+		Number of 3M elevation tiles: 23
+	8-digit HUC 02080102: Great Wicomico-Piankatank
+		Number of 3M elevation tiles: 20
+	8-digit HUC 02080103: Rapidan-Upper Rappahannock
+		Number of 3M elevation tiles: 18
+	8-digit HUC 02080104: Lower Rappahannock
+		Number of 3M elevation tiles: 28
+	8-digit HUC 02080105: Mattaponi
+		Number of 3M elevation tiles: 24
+	8-digit HUC 02080106: Pamunkey
+		Number of 3M elevation tiles: 21
+	8-digit HUC 02080107: York
+		Number of 3M elevation tiles: 13
+	8-digit HUC 02080108: Lynnhaven-Poquoson
+		Number of 3M elevation tiles: 5
+	8-digit HUC 02080109: Nanticoke
+		Number of 3M elevation tiles: 13
+	8-digit HUC 02080110: Tangier
+		Number of 3M elevation tiles: 9
+	8-digit HUC 02080111: Pokomoke-Western Lower Delmarva
+		Bad Request
+	8-digit HUC 02080201: Upper James
+		Number of 3M elevation tiles: 14
+	8-digit HUC 02080202: Maury
+		Number of 3M elevation tiles: 4
+	8-digit HUC 02080203: Middle James-Buffalo
+		Number of 3M elevation tiles: 4
+	8-digit HUC 02080204: Rivanna
+		Number of 3M elevation tiles: 5
+	8-digit HUC 02080205: Middle James-Willis
+		Number of 3M elevation tiles: 4
+	8-digit HUC 02080206: Lower James
+		Number of 3M elevation tiles: 26
+	8-digit HUC 02080207: Appomattox
+		Number of 3M elevation tiles: 2
+	8-digit HUC 02080208: Hampton Roads
+		Number of 3M elevation tiles: 19
+	8-digit HUC 03010101: Upper Roanoke
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03010102: Middle Roanoke
+		Number of 3M elevation tiles: 6
+	8-digit HUC 03010103: Upper Dan
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03010104: Lower Dan
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03010105: Banister
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03010106: Roanoke Rapids
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03010107: Lower Roanoke
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03010201: Nottoway
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03010202: Blackwater
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03010203: Chowan
+		Number of 3M elevation tiles: 30
+	8-digit HUC 03010204: Meherrin
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03010205: Albemarle
+		Number of 3M elevation tiles: 52
+	8-digit HUC 03020101: Upper Tar
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03020102: Fishing
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03020103: Lower Tar
+		Number of 3M elevation tiles: 18
+	8-digit HUC 03020104: Pamlico
+		Number of 3M elevation tiles: 24
+	8-digit HUC 03020105: Pamlico Sound
+		Number of 3M elevation tiles: 36
+	8-digit HUC 03020201: Upper Neuse
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03020202: Middle Neuse
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03020203: Contentnea
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03020204: Lower Neuse
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03020301: White Oak River
+		Bad Request
+	8-digit HUC 03020302: New River
+		Bad Request
+	8-digit HUC 03030002: Haw
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03030003: Deep
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03030004: Upper Cape Fear
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03030005: Lower Cape Fear
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03030006: Black
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03030007: Northeast Cape Fear
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03040101: Upper Yadkin
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03040102: South Yadkin
+		Number of 3M elevation tiles: 10
+	8-digit HUC 03040103: Lower Yadkin
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03040104: Upper Pee Dee
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03040105: Rocky
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03040201: Lower Pee Dee
+		Number of 3M elevation tiles: 46
+	8-digit HUC 03040202: Lynches
+		Number of 3M elevation tiles: 37
+	8-digit HUC 03040203: Lumber
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03040204: Little Pee Dee
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03040205: Black
+		Number of 3M elevation tiles: 48
+	8-digit HUC 03040206: Waccamaw
+		Number of 3M elevation tiles: 18
+	8-digit HUC 03040207: Carolina Coastal-Sampit
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03040208: Coastal Carolina
+		Bad Request
+	8-digit HUC 03050101: Upper Catawba
+		Number of 3M elevation tiles: 30
+	8-digit HUC 03050102: South Fork Catawba
+		Number of 3M elevation tiles: 8
+	8-digit HUC 03050103: Lower Catawba
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03050104: Wateree
+		Number of 3M elevation tiles: 33
+	8-digit HUC 03050105: Upper Broad
+		Number of 3M elevation tiles: 26
+	8-digit HUC 03050106: Lower Broad
+		Number of 3M elevation tiles: 32
+	8-digit HUC 03050107: Tyger
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03050108: Enoree
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03050109: Saluda
+		Number of 3M elevation tiles: 43
+	8-digit HUC 03050110: Congaree
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03050111: Lake Marion
+		Number of 3M elevation tiles: 19
+	8-digit HUC 03050112: Santee
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03050201: Cooper
+		Number of 3M elevation tiles: 10
+	8-digit HUC 03050202: South Carolina Coastal
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03050203: North Fork Edisto
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03050204: South Fork Edisto
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03050205: Four Hole Swamp
+		Number of 3M elevation tiles: 10
+	8-digit HUC 03050206: Edisto River
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03050207: Salkehatchie
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03050208: Broad-St. Helena
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03050209: Bulls Bay
+		Bad Request
+	8-digit HUC 03050210: St. Helena Island
+		Bad Request
+	8-digit HUC 03060101: Seneca
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03060102: Tugaloo
+		Number of 3M elevation tiles: 30
+	8-digit HUC 03060103: Upper Savannah
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03060104: Broad
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03060105: Little
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03060106: Middle Savannah
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03060107: Stevens
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03060108: Brier
+		Number of 3M elevation tiles: 7
+	8-digit HUC 03060109: Lower Savannah
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03060110: Calibogue Sound-Wright River
+		Bad Request
+	8-digit HUC 03060201: Upper Ogeechee
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03060202: Lower Ogeechee
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03060203: Canoochee
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03060204: Ogeechee Coastal
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03070101: Upper Oconee
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03070102: Lower Oconee
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03070103: Upper Ocmulgee
+		Number of 3M elevation tiles: 34
+	8-digit HUC 03070104: Lower Ocmulgee
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03070105: Little Ocmulgee
+		There are NO 3M elevation tiles
+	8-digit HUC 03070106: Altamaha
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03070107: Ohoopee
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03070201: Satilla
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03070202: Little Satilla
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03070203: Cumberland-St. Simons
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03070204: St. Marys
+		Number of 3M elevation tiles: 43
+	8-digit HUC 03070205: Nassau
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03080101: Upper St. Johns
+		Number of 3M elevation tiles: 55
+	8-digit HUC 03080102: Oklawaha
+		Number of 3M elevation tiles: 57
+	8-digit HUC 03080103: Lower St. Johns
+		Number of 3M elevation tiles: 54
+	8-digit HUC 03080201: Daytona-St. Augustine
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03080202: Cape Canaveral
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03080203: Vero Beach
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03090101: Kissimmee
+		Number of 3M elevation tiles: 34
+	8-digit HUC 03090102: Northern Okeechobee Inflow
+		Number of 3M elevation tiles: 5
+	8-digit HUC 03090103: Western Okeechobee Inflow
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03090201: Lake Okeechobee
+		Number of 3M elevation tiles: 8
+	8-digit HUC 03090202: Everglades
+		Number of 3M elevation tiles: 60
+	8-digit HUC 03090203: Florida Bay-Florida Keys
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03090204: Big Cypress Swamp
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03090205: Caloosahatchee
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03090206: Florida Southeast Coast
+		Bad Request
+	8-digit HUC 03100101: Peace
+		Number of 3M elevation tiles: 54
+	8-digit HUC 03100102: Myakka
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03100103: Charlotte Harbor
+		Bad Request
+	8-digit HUC 03100201: Sarasota Bay
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03100202: Manatee
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03100203: Little Manatee
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03100204: Alafia
+		Number of 3M elevation tiles: 19
+	8-digit HUC 03100205: Hillsborough
+		Number of 3M elevation tiles: 33
+	8-digit HUC 03100206: Tampa Bay
+		Number of 3M elevation tiles: 33
+	8-digit HUC 03100207: Crystal-Pithlachascotee
+		Number of 3M elevation tiles: 45
+	8-digit HUC 03100208: Withlacoochee
+		Number of 3M elevation tiles: 47
+	8-digit HUC 03110101: Waccasassa
+		Number of 3M elevation tiles: 21
+	8-digit HUC 03110102: Econfina-Steinhatchee
+		Number of 3M elevation tiles: 26
+	8-digit HUC 03110103: Aucilla
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03110201: Upper Suwannee
+		Number of 3M elevation tiles: 38
+	8-digit HUC 03110202: Alapaha
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03110203: Withlacoochee
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03110204: Little
+		There are NO 3M elevation tiles
+	8-digit HUC 03110205: Lower Suwannee
+		Number of 3M elevation tiles: 40
+	8-digit HUC 03110206: Santa Fe
+		Number of 3M elevation tiles: 35
+	8-digit HUC 03120001: Apalachee Bay-St. Marks
+		Number of 3M elevation tiles: 31
+	8-digit HUC 03120002: Upper Ochlockonee
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03120003: Lower Ochlockonee
+		Number of 3M elevation tiles: 32
+	8-digit HUC 03130001: Upper Chattahoochee
+		Number of 3M elevation tiles: 28
+	8-digit HUC 03130002: Middle Chattahoochee-Lake Harding
+		Number of 3M elevation tiles: 29
+	8-digit HUC 03130003: Middle Chattahoochee-Walter F
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03130004: Lower Chattahoochee
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03130005: Upper Flint
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03130006: Middle Flint
+		There are NO 3M elevation tiles
+	8-digit HUC 03130007: Kinchafoonee-Muckalee
+		There are NO 3M elevation tiles
+	8-digit HUC 03130008: Lower Flint
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03130009: Ichawaynochaway
+		There are NO 3M elevation tiles
+	8-digit HUC 03130010: Spring
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03130011: Apalachicola
+		Number of 3M elevation tiles: 31
+	8-digit HUC 03130012: Chipola
+		Number of 3M elevation tiles: 24
+	8-digit HUC 03130013: New
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03130014: Apalachicola Bay
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03140101: St. Andrew-St. Joseph Bays
+		Number of 3M elevation tiles: 29
+	8-digit HUC 03140102: Choctawhatchee Bay
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03140103: Yellow
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03140104: Blackwater
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03140105: Pensacola Bay
+		Number of 3M elevation tiles: 19
+	8-digit HUC 03140106: Perdido
+		Number of 3M elevation tiles: 29
+	8-digit HUC 03140107: Perdido Bay
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03140201: Upper Choctawhatchee
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03140202: Pea
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03140203: Lower Choctawhatchee
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03140301: Upper Conecuh
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03140302: Patsaliga
+		There are NO 3M elevation tiles
+	8-digit HUC 03140303: Sepulga
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03140304: Lower Conecuh
+		Number of 3M elevation tiles: 8
+	8-digit HUC 03140305: Escambia
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03150101: Conasauga
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03150102: Coosawattee
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03150103: Oostanaula
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03150104: Etowah
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03150105: Upper Coosa
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03150106: Middle Coosa
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03150107: Lower Coosa
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03150108: Upper Tallapoosa
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03150109: Middle Tallapoosa
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03150110: Lower Tallapoosa
+		Number of 3M elevation tiles: 6
+	8-digit HUC 03150201: Upper Alabama
+		Number of 3M elevation tiles: 4
+	8-digit HUC 03150202: Cahaba
+		Number of 3M elevation tiles: 5
+	8-digit HUC 03150203: Middle Alabama
+		There are NO 3M elevation tiles
+	8-digit HUC 03150204: Lower Alabama
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03160101: Upper Tombigbee
+		Number of 3M elevation tiles: 23
+	8-digit HUC 03160102: Town
+		Number of 3M elevation tiles: 16
+	8-digit HUC 03160103: Buttahatchee
+		Number of 3M elevation tiles: 12
+	8-digit HUC 03160104: Tibbee
+		Number of 3M elevation tiles: 19
+	8-digit HUC 03160105: Luxapallila
+		Number of 3M elevation tiles: 10
+	8-digit HUC 03160106: Middle Tombigbee-Lubbub
+		Number of 3M elevation tiles: 17
+	8-digit HUC 03160107: Sipsey
+		Number of 3M elevation tiles: 5
+	8-digit HUC 03160108: Noxubee
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03160109: Mulberry
+		Number of 3M elevation tiles: 8
+	8-digit HUC 03160110: Sipsey Fork
+		Number of 3M elevation tiles: 2
+	8-digit HUC 03160111: Locust
+		Number of 3M elevation tiles: 9
+	8-digit HUC 03160112: Upper Black Warrior
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03160113: Lower Black Warrior
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03160201: Middle Tombigbee-Chickasaw
+		Number of 3M elevation tiles: 5
+	8-digit HUC 03160202: Sucarnoochee
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03160203: Lower Tombigbee
+		Number of 3M elevation tiles: 3
+	8-digit HUC 03160204: Mobile-Tensaw
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03160205: Mobile Bay
+		Number of 3M elevation tiles: 24
+	8-digit HUC 03170001: Chunky-Okatibbee
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03170002: Upper Chickasawhay
+		Number of 3M elevation tiles: 11
+	8-digit HUC 03170003: Lower Chickasawhay
+		Number of 3M elevation tiles: 6
+	8-digit HUC 03170004: Upper Leaf
+		Number of 3M elevation tiles: 7
+	8-digit HUC 03170005: Lower Leaf
+		Number of 3M elevation tiles: 14
+	8-digit HUC 03170006: Pascagoula
+		Number of 3M elevation tiles: 13
+	8-digit HUC 03170007: Black
+		Number of 3M elevation tiles: 20
+	8-digit HUC 03170008: Escatawpa
+		Number of 3M elevation tiles: 22
+	8-digit HUC 03170009: Mississippi Coastal
+		Number of 3M elevation tiles: 47
+	8-digit HUC 03180001: Upper Pearl
+		Number of 3M elevation tiles: 15
+	8-digit HUC 03180002: Middle Pearl-Strong
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03180003: Middle Pearl-Silver
+		Number of 3M elevation tiles: 1
+	8-digit HUC 03180004: Lower Pearl
+		Number of 3M elevation tiles: 25
+	8-digit HUC 03180005: Bogue Chitto
+		Number of 3M elevation tiles: 8
+	8-digit HUC 04010101: Baptism-Brule
+		There are NO 3M elevation tiles
+	8-digit HUC 04010102: Beaver-Lester
+		There are NO 3M elevation tiles
+	8-digit HUC 04010201: St. Louis
+		There are NO 3M elevation tiles
+	8-digit HUC 04010202: Cloquet
+		There are NO 3M elevation tiles
+	8-digit HUC 04010301: Beartrap-Nemadji
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04010302: Bad-Montreal
+		There are NO 3M elevation tiles
+	8-digit HUC 04020101: Black-Presque Isle
+		There are NO 3M elevation tiles
+	8-digit HUC 04020102: Ontonagon
+		There are NO 3M elevation tiles
+	8-digit HUC 04020103: Keweenaw Peninsula
+		There are NO 3M elevation tiles
+	8-digit HUC 04020104: Sturgeon
+		There are NO 3M elevation tiles
+	8-digit HUC 04020105: Dead-Kelsey
+		There are NO 3M elevation tiles
+	8-digit HUC 04020201: Betsy-Chocolay
+		There are NO 3M elevation tiles
+	8-digit HUC 04020202: Tahquamenon
+		There are NO 3M elevation tiles
+	8-digit HUC 04020203: Waiska
+		There are NO 3M elevation tiles
+	8-digit HUC 04030101: Manitowoc-Sheboygan
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04030102: Door-Kewaunee
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04030103: Duck-Pensaukee
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04030104: Oconto
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04030105: Peshtigo
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04030106: Brule
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04030107: Michigamme
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04030108: Menominee
+		Number of 3M elevation tiles: 8
+	8-digit HUC 04030109: Cedar-Ford
+		Number of 3M elevation tiles: 5
+	8-digit HUC 04030110: Escanaba
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04030111: Tacoosh-Whitefish
+		There are NO 3M elevation tiles
+	8-digit HUC 04030112: Fishdam-Sturgeon
+		There are NO 3M elevation tiles
+	8-digit HUC 04030113: Manistique River
+		Bad Request
+	8-digit HUC 04030114: Millecoquins Lake-Brevoort River
+		Bad Request
+	8-digit HUC 04030201: Upper Fox
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04030202: Wolf
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04030203: Lake Winnebago
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04030204: Lower Fox
+		Number of 3M elevation tiles: 5
+	8-digit HUC 04040001: Little Calumet-Galien
+		Number of 3M elevation tiles: 4
+	8-digit HUC 04040002: Pike-Root
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04040003: Milwaukee
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04050001: St. Joseph
+		Number of 3M elevation tiles: 43
+	8-digit HUC 04050002: Black-Macatawa
+		There are NO 3M elevation tiles
+	8-digit HUC 04050003: Kalamazoo
+		Number of 3M elevation tiles: 19
+	8-digit HUC 04050004: Upper Grand
+		Number of 3M elevation tiles: 29
+	8-digit HUC 04050005: Maple
+		Number of 3M elevation tiles: 8
+	8-digit HUC 04050006: Lower Grand
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04050007: Thornapple
+		Number of 3M elevation tiles: 10
+	8-digit HUC 04060101: Pere Marquette-White
+		There are NO 3M elevation tiles
+	8-digit HUC 04060102: Muskegon
+		There are NO 3M elevation tiles
+	8-digit HUC 04060103: Manistee
+		There are NO 3M elevation tiles
+	8-digit HUC 04060104: Betsie-Platte
+		There are NO 3M elevation tiles
+	8-digit HUC 04060105: Boardman-Charlevoix
+		There are NO 3M elevation tiles
+	8-digit HUC 04070003: Lone Lake-Ocqueoc
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04070004: Cheboygan
+		There are NO 3M elevation tiles
+	8-digit HUC 04070005: Black
+		There are NO 3M elevation tiles
+	8-digit HUC 04070006: Thunder Bay
+		Number of 3M elevation tiles: 3
+	8-digit HUC 04070007: Au Sable
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04080101: Au Gres-Rifle
+		Number of 3M elevation tiles: 10
+	8-digit HUC 04080102: Kawkawlin-Pine
+		Number of 3M elevation tiles: 8
+	8-digit HUC 04080103: Pigeon-Wiscoggin
+		Number of 3M elevation tiles: 17
+	8-digit HUC 04080104: Birch-Willow
+		Number of 3M elevation tiles: 5
+	8-digit HUC 04080201: Tittabawassee
+		Number of 3M elevation tiles: 7
+	8-digit HUC 04080202: Pine
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04080203: Shiawassee
+		Number of 3M elevation tiles: 23
+	8-digit HUC 04080204: Flint
+		Number of 3M elevation tiles: 18
+	8-digit HUC 04080205: Cass
+		Number of 3M elevation tiles: 13
+	8-digit HUC 04080206: Saginaw
+		Number of 3M elevation tiles: 9
+	8-digit HUC 04090001: St. Clair
+		Number of 3M elevation tiles: 13
+	8-digit HUC 04090002: Lake St. Clair
+		Number of 3M elevation tiles: 9
+	8-digit HUC 04090003: Clinton
+		Number of 3M elevation tiles: 17
+	8-digit HUC 04090004: Detroit
+		Number of 3M elevation tiles: 23
+	8-digit HUC 04090006: Upper Thames River
+		Bad Request
+	8-digit HUC 04090007: Lower Thames River
+		Bad Request
+	8-digit HUC 04100001: Ottawa-Stony
+		Number of 3M elevation tiles: 22
+	8-digit HUC 04100002: Raisin
+		Number of 3M elevation tiles: 23
+	8-digit HUC 04100003: St. Joseph
+		Number of 3M elevation tiles: 24
+	8-digit HUC 04100004: St. Marys
+		Number of 3M elevation tiles: 15
+	8-digit HUC 04100005: Upper Maumee
+		Number of 3M elevation tiles: 13
+	8-digit HUC 04100006: Tiffin
+		Number of 3M elevation tiles: 15
+	8-digit HUC 04100007: Auglaize
+		Number of 3M elevation tiles: 21
+	8-digit HUC 04100008: Blanchard
+		Number of 3M elevation tiles: 11
+	8-digit HUC 04100009: Lower Maumee
+		Number of 3M elevation tiles: 16
+	8-digit HUC 04100010: Cedar-Portage
+		Number of 3M elevation tiles: 15
+	8-digit HUC 04100011: Sandusky
+		Number of 3M elevation tiles: 19
+	8-digit HUC 04100012: Huron-Vermilion
+		Number of 3M elevation tiles: 9
+	8-digit HUC 04100013: Huron
+		Bad Request
+	8-digit HUC 04110001: Black-Rocky
+		Number of 3M elevation tiles: 12
+	8-digit HUC 04110002: Cuyahoga
+		Number of 3M elevation tiles: 11
+	8-digit HUC 04110003: Ashtabula-Chagrin
+		Number of 3M elevation tiles: 15
+	8-digit HUC 04110004: Grand
+		Number of 3M elevation tiles: 12
+	8-digit HUC 04120101: Chautauqua-Conneaut
+		Number of 3M elevation tiles: 13
+	8-digit HUC 04120102: Cattaraugus
+		There are NO 3M elevation tiles
+	8-digit HUC 04120103: Buffalo-Eighteenmile
+		There are NO 3M elevation tiles
+	8-digit HUC 04130001: Oak Orchard-Twelvemile
+		There are NO 3M elevation tiles
+	8-digit HUC 04130002: Upper Genesee
+		Number of 3M elevation tiles: 6
+	8-digit HUC 04130003: Lower Genesee
+		There are NO 3M elevation tiles
+	8-digit HUC 04140101: Irondequoit-Ninemile
+		There are NO 3M elevation tiles
+	8-digit HUC 04140102: Salmon-Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 04140201: Seneca
+		Number of 3M elevation tiles: 2
+	8-digit HUC 04140202: Oneida
+		There are NO 3M elevation tiles
+	8-digit HUC 04140203: Oswego
+		There are NO 3M elevation tiles
+	8-digit HUC 04140301: Black
+		Bad Request
+	8-digit HUC 04140302: Chaumont-Perch
+		Bad Request
+	8-digit HUC 04160001: Dog River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04160002: Black Sturgeon River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04160003: Nipigon River
+		Bad Request
+	8-digit HUC 04160004: Jackpine River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170001: Little Pic River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170002: Pic River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170003: White River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170004: Magpie River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170005: Agawa River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04170006: Goulais River-Frontal Lake Superior
+		Bad Request
+	8-digit HUC 04180000: Lake Superior
+		Bad Request
+	8-digit HUC 04190000: Lake Michigan
+		Bad Request
+	8-digit HUC 04200001: Carp-Pine
+		Bad Request
+	8-digit HUC 04200002: St. Marys
+		Bad Request
+	8-digit HUC 04200003: Gordon Lake
+		Bad Request
+	8-digit HUC 04200004: Upper Mississagi River
+		Bad Request
+	8-digit HUC 04200005: Lower Mississagi River
+		Bad Request
+	8-digit HUC 04200006: Serpent River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04200007: Vermillion River
+		Bad Request
+	8-digit HUC 04200008: Spanish River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04200009: Killarney Lake-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04210001: Upper Wanapitei River
+		Bad Request
+	8-digit HUC 04210002: Lower Wanapitei River
+		Bad Request
+	8-digit HUC 04210003: Sturgeon River
+		Bad Request
+	8-digit HUC 04210004: French River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04220001: Magnetawan River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04220002: Lake Muskoka-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04220003: Severn River-Lake Simcoe
+		Bad Request
+	8-digit HUC 04220004: Nottawasaga River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04230001: Eugenia Lake-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04230002: Bruce Peninsula-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04230003: Saugeen River
+		Bad Request
+	8-digit HUC 04230004: Penetangore River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04230005: Maitland River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04230006: Ausable River-Frontal Lake Huron
+		Bad Request
+	8-digit HUC 04240001: Manitoulin Island
+		Bad Request
+	8-digit HUC 04240002: Lake Huron
+		Bad Request
+	8-digit HUC 04250001: Cedar Creek-Frontal Lake Erie
+		Bad Request
+	8-digit HUC 04250002: Talbot Creek-Frontal Lake Erie
+		Bad Request
+	8-digit HUC 04250003: Big Creek-Frontal Lake Erie
+		Bad Request
+	8-digit HUC 04250004: Upper Grand River
+		Bad Request
+	8-digit HUC 04250005: Lower Grand River
+		Bad Request
+	8-digit HUC 04260000: Lake Erie
+		Bad Request
+	8-digit HUC 04270101: Niagara River
+		Bad Request
+	8-digit HUC 04270102: Jordan Harbour-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270103: Sixteen Mile Creek-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270104: Humber River-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270105: Ganaraska River-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270106: Moira River-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270107: Napanee River-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04270201: Scugog River
+		Bad Request
+	8-digit HUC 04270202: Gull River
+		Bad Request
+	8-digit HUC 04270203: Kawartha Lakes
+		Bad Request
+	8-digit HUC 04270204: Otonabee River
+		Bad Request
+	8-digit HUC 04270205: Trent River
+		Bad Request
+	8-digit HUC 04280001: Prince Edward County-Frontal Lake Ontario
+		Bad Request
+	8-digit HUC 04280002: Lake Ontario
+		Bad Request
+	8-digit HUC 04290001: Headwaters St. Lawrence River
+		Bad Request
+	8-digit HUC 04290002: Indian
+		Bad Request
+	8-digit HUC 04290003: Oswegatchie
+		Bad Request
+	8-digit HUC 04290004: Grass
+		Bad Request
+	8-digit HUC 04290005: Raquette
+		Bad Request
+	8-digit HUC 04290006: St. Regis
+		Bad Request
+	8-digit HUC 04290007: Salmon
+		Bad Request
+	8-digit HUC 04290008: Raisin River-St. Lawrence River
+		Bad Request
+	8-digit HUC 04300101: Mettawee River
+		Bad Request
+	8-digit HUC 04300102: Otter Creek
+		Bad Request
+	8-digit HUC 04300103: Winooski River
+		Bad Request
+	8-digit HUC 04300104: Ausable River
+		Bad Request
+	8-digit HUC 04300105: Lamoille River
+		Bad Request
+	8-digit HUC 04300106: Saranac River
+		Bad Request
+	8-digit HUC 04300107: Missiquoi River
+		Bad Request
+	8-digit HUC 04300108: Lake Champlain
+		Bad Request
+	8-digit HUC 04300109: Richelieu River
+		Bad Request
+	8-digit HUC 04300201: Chateaugay-English
+		Bad Request
+	8-digit HUC 04300202: St. Francois River
+		Bad Request
+	8-digit HUC 04310001: Chaudiere River
+		Bad Request
+	8-digit HUC 04320000: Mojikit Lake-Ogoki River
+		Bad Request
+	8-digit HUC 04330000: Long Lake-Kenogami River
+		Bad Request
+	8-digit HUC 05010001: Upper Allegheny
+		Number of 3M elevation tiles: 21
+	8-digit HUC 05010002: Conewango
+		Number of 3M elevation tiles: 7
+	8-digit HUC 05010003: Middle Allegheny-Tionesta
+		Number of 3M elevation tiles: 23
+	8-digit HUC 05010004: French
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05010005: Clarion
+		Number of 3M elevation tiles: 17
+	8-digit HUC 05010006: Middle Allegheny-Redbank
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05010007: Conemaugh
+		Number of 3M elevation tiles: 26
+	8-digit HUC 05010008: Kiskiminetas
+		Number of 3M elevation tiles: 10
+	8-digit HUC 05010009: Lower Allegheny
+		Number of 3M elevation tiles: 9
+	8-digit HUC 05020001: Tygart Valley
+		Number of 3M elevation tiles: 17
+	8-digit HUC 05020002: West Fork
+		Number of 3M elevation tiles: 12
+	8-digit HUC 05020003: Upper Monongahela
+		Number of 3M elevation tiles: 12
+	8-digit HUC 05020004: Cheat
+		Number of 3M elevation tiles: 24
+	8-digit HUC 05020005: Lower Monongahela
+		Number of 3M elevation tiles: 21
+	8-digit HUC 05020006: Youghiogheny
+		Number of 3M elevation tiles: 33
+	8-digit HUC 05030101: Upper Ohio
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05030102: Shenango
+		Number of 3M elevation tiles: 21
+	8-digit HUC 05030103: Mahoning
+		Number of 3M elevation tiles: 22
+	8-digit HUC 05030104: Beaver
+		Number of 3M elevation tiles: 4
+	8-digit HUC 05030105: Connoquenessing
+		Number of 3M elevation tiles: 12
+	8-digit HUC 05030106: Upper Ohio-Wheeling
+		Number of 3M elevation tiles: 31
+	8-digit HUC 05030201: Little Muskingum-Middle Island
+		Number of 3M elevation tiles: 25
+	8-digit HUC 05030202: Upper Ohio-Shade
+		Number of 3M elevation tiles: 31
+	8-digit HUC 05030203: Little Kanawha
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05030204: Hocking
+		Number of 3M elevation tiles: 26
+	8-digit HUC 05040001: Tuscarawas
+		Number of 3M elevation tiles: 28
+	8-digit HUC 05040002: Mohican
+		Number of 3M elevation tiles: 13
+	8-digit HUC 05040003: Walhonding
+		Number of 3M elevation tiles: 23
+	8-digit HUC 05040004: Muskingum
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05040005: Wills
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05040006: Licking
+		Number of 3M elevation tiles: 18
+	8-digit HUC 05050001: Upper New
+		Number of 3M elevation tiles: 18
+	8-digit HUC 05050002: Middle New
+		Number of 3M elevation tiles: 19
+	8-digit HUC 05050003: Greenbrier
+		Number of 3M elevation tiles: 22
+	8-digit HUC 05050004: Lower New
+		Number of 3M elevation tiles: 18
+	8-digit HUC 05050005: Gauley
+		Number of 3M elevation tiles: 22
+	8-digit HUC 05050006: Upper Kanawha
+		Number of 3M elevation tiles: 15
+	8-digit HUC 05050007: Elk
+		Number of 3M elevation tiles: 23
+	8-digit HUC 05050008: Lower Kanawha
+		Number of 3M elevation tiles: 29
+	8-digit HUC 05050009: Coal
+		Number of 3M elevation tiles: 19
+	8-digit HUC 05060001: Upper Scioto
+		Number of 3M elevation tiles: 38
+	8-digit HUC 05060002: Lower Scioto
+		Number of 3M elevation tiles: 37
+	8-digit HUC 05060003: Paint
+		Number of 3M elevation tiles: 16
+	8-digit HUC 05070101: Upper Guyandotte
+		Number of 3M elevation tiles: 15
+	8-digit HUC 05070102: Lower Guyandotte
+		Number of 3M elevation tiles: 19
+	8-digit HUC 05070201: Tug
+		Number of 3M elevation tiles: 16
+	8-digit HUC 05070202: Upper Levisa
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05070203: Lower Levisa
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05070204: Big Sandy
+		Number of 3M elevation tiles: 10
+	8-digit HUC 05080001: Upper Great Miami, Indiana, Ohio
+		Number of 3M elevation tiles: 30
+	8-digit HUC 05080002: Lower Great Miami, Indiana, Ohio
+		Number of 3M elevation tiles: 15
+	8-digit HUC 05080003: Whitewater
+		Number of 3M elevation tiles: 9
+	8-digit HUC 05090101: Raccoon-Symmes
+		Number of 3M elevation tiles: 34
+	8-digit HUC 05090102: Twelvepole
+		Number of 3M elevation tiles: 15
+	8-digit HUC 05090103: Little Scioto-Tygarts
+		Number of 3M elevation tiles: 16
+	8-digit HUC 05090104: Little Sandy
+		Number of 3M elevation tiles: 8
+	8-digit HUC 05090201: Ohio Brush-Whiteoak
+		Number of 3M elevation tiles: 22
+	8-digit HUC 05090202: Little Miami
+		Number of 3M elevation tiles: 24
+	8-digit HUC 05090203: Middle Ohio-Laughery
+		Number of 3M elevation tiles: 9
+	8-digit HUC 05100101: Licking
+		Number of 3M elevation tiles: 13
+	8-digit HUC 05100102: South Fork Licking
+		There are NO 3M elevation tiles
+	8-digit HUC 05100201: North Fork Kentucky
+		There are NO 3M elevation tiles
+	8-digit HUC 05100202: Middle Fork Kentucky
+		There are NO 3M elevation tiles
+	8-digit HUC 05100203: South Fork Kentucky
+		There are NO 3M elevation tiles
+	8-digit HUC 05100204: Upper Kentucky
+		There are NO 3M elevation tiles
+	8-digit HUC 05100205: Lower Kentucky
+		Number of 3M elevation tiles: 1
+	8-digit HUC 05110001: Upper Green
+		There are NO 3M elevation tiles
+	8-digit HUC 05110002: Barren
+		There are NO 3M elevation tiles
+	8-digit HUC 05110003: Middle Green
+		There are NO 3M elevation tiles
+	8-digit HUC 05110004: Rough
+		Number of 3M elevation tiles: 3
+	8-digit HUC 05110005: Lower Green
+		Number of 3M elevation tiles: 1
+	8-digit HUC 05110006: Pond
+		Number of 3M elevation tiles: 1
+	8-digit HUC 05120101: Upper Wabash
+		Number of 3M elevation tiles: 37
+	8-digit HUC 05120102: Salamonie
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05120103: Mississinewa
+		Number of 3M elevation tiles: 18
+	8-digit HUC 05120104: Eel
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05120105: Middle Wabash-Deer
+		Number of 3M elevation tiles: 27
+	8-digit HUC 05120106: Tippecanoe
+		Number of 3M elevation tiles: 52
+	8-digit HUC 05120107: Wildcat
+		Number of 3M elevation tiles: 28
+	8-digit HUC 05120108: Middle Wabash-Little Vermilion
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05120109: Vermilion
+		Number of 3M elevation tiles: 8
+	8-digit HUC 05120110: Sugar
+		Number of 3M elevation tiles: 19
+	8-digit HUC 05120111: Middle Wabash-Busseron
+		Number of 3M elevation tiles: 16
+	8-digit HUC 05120112: Embarras
+		Number of 3M elevation tiles: 9
+	8-digit HUC 05120113: Lower Wabash
+		Number of 3M elevation tiles: 17
+	8-digit HUC 05120114: Little Wabash
+		Number of 3M elevation tiles: 10
+	8-digit HUC 05120115: Skillet
+		Number of 3M elevation tiles: 6
+	8-digit HUC 05120201: Upper White
+		Number of 3M elevation tiles: 21
+	8-digit HUC 05120202: Lower White
+		Number of 3M elevation tiles: 19
+	8-digit HUC 05120203: Eel
+		Number of 3M elevation tiles: 13
+	8-digit HUC 05120204: Driftwood
+		Number of 3M elevation tiles: 11
+	8-digit HUC 05120205: Flatrock-Haw
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05120206: Upper East Fork White
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05120207: Muscatatuck
+		Number of 3M elevation tiles: 13
+	8-digit HUC 05120208: Lower East Fork White
+		Number of 3M elevation tiles: 30
+	8-digit HUC 05120209: Patoka
+		Number of 3M elevation tiles: 12
+	8-digit HUC 05130101: Upper Cumberland
+		Number of 3M elevation tiles: 3
+	8-digit HUC 05130102: Rockcastle
+		There are NO 3M elevation tiles
+	8-digit HUC 05130103: Upper Cumberland-Lake Cumberland
+		There are NO 3M elevation tiles
+	8-digit HUC 05130104: South Fork Cumberland
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05130105: Obey
+		There are NO 3M elevation tiles
+	8-digit HUC 05130106: Upper Cumberland-Cordell Hull Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 05130107: Collins
+		There are NO 3M elevation tiles
+	8-digit HUC 05130108: Caney
+		There are NO 3M elevation tiles
+	8-digit HUC 05130201: Lower Cumberland-Old Hickory Lake
+		Number of 3M elevation tiles: 2
+	8-digit HUC 05130202: Lower Cumberland-Sycamore
+		Number of 3M elevation tiles: 7
+	8-digit HUC 05130203: Stones
+		Number of 3M elevation tiles: 2
+	8-digit HUC 05130204: Harpeth
+		Number of 3M elevation tiles: 6
+	8-digit HUC 05130205: Lower Cumberland
+		Number of 3M elevation tiles: 5
+	8-digit HUC 05130206: Red
+		Number of 3M elevation tiles: 3
+	8-digit HUC 05140101: Silver-Little Kentucky
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05140102: Salt
+		Number of 3M elevation tiles: 10
+	8-digit HUC 05140103: Rolling Fork
+		Number of 3M elevation tiles: 4
+	8-digit HUC 05140104: Blue-Sinking
+		Number of 3M elevation tiles: 28
+	8-digit HUC 05140201: Lower Ohio-Little Pigeon
+		Number of 3M elevation tiles: 4
+	8-digit HUC 05140202: Highland-Pigeon
+		Number of 3M elevation tiles: 7
+	8-digit HUC 05140203: Lower Ohio-Bay
+		Number of 3M elevation tiles: 14
+	8-digit HUC 05140204: Saline
+		Number of 3M elevation tiles: 15
+	8-digit HUC 05140205: Tradewater
+		Number of 3M elevation tiles: 4
+	8-digit HUC 05140206: Lower Ohio
+		Number of 3M elevation tiles: 22
+	8-digit HUC 06010101: North Fork Holston
+		Number of 3M elevation tiles: 2
+	8-digit HUC 06010102: South Fork Holston
+		Number of 3M elevation tiles: 3
+	8-digit HUC 06010103: Watauga, North Carolina, Tennessee
+		Number of 3M elevation tiles: 7
+	8-digit HUC 06010104: Holston
+		Number of 3M elevation tiles: 1
+	8-digit HUC 06010105: Upper French Broad
+		Number of 3M elevation tiles: 19
+	8-digit HUC 06010106: Pigeon
+		Number of 3M elevation tiles: 12
+	8-digit HUC 06010107: Lower French Broad
+		Number of 3M elevation tiles: 10
+	8-digit HUC 06010108: Nolichucky
+		Number of 3M elevation tiles: 14
+	8-digit HUC 06010201: Watts Bar Lake
+		Number of 3M elevation tiles: 8
+	8-digit HUC 06010202: Upper Little Tennessee
+		Number of 3M elevation tiles: 19
+	8-digit HUC 06010203: Tuckasegee
+		Number of 3M elevation tiles: 18
+	8-digit HUC 06010204: Lower Little Tennessee
+		Number of 3M elevation tiles: 13
+	8-digit HUC 06010205: Upper Clinch, Tennessee, Virginia
+		Number of 3M elevation tiles: 5
+	8-digit HUC 06010206: Powell
+		Number of 3M elevation tiles: 1
+	8-digit HUC 06010207: Lower Clinch
+		Number of 3M elevation tiles: 2
+	8-digit HUC 06010208: Emory
+		Number of 3M elevation tiles: 2
+	8-digit HUC 06020001: Middle Tennessee-Chickamauga
+		Number of 3M elevation tiles: 10
+	8-digit HUC 06020002: Hiwassee
+		Number of 3M elevation tiles: 16
+	8-digit HUC 06020003: Ocoee
+		Number of 3M elevation tiles: 8
+	8-digit HUC 06020004: Sequatchie
+		Number of 3M elevation tiles: 1
+	8-digit HUC 06030001: Guntersville Lake
+		Number of 3M elevation tiles: 5
+	8-digit HUC 06030002: Wheeler Lake
+		Number of 3M elevation tiles: 7
+	8-digit HUC 06030003: Upper Elk
+		There are NO 3M elevation tiles
+	8-digit HUC 06030004: Lower Elk
+		Number of 3M elevation tiles: 4
+	8-digit HUC 06030005: Pickwick Lake
+		Number of 3M elevation tiles: 13
+	8-digit HUC 06030006: Bear
+		Number of 3M elevation tiles: 6
+	8-digit HUC 06040001: Lower Tennessee-Beech
+		Number of 3M elevation tiles: 3
+	8-digit HUC 06040002: Upper Duck
+		Number of 3M elevation tiles: 2
+	8-digit HUC 06040003: Lower Duck
+		Number of 3M elevation tiles: 3
+	8-digit HUC 06040004: Buffalo
+		Number of 3M elevation tiles: 2
+	8-digit HUC 06040005: Kentucky Lake
+		Number of 3M elevation tiles: 1
+	8-digit HUC 06040006: Lower Tennessee
+		Number of 3M elevation tiles: 2
+	8-digit HUC 07010101: Mississippi Headwaters
+		Number of 3M elevation tiles: 18
+	8-digit HUC 07010102: Leech Lake
+		Number of 3M elevation tiles: 3
+	8-digit HUC 07010103: Prairie-Willow
+		There are NO 3M elevation tiles
+	8-digit HUC 07010104: Elk-Nokasippi
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07010105: Pine
+		There are NO 3M elevation tiles
+	8-digit HUC 07010106: Crow Wing
+		Number of 3M elevation tiles: 13
+	8-digit HUC 07010107: Redeye
+		Number of 3M elevation tiles: 13
+	8-digit HUC 07010108: Long Prairie
+		Number of 3M elevation tiles: 5
+	8-digit HUC 07010201: Platte-Spunk
+		There are NO 3M elevation tiles
+	8-digit HUC 07010202: Sauk
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07010203: Clearwater-Elk
+		There are NO 3M elevation tiles
+	8-digit HUC 07010204: Crow
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07010205: South Fork Crow
+		Number of 3M elevation tiles: 19
+	8-digit HUC 07010206: Twin Cities
+		Number of 3M elevation tiles: 2
+	8-digit HUC 07010207: Rum
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07020001: Upper Minnesota
+		Number of 3M elevation tiles: 41
+	8-digit HUC 07020002: Pomme De Terre
+		Number of 3M elevation tiles: 24
+	8-digit HUC 07020003: Lac Qui Parle
+		Number of 3M elevation tiles: 12
+	8-digit HUC 07020004: Hawk-Yellow Medicine
+		Number of 3M elevation tiles: 32
+	8-digit HUC 07020005: Chippewa
+		Number of 3M elevation tiles: 31
+	8-digit HUC 07020006: Redwood
+		Number of 3M elevation tiles: 10
+	8-digit HUC 07020007: Middle Minnesota
+		Number of 3M elevation tiles: 13
+	8-digit HUC 07020008: Cottonwood
+		Number of 3M elevation tiles: 13
+	8-digit HUC 07020009: Blue Earth
+		Number of 3M elevation tiles: 21
+	8-digit HUC 07020010: Watonwan
+		Number of 3M elevation tiles: 4
+	8-digit HUC 07020011: Le Sueur
+		Number of 3M elevation tiles: 15
+	8-digit HUC 07020012: Lower Minnesota
+		Number of 3M elevation tiles: 12
+	8-digit HUC 07030001: Upper St. Croix
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07030002: Namekagon
+		There are NO 3M elevation tiles
+	8-digit HUC 07030003: Kettle
+		Number of 3M elevation tiles: 9
+	8-digit HUC 07030004: Snake
+		Number of 3M elevation tiles: 6
+	8-digit HUC 07030005: Lower St. Croix
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07040001: Rush-Vermillion
+		Number of 3M elevation tiles: 10
+	8-digit HUC 07040002: Cannon
+		Number of 3M elevation tiles: 12
+	8-digit HUC 07040003: Buffalo-Whitewater
+		Number of 3M elevation tiles: 20
+	8-digit HUC 07040004: Zumbro
+		Number of 3M elevation tiles: 17
+	8-digit HUC 07040005: Trempealeau
+		Number of 3M elevation tiles: 7
+	8-digit HUC 07040006: La Crosse-Pine
+		Number of 3M elevation tiles: 14
+	8-digit HUC 07040007: Black
+		Number of 3M elevation tiles: 14
+	8-digit HUC 07040008: Root
+		Number of 3M elevation tiles: 33
+	8-digit HUC 07050001: Upper Chippewa
+		There are NO 3M elevation tiles
+	8-digit HUC 07050002: Flambeau
+		There are NO 3M elevation tiles
+	8-digit HUC 07050003: South Fork Flambeau
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07050004: Jump
+		Number of 3M elevation tiles: 2
+	8-digit HUC 07050005: Lower Chippewa
+		Number of 3M elevation tiles: 6
+	8-digit HUC 07050006: Eau Claire
+		There are NO 3M elevation tiles
+	8-digit HUC 07050007: Red Cedar
+		There are NO 3M elevation tiles
+	8-digit HUC 07060001: Coon-Yellow
+		Number of 3M elevation tiles: 35
+	8-digit HUC 07060002: Upper Iowa
+		Number of 3M elevation tiles: 31
+	8-digit HUC 07060003: Grant-Little Maquoketa
+		Number of 3M elevation tiles: 18
+	8-digit HUC 07060004: Turkey
+		Number of 3M elevation tiles: 32
+	8-digit HUC 07060005: Apple-Plum
+		Number of 3M elevation tiles: 44
+	8-digit HUC 07060006: Maquoketa
+		Number of 3M elevation tiles: 35
+	8-digit HUC 07070001: Upper Wisconsin
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07070002: Lake Dubay
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07070003: Castle Rock
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07070004: Baraboo
+		There are NO 3M elevation tiles
+	8-digit HUC 07070005: Lower Wisconsin
+		Number of 3M elevation tiles: 9
+	8-digit HUC 07070006: Kickapoo
+		Number of 3M elevation tiles: 5
+	8-digit HUC 07080101: Copperas-Duck
+		Number of 3M elevation tiles: 54
+	8-digit HUC 07080102: Upper Wapsipinicon
+		Number of 3M elevation tiles: 29
+	8-digit HUC 07080103: Lower Wapsipinicon
+		Number of 3M elevation tiles: 22
+	8-digit HUC 07080104: Flint-Henderson
+		Number of 3M elevation tiles: 33
+	8-digit HUC 07080105: South Skunk
+		Number of 3M elevation tiles: 37
+	8-digit HUC 07080106: North Skunk
+		Number of 3M elevation tiles: 29
+	8-digit HUC 07080107: Skunk
+		Number of 3M elevation tiles: 27
+	8-digit HUC 07080201: Upper Cedar
+		Number of 3M elevation tiles: 33
+	8-digit HUC 07080202: Shell Rock
+		Number of 3M elevation tiles: 29
+	8-digit HUC 07080203: Winnebago
+		Number of 3M elevation tiles: 15
+	8-digit HUC 07080204: West Fork Cedar
+		Number of 3M elevation tiles: 16
+	8-digit HUC 07080205: Middle Cedar
+		Number of 3M elevation tiles: 31
+	8-digit HUC 07080206: Lower Cedar
+		Number of 3M elevation tiles: 25
+	8-digit HUC 07080207: Upper Iowa
+		Number of 3M elevation tiles: 19
+	8-digit HUC 07080208: Middle Iowa
+		Number of 3M elevation tiles: 31
+	8-digit HUC 07080209: Lower Iowa
+		Number of 3M elevation tiles: 34
+	8-digit HUC 07090001: Upper Rock
+		Number of 3M elevation tiles: 23
+	8-digit HUC 07090002: Middle Rock
+		Number of 3M elevation tiles: 10
+	8-digit HUC 07090003: Pecatonica
+		Number of 3M elevation tiles: 22
+	8-digit HUC 07090004: Sugar
+		Number of 3M elevation tiles: 11
+	8-digit HUC 07090005: Lower Rock
+		Number of 3M elevation tiles: 58
+	8-digit HUC 07090006: Kishwaukee
+		Number of 3M elevation tiles: 23
+	8-digit HUC 07090007: Green
+		Number of 3M elevation tiles: 27
+	8-digit HUC 07100001: Des Moines Headwaters
+		Number of 3M elevation tiles: 18
+	8-digit HUC 07100002: Upper Des Moines
+		Number of 3M elevation tiles: 22
+	8-digit HUC 07100003: East Fork Des Moines
+		Number of 3M elevation tiles: 22
+	8-digit HUC 07100004: Middle Des Moines
+		Number of 3M elevation tiles: 30
+	8-digit HUC 07100005: Boone
+		Number of 3M elevation tiles: 11
+	8-digit HUC 07100006: North Raccoon
+		Number of 3M elevation tiles: 41
+	8-digit HUC 07100007: South Raccoon
+		Number of 3M elevation tiles: 23
+	8-digit HUC 07100008: Lake Red Rock
+		Number of 3M elevation tiles: 34
+	8-digit HUC 07100009: Lower Des Moines
+		Number of 3M elevation tiles: 38
+	8-digit HUC 07110001: Bear-Wyaconda
+		Bad Request
+	8-digit HUC 07110002: North Fabius
+		Number of 3M elevation tiles: 10
+	8-digit HUC 07110003: South Fabius
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07110004: The Sny
+		Number of 3M elevation tiles: 24
+	8-digit HUC 07110005: North Fork Salt
+		Number of 3M elevation tiles: 15
+	8-digit HUC 07110006: South Fork Salt
+		Number of 3M elevation tiles: 27
+	8-digit HUC 07110007: Salt
+		Number of 3M elevation tiles: 10
+	8-digit HUC 07110008: Cuivre
+		Number of 3M elevation tiles: 28
+	8-digit HUC 07110009: Peruque-Piasa
+		Number of 3M elevation tiles: 25
+	8-digit HUC 07120001: Kankakee
+		Number of 3M elevation tiles: 41
+	8-digit HUC 07120002: Iroquois
+		Number of 3M elevation tiles: 9
+	8-digit HUC 07120003: Chicago
+		Number of 3M elevation tiles: 5
+	8-digit HUC 07120004: Des Plaines
+		Number of 3M elevation tiles: 25
+	8-digit HUC 07120005: Upper Illinois
+		Number of 3M elevation tiles: 24
+	8-digit HUC 07120006: Upper Fox
+		Number of 3M elevation tiles: 14
+	8-digit HUC 07120007: Lower Fox
+		Number of 3M elevation tiles: 20
+	8-digit HUC 07130001: Lower Illinois-Senachwine Lake
+		Number of 3M elevation tiles: 19
+	8-digit HUC 07130002: Vermilion
+		Number of 3M elevation tiles: 3
+	8-digit HUC 07130003: Lower Illinois-Lake Chautauqua
+		Number of 3M elevation tiles: 15
+	8-digit HUC 07130004: Mackinaw
+		Number of 3M elevation tiles: 8
+	8-digit HUC 07130005: Spoon
+		Number of 3M elevation tiles: 11
+	8-digit HUC 07130006: Upper Sangamon
+		Number of 3M elevation tiles: 4
+	8-digit HUC 07130007: South Fork Sangamon
+		Number of 3M elevation tiles: 2
+	8-digit HUC 07130008: Lower Sangamon
+		Number of 3M elevation tiles: 4
+	8-digit HUC 07130009: Salt
+		Number of 3M elevation tiles: 1
+	8-digit HUC 07130010: La Moine
+		Number of 3M elevation tiles: 4
+	8-digit HUC 07130011: Lower Illinois
+		Number of 3M elevation tiles: 12
+	8-digit HUC 07130012: Macoupin
+		Number of 3M elevation tiles: 7
+	8-digit HUC 07140101: Cahokia-Joachim
+		Number of 3M elevation tiles: 35
+	8-digit HUC 07140102: Meramec
+		Number of 3M elevation tiles: 37
+	8-digit HUC 07140103: Bourbeuse
+		Number of 3M elevation tiles: 13
+	8-digit HUC 07140104: Big
+		Number of 3M elevation tiles: 29
+	8-digit HUC 07140105: Upper Mississippi-Cape Girardeau
+		Number of 3M elevation tiles: 30
+	8-digit HUC 07140106: Big Muddy
+		Number of 3M elevation tiles: 14
+	8-digit HUC 07140107: Whitewater
+		Number of 3M elevation tiles: 14
+	8-digit HUC 07140108: Cache
+		Number of 3M elevation tiles: 11
+	8-digit HUC 07140201: Upper Kaskaskia
+		Number of 3M elevation tiles: 3
+	8-digit HUC 07140202: Middle Kaskaskia
+		There are NO 3M elevation tiles
+	8-digit HUC 07140203: Shoal
+		Number of 3M elevation tiles: 3
+	8-digit HUC 07140204: Lower Kaskaskia
+		Number of 3M elevation tiles: 14
+	8-digit HUC 08010100: Lower Mississippi-Memphis
+		Number of 3M elevation tiles: 32
+	8-digit HUC 08010201: Bayou De Chien-Mayfield
+		Number of 3M elevation tiles: 4
+	8-digit HUC 08010202: Obion
+		Number of 3M elevation tiles: 4
+	8-digit HUC 08010203: South Fork Obion
+		There are NO 3M elevation tiles
+	8-digit HUC 08010204: North Fork Forked Deer
+		Number of 3M elevation tiles: 1
+	8-digit HUC 08010205: South Fork Forked Deer
+		Number of 3M elevation tiles: 3
+	8-digit HUC 08010206: Forked Deer
+		Number of 3M elevation tiles: 2
+	8-digit HUC 08010207: Upper Hatchie
+		Number of 3M elevation tiles: 5
+	8-digit HUC 08010208: Lower Hatchie
+		Number of 3M elevation tiles: 9
+	8-digit HUC 08010209: Loosahatchie
+		Number of 3M elevation tiles: 10
+	8-digit HUC 08010210: Wolf
+		Number of 3M elevation tiles: 11
+	8-digit HUC 08010211: Horn Lake-Nonconnah
+		Number of 3M elevation tiles: 19
+	8-digit HUC 08010300: Town of Madrid-Saint Johns Bayou
+		Bad Request
+	8-digit HUC 08020100: Lower Mississippi-Helena
+		Number of 3M elevation tiles: 22
+	8-digit HUC 08020202: Upper St. Francis
+		Number of 3M elevation tiles: 12
+	8-digit HUC 08020203: Lower St. Francis
+		Number of 3M elevation tiles: 48
+	8-digit HUC 08020204: Little River Ditches
+		Number of 3M elevation tiles: 40
+	8-digit HUC 08020205: L'Anguille
+		Number of 3M elevation tiles: 6
+	8-digit HUC 08020301: Lower White-Bayou Des Arc
+		Number of 3M elevation tiles: 8
+	8-digit HUC 08020302: Cache
+		Number of 3M elevation tiles: 28
+	8-digit HUC 08020303: Lower White
+		Number of 3M elevation tiles: 14
+	8-digit HUC 08020304: Big
+		Number of 3M elevation tiles: 5
+	8-digit HUC 08020401: Lower Arkansas
+		Number of 3M elevation tiles: 15
+	8-digit HUC 08020402: Bayou Meto
+		Number of 3M elevation tiles: 16
+	8-digit HUC 08030100: Lower Mississippi-Greenville
+		Number of 3M elevation tiles: 25
+	8-digit HUC 08030201: Little Tallahatchie
+		Number of 3M elevation tiles: 21
+	8-digit HUC 08030202: Tallahatchie
+		Number of 3M elevation tiles: 19
+	8-digit HUC 08030203: Yocona
+		Number of 3M elevation tiles: 14
+	8-digit HUC 08030204: Coldwater
+		Number of 3M elevation tiles: 29
+	8-digit HUC 08030205: Yalobusha
+		Number of 3M elevation tiles: 25
+	8-digit HUC 08030206: Upper Yazoo
+		Number of 3M elevation tiles: 15
+	8-digit HUC 08030207: Big Sunflower
+		Number of 3M elevation tiles: 34
+	8-digit HUC 08030208: Lower Yazoo
+		Number of 3M elevation tiles: 5
+	8-digit HUC 08030209: Deer-Steele
+		Number of 3M elevation tiles: 25
+	8-digit HUC 08040101: Ouachita Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 08040102: Upper Ouachita
+		There are NO 3M elevation tiles
+	8-digit HUC 08040103: Little Missouri
+		Number of 3M elevation tiles: 1
+	8-digit HUC 08040201: Lower Ouachita-Smackover
+		Number of 3M elevation tiles: 3
+	8-digit HUC 08040202: Lower Ouachita-Bayou De Loutre
+		Number of 3M elevation tiles: 18
+	8-digit HUC 08040203: Upper Saline
+		Number of 3M elevation tiles: 4
+	8-digit HUC 08040204: Lower Saline
+		Number of 3M elevation tiles: 9
+	8-digit HUC 08040205: Bayou Bartholomew
+		Number of 3M elevation tiles: 28
+	8-digit HUC 08040206: Bayou D'Arbonne
+		Number of 3M elevation tiles: 28
+	8-digit HUC 08040207: Lower Ouachita
+		Number of 3M elevation tiles: 19
+	8-digit HUC 08040301: Lower Red
+		Number of 3M elevation tiles: 15
+	8-digit HUC 08040302: Castor
+		Number of 3M elevation tiles: 18
+	8-digit HUC 08040303: Dugdemona
+		Number of 3M elevation tiles: 18
+	8-digit HUC 08040304: Little
+		Number of 3M elevation tiles: 19
+	8-digit HUC 08040305: Black
+		Number of 3M elevation tiles: 5
+	8-digit HUC 08040306: Bayou Cocodrie
+		Number of 3M elevation tiles: 11
+	8-digit HUC 08050001: Boeuf
+		Number of 3M elevation tiles: 43
+	8-digit HUC 08050002: Bayou Macon
+		Number of 3M elevation tiles: 31
+	8-digit HUC 08050003: Tensas
+		Number of 3M elevation tiles: 24
+	8-digit HUC 08060100: Lower Mississippi-Natchez
+		Number of 3M elevation tiles: 18
+	8-digit HUC 08060201: Upper Big Black
+		Number of 3M elevation tiles: 8
+	8-digit HUC 08060202: Lower Big Black
+		Number of 3M elevation tiles: 8
+	8-digit HUC 08060203: Bayou Pierre
+		Number of 3M elevation tiles: 3
+	8-digit HUC 08060204: Coles Creek
+		Number of 3M elevation tiles: 6
+	8-digit HUC 08060205: Homochitto
+		Number of 3M elevation tiles: 10
+	8-digit HUC 08060206: Buffalo
+		Number of 3M elevation tiles: 5
+	8-digit HUC 08070100: Lower Mississippi-Baton Rouge
+		Number of 3M elevation tiles: 20
+	8-digit HUC 08070201: Bayou Sara-Thompson
+		Number of 3M elevation tiles: 13
+	8-digit HUC 08070202: Amite
+		Number of 3M elevation tiles: 14
+	8-digit HUC 08070203: Tickfaw
+		Number of 3M elevation tiles: 9
+	8-digit HUC 08070204: Lake Maurepas
+		Number of 3M elevation tiles: 11
+	8-digit HUC 08070205: Tangipahoa
+		Number of 3M elevation tiles: 9
+	8-digit HUC 08070300: Lower Grand
+		Number of 3M elevation tiles: 18
+	8-digit HUC 08080101: Atchafalaya
+		Number of 3M elevation tiles: 55
+	8-digit HUC 08080102: Bayou Teche
+		Number of 3M elevation tiles: 46
+	8-digit HUC 08080103: Vermilion
+		Number of 3M elevation tiles: 30
+	8-digit HUC 08080201: Mermentau Headwaters
+		Number of 3M elevation tiles: 13
+	8-digit HUC 08080202: Mermentau
+		Number of 3M elevation tiles: 24
+	8-digit HUC 08080203: Upper Calcasieu
+		Number of 3M elevation tiles: 19
+	8-digit HUC 08080204: Whisky Chitto
+		Number of 3M elevation tiles: 8
+	8-digit HUC 08080205: West Fork Calcasieu
+		Number of 3M elevation tiles: 9
+	8-digit HUC 08080206: Lower Calcasieu
+		Number of 3M elevation tiles: 16
+	8-digit HUC 08090100: Lower Mississippi-New Orleans
+		Number of 3M elevation tiles: 27
+	8-digit HUC 08090201: Liberty Bayou-Tchefuncta
+		Number of 3M elevation tiles: 16
+	8-digit HUC 08090202: Lake Pontchartrain
+		Number of 3M elevation tiles: 10
+	8-digit HUC 08090203: Eastern Louisiana Coastal
+		Number of 3M elevation tiles: 36
+	8-digit HUC 08090301: East Central Louisiana Coastal
+		Number of 3M elevation tiles: 42
+	8-digit HUC 08090302: West Central Louisiana Coastal
+		Number of 3M elevation tiles: 48
+	8-digit HUC 09010002: Des Lacs
+		There are NO 3M elevation tiles
+	8-digit HUC 09010003: Lower Souris
+		Number of 3M elevation tiles: 7
+	8-digit HUC 09010004: Willow
+		Number of 3M elevation tiles: 16
+	8-digit HUC 09010005: Deep
+		There are NO 3M elevation tiles
+	8-digit HUC 09010006: Long Creek
+		Bad Request
+	8-digit HUC 09010007: Headwaters Souris River
+		Bad Request
+	8-digit HUC 09010008: Moose Mountain Creek-Souris River
+		Bad Request
+	8-digit HUC 09010009: Upper Moose Mountain Creek
+		Bad Request
+	8-digit HUC 09020101: Bois De Sioux
+		Number of 3M elevation tiles: 21
+	8-digit HUC 09020102: Mustinka
+		Number of 3M elevation tiles: 21
+	8-digit HUC 09020103: Otter Tail
+		Number of 3M elevation tiles: 37
+	8-digit HUC 09020104: Upper Red
+		Number of 3M elevation tiles: 18
+	8-digit HUC 09020105: Western Wild Rice
+		Number of 3M elevation tiles: 39
+	8-digit HUC 09020106: Buffalo
+		Number of 3M elevation tiles: 29
+	8-digit HUC 09020107: Elm-Marsh
+		Number of 3M elevation tiles: 20
+	8-digit HUC 09020108: Eastern Wild Rice
+		Number of 3M elevation tiles: 29
+	8-digit HUC 09020109: Goose
+		Number of 3M elevation tiles: 24
+	8-digit HUC 09020201: Devils Lake
+		Number of 3M elevation tiles: 47
+	8-digit HUC 09020202: Upper Sheyenne
+		Number of 3M elevation tiles: 22
+	8-digit HUC 09020203: Middle Sheyenne
+		Number of 3M elevation tiles: 30
+	8-digit HUC 09020204: Lower Sheyenne
+		Number of 3M elevation tiles: 36
+	8-digit HUC 09020205: Maple
+		Number of 3M elevation tiles: 23
+	8-digit HUC 09020301: Sandhill-Wilson
+		Number of 3M elevation tiles: 22
+	8-digit HUC 09020302: Red Lakes
+		Number of 3M elevation tiles: 32
+	8-digit HUC 09020303: Red Lake
+		Number of 3M elevation tiles: 25
+	8-digit HUC 09020304: Thief
+		Number of 3M elevation tiles: 22
+	8-digit HUC 09020305: Clearwater
+		Number of 3M elevation tiles: 20
+	8-digit HUC 09020306: Grand Marais-Red
+		Number of 3M elevation tiles: 12
+	8-digit HUC 09020307: Turtle
+		Number of 3M elevation tiles: 16
+	8-digit HUC 09020308: Forest
+		Number of 3M elevation tiles: 18
+	8-digit HUC 09020309: Snake
+		Number of 3M elevation tiles: 17
+	8-digit HUC 09020310: Park
+		Number of 3M elevation tiles: 14
+	8-digit HUC 09020311: Middle Red
+		Number of 3M elevation tiles: 31
+	8-digit HUC 09020312: Two Rivers
+		Number of 3M elevation tiles: 16
+	8-digit HUC 09020314: Roseau
+		Number of 3M elevation tiles: 18
+	8-digit HUC 09020315: Upper Pembina River
+		Bad Request
+	8-digit HUC 09020316: Lower Pembina River
+		Bad Request
+	8-digit HUC 09020317: Morris River
+		Bad Request
+	8-digit HUC 09020318: Rat River-Tourond Creek
+		Bad Request
+	8-digit HUC 09020319: La Salle River
+		Bad Request
+	8-digit HUC 09030001: Rainy Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 09030002: Vermilion
+		There are NO 3M elevation tiles
+	8-digit HUC 09030003: Rainy Lake
+		Number of 3M elevation tiles: 3
+	8-digit HUC 09030005: Little Fork
+		Number of 3M elevation tiles: 5
+	8-digit HUC 09030006: Big Fork
+		Bad Request
+	8-digit HUC 09030007: Rapid
+		Number of 3M elevation tiles: 13
+	8-digit HUC 09030008: Lower Rainy
+		Number of 3M elevation tiles: 7
+	8-digit HUC 09030009: Lake of the Woods
+		Number of 3M elevation tiles: 12
+	8-digit HUC 09030010: Big Turtle River-Rainy Lake
+		Bad Request
+	8-digit HUC 09030011: Shoal Lake
+		Bad Request
+	8-digit HUC 09040001: St. Marys
+		Bad Request
+	8-digit HUC 09040002: Belly
+		Bad Request
+	8-digit HUC 09040003: Upper Oldman River
+		Bad Request
+	8-digit HUC 09040004: Oldman River-Willow Creek
+		Bad Request
+	8-digit HUC 10020001: Red Rock
+		There are NO 3M elevation tiles
+	8-digit HUC 10020002: Beaverhead
+		There are NO 3M elevation tiles
+	8-digit HUC 10020003: Ruby
+		There are NO 3M elevation tiles
+	8-digit HUC 10020004: Big Hole
+		There are NO 3M elevation tiles
+	8-digit HUC 10020005: Jefferson
+		There are NO 3M elevation tiles
+	8-digit HUC 10020006: Boulder
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10020007: Madison
+		There are NO 3M elevation tiles
+	8-digit HUC 10020008: Gallatin
+		There are NO 3M elevation tiles
+	8-digit HUC 10030101: Upper Missouri
+		Number of 3M elevation tiles: 7
+	8-digit HUC 10030102: Upper Missouri-Dearborn
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10030103: Smith
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10030104: Sun
+		There are NO 3M elevation tiles
+	8-digit HUC 10030105: Belt
+		There are NO 3M elevation tiles
+	8-digit HUC 10030201: Two Medicine
+		There are NO 3M elevation tiles
+	8-digit HUC 10030202: Cut Bank
+		There are NO 3M elevation tiles
+	8-digit HUC 10030203: Marias
+		There are NO 3M elevation tiles
+	8-digit HUC 10030204: Willow
+		There are NO 3M elevation tiles
+	8-digit HUC 10030205: Teton
+		There are NO 3M elevation tiles
+	8-digit HUC 10040101: Bullwhacker-Dog
+		There are NO 3M elevation tiles
+	8-digit HUC 10040102: Arrow
+		There are NO 3M elevation tiles
+	8-digit HUC 10040103: Judith
+		There are NO 3M elevation tiles
+	8-digit HUC 10040104: Fort Peck Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 10040105: Big Dry
+		There are NO 3M elevation tiles
+	8-digit HUC 10040106: Little Dry
+		There are NO 3M elevation tiles
+	8-digit HUC 10040201: Upper Musselshell
+		Number of 3M elevation tiles: 6
+	8-digit HUC 10040202: Middle Musselshell
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10040203: Flatwillow
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10040204: Box Elder
+		There are NO 3M elevation tiles
+	8-digit HUC 10040205: Lower Musselshell
+		There are NO 3M elevation tiles
+	8-digit HUC 10050001: Milk Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 10050002: Upper Milk
+		There are NO 3M elevation tiles
+	8-digit HUC 10050003: Wild Horse Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 10050004: Middle Milk
+		There are NO 3M elevation tiles
+	8-digit HUC 10050005: Big Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 10050006: Sage
+		There are NO 3M elevation tiles
+	8-digit HUC 10050007: Lodge
+		There are NO 3M elevation tiles
+	8-digit HUC 10050008: Battle
+		There are NO 3M elevation tiles
+	8-digit HUC 10050009: Peoples
+		There are NO 3M elevation tiles
+	8-digit HUC 10050010: Cottonwood
+		There are NO 3M elevation tiles
+	8-digit HUC 10050011: Whitewater
+		There are NO 3M elevation tiles
+	8-digit HUC 10050012: Lower Milk
+		There are NO 3M elevation tiles
+	8-digit HUC 10050013: Frenchman
+		There are NO 3M elevation tiles
+	8-digit HUC 10050014: Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10050015: Rock
+		There are NO 3M elevation tiles
+	8-digit HUC 10050016: Porcupine
+		There are NO 3M elevation tiles
+	8-digit HUC 10060001: Prairie Elk-Wolf
+		There are NO 3M elevation tiles
+	8-digit HUC 10060002: Redwater
+		There are NO 3M elevation tiles
+	8-digit HUC 10060003: Poplar
+		There are NO 3M elevation tiles
+	8-digit HUC 10060004: West Fork Poplar
+		There are NO 3M elevation tiles
+	8-digit HUC 10060005: Charlie-Little Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 10060006: Big Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 10060007: Brush Lake Closed Basin
+		There are NO 3M elevation tiles
+	8-digit HUC 10070001: Yellowstone Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 10070002: Upper Yellowstone
+		There are NO 3M elevation tiles
+	8-digit HUC 10070003: Shields
+		There are NO 3M elevation tiles
+	8-digit HUC 10070004: Upper Yellowstone-Lake Basin
+		There are NO 3M elevation tiles
+	8-digit HUC 10070005: Stillwater
+		There are NO 3M elevation tiles
+	8-digit HUC 10070006: Clarks Fork Yellowstone
+		There are NO 3M elevation tiles
+	8-digit HUC 10070007: Upper Yellowstone-Pompeys Pillar
+		There are NO 3M elevation tiles
+	8-digit HUC 10070008: Pryor
+		There are NO 3M elevation tiles
+	8-digit HUC 10080001: Upper Wind
+		There are NO 3M elevation tiles
+	8-digit HUC 10080002: Little Wind
+		There are NO 3M elevation tiles
+	8-digit HUC 10080003: Popo Agie
+		There are NO 3M elevation tiles
+	8-digit HUC 10080004: Muskrat
+		There are NO 3M elevation tiles
+	8-digit HUC 10080005: Lower Wind
+		There are NO 3M elevation tiles
+	8-digit HUC 10080006: Badwater
+		There are NO 3M elevation tiles
+	8-digit HUC 10080007: Upper Bighorn
+		There are NO 3M elevation tiles
+	8-digit HUC 10080008: Nowood
+		There are NO 3M elevation tiles
+	8-digit HUC 10080009: Greybull
+		There are NO 3M elevation tiles
+	8-digit HUC 10080010: Big Horn Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 10080011: Dry
+		There are NO 3M elevation tiles
+	8-digit HUC 10080012: North Fork Shoshone
+		There are NO 3M elevation tiles
+	8-digit HUC 10080013: South Fork Shoshone
+		There are NO 3M elevation tiles
+	8-digit HUC 10080014: Shoshone
+		There are NO 3M elevation tiles
+	8-digit HUC 10080015: Lower Bighorn
+		There are NO 3M elevation tiles
+	8-digit HUC 10080016: Little Bighorn
+		There are NO 3M elevation tiles
+	8-digit HUC 10090101: Upper Tongue
+		There are NO 3M elevation tiles
+	8-digit HUC 10090102: Lower Tongue
+		There are NO 3M elevation tiles
+	8-digit HUC 10090201: Middle Fork Powder
+		There are NO 3M elevation tiles
+	8-digit HUC 10090202: Upper Powder
+		There are NO 3M elevation tiles
+	8-digit HUC 10090203: South Fork Powder
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10090204: Salt
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10090205: Crazy Woman
+		There are NO 3M elevation tiles
+	8-digit HUC 10090206: Clear
+		There are NO 3M elevation tiles
+	8-digit HUC 10090207: Middle Powder
+		There are NO 3M elevation tiles
+	8-digit HUC 10090208: Little Powder
+		There are NO 3M elevation tiles
+	8-digit HUC 10090209: Lower Powder
+		There are NO 3M elevation tiles
+	8-digit HUC 10090210: Mizpah
+		There are NO 3M elevation tiles
+	8-digit HUC 10100001: Lower Yellowstone-Sunday
+		There are NO 3M elevation tiles
+	8-digit HUC 10100002: Big Porcupine
+		There are NO 3M elevation tiles
+	8-digit HUC 10100003: Rosebud
+		There are NO 3M elevation tiles
+	8-digit HUC 10100004: Lower Yellowstone
+		There are NO 3M elevation tiles
+	8-digit HUC 10100005: O'Fallon
+		There are NO 3M elevation tiles
+	8-digit HUC 10110101: Lake Sakakawea
+		There are NO 3M elevation tiles
+	8-digit HUC 10110102: Little Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 10110201: Upper Little Missouri
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10110202: Boxelder
+		There are NO 3M elevation tiles
+	8-digit HUC 10110203: Middle Little Missouri
+		There are NO 3M elevation tiles
+	8-digit HUC 10110204: Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10110205: Lower Little Missouri
+		There are NO 3M elevation tiles
+	8-digit HUC 10120101: Antelope
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10120102: Dry Fork Cheyenne
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10120103: Upper Cheyenne
+		There are NO 3M elevation tiles
+	8-digit HUC 10120104: Lance
+		There are NO 3M elevation tiles
+	8-digit HUC 10120105: Lightning
+		There are NO 3M elevation tiles
+	8-digit HUC 10120106: Angostura Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 10120107: Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10120108: Hat
+		There are NO 3M elevation tiles
+	8-digit HUC 10120109: Middle Cheyenne-Spring
+		There are NO 3M elevation tiles
+	8-digit HUC 10120110: Rapid
+		There are NO 3M elevation tiles
+	8-digit HUC 10120111: Middle Cheyenne-Elk
+		There are NO 3M elevation tiles
+	8-digit HUC 10120112: Lower Cheyenne
+		There are NO 3M elevation tiles
+	8-digit HUC 10120113: Cherry
+		There are NO 3M elevation tiles
+	8-digit HUC 10120201: Upper Belle Fourche
+		There are NO 3M elevation tiles
+	8-digit HUC 10120202: Lower Belle Fourche
+		There are NO 3M elevation tiles
+	8-digit HUC 10120203: Redwater
+		There are NO 3M elevation tiles
+	8-digit HUC 10130101: Painted Woods-Square Butte
+		Number of 3M elevation tiles: 6
+	8-digit HUC 10130102: Upper Lake Oahe
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10130103: Apple Creek
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10130104: Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10130105: Lower Lake Oahe
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10130106: West Missouri Coteau
+		There are NO 3M elevation tiles
+	8-digit HUC 10130201: Knife
+		There are NO 3M elevation tiles
+	8-digit HUC 10130202: Upper Heart
+		There are NO 3M elevation tiles
+	8-digit HUC 10130203: Lower Heart
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10130204: Upper Cannonball
+		There are NO 3M elevation tiles
+	8-digit HUC 10130205: Cedar
+		There are NO 3M elevation tiles
+	8-digit HUC 10130206: Lower Cannonball
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10130301: North Fork Grand
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10130302: South Fork Grand
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10130303: Grand
+		There are NO 3M elevation tiles
+	8-digit HUC 10130304: South Fork Moreau
+		There are NO 3M elevation tiles
+	8-digit HUC 10130305: Upper Moreau
+		There are NO 3M elevation tiles
+	8-digit HUC 10130306: Lower Moreau
+		There are NO 3M elevation tiles
+	8-digit HUC 10140101: Fort Randall Reservoir
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10140102: Bad
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10140103: Medicine Knoll
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10140104: Medicine
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10140105: Crow
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10140201: Upper White
+		There are NO 3M elevation tiles
+	8-digit HUC 10140202: Middle White
+		There are NO 3M elevation tiles
+	8-digit HUC 10140203: Little White
+		There are NO 3M elevation tiles
+	8-digit HUC 10140204: Lower White
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10150002: Niobrara Headwaters
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10150003: Upper Niobrara
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10150004: Middle Niobrara
+		There are NO 3M elevation tiles
+	8-digit HUC 10150005: Snake
+		There are NO 3M elevation tiles
+	8-digit HUC 10150006: Keya Paha
+		There are NO 3M elevation tiles
+	8-digit HUC 10150007: Lower Niobrara
+		There are NO 3M elevation tiles
+	8-digit HUC 10160001: James Headwaters
+		Number of 3M elevation tiles: 18
+	8-digit HUC 10160002: Pipestem
+		Number of 3M elevation tiles: 5
+	8-digit HUC 10160003: Upper James
+		Number of 3M elevation tiles: 38
+	8-digit HUC 10160004: Elm
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10160005: Mud
+		Number of 3M elevation tiles: 19
+	8-digit HUC 10160006: Middle James
+		Number of 3M elevation tiles: 49
+	8-digit HUC 10160007: North Fork Snake
+		There are NO 3M elevation tiles
+	8-digit HUC 10160008: Snake
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10160009: Turtle
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10160011: Lower James
+		Number of 3M elevation tiles: 60
+	8-digit HUC 10170101: Lewis and Clark Lake
+		Number of 3M elevation tiles: 44
+	8-digit HUC 10170102: Vermillion
+		Number of 3M elevation tiles: 60
+	8-digit HUC 10170103: Lake Thompson
+		Number of 3M elevation tiles: 14
+	8-digit HUC 10170104: Ponca
+		Bad Request
+	8-digit HUC 10170201: Upper Big Sioux
+		Number of 3M elevation tiles: 32
+	8-digit HUC 10170202: Middle Big Sioux
+		Number of 3M elevation tiles: 40
+	8-digit HUC 10170203: Lower Big Sioux
+		Number of 3M elevation tiles: 89
+	8-digit HUC 10170204: Rock
+		Number of 3M elevation tiles: 28
+	8-digit HUC 10180001: North Platte Headwaters
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10180002: Upper North Platte
+		There are NO 3M elevation tiles
+	8-digit HUC 10180003: Pathfinder-Seminoe Reservoirs
+		There are NO 3M elevation tiles
+	8-digit HUC 10180004: Medicine Bow
+		There are NO 3M elevation tiles
+	8-digit HUC 10180005: Little Medicine Bow
+		There are NO 3M elevation tiles
+	8-digit HUC 10180006: Sweetwater
+		There are NO 3M elevation tiles
+	8-digit HUC 10180007: Middle North Platte-Casper
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10180008: Glendo Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 10180009: Middle North Platte-Scotts Bluff
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10180010: Upper Laramie
+		There are NO 3M elevation tiles
+	8-digit HUC 10180011: Lower Laramie
+		There are NO 3M elevation tiles
+	8-digit HUC 10180012: Horse
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10180013: Pumpkin
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10180014: Lower North Platte
+		Number of 3M elevation tiles: 5
+	8-digit HUC 10190001: South Platte Headwaters
+		Number of 3M elevation tiles: 5
+	8-digit HUC 10190002: Upper South Platte
+		Number of 3M elevation tiles: 6
+	8-digit HUC 10190003: Middle South Platte-Cherry Creek
+		Number of 3M elevation tiles: 11
+	8-digit HUC 10190004: Clear
+		Number of 3M elevation tiles: 7
+	8-digit HUC 10190005: St. Vrain
+		Number of 3M elevation tiles: 7
+	8-digit HUC 10190006: Big Thompson
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10190007: Cache La Poudre
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10190008: Lone Tree-Owl
+		There are NO 3M elevation tiles
+	8-digit HUC 10190009: Crow
+		There are NO 3M elevation tiles
+	8-digit HUC 10190010: Kiowa
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10190011: Bijou
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10190012: Middle South Platte-Sterling
+		There are NO 3M elevation tiles
+	8-digit HUC 10190013: Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10190014: Pawnee
+		There are NO 3M elevation tiles
+	8-digit HUC 10190015: Upper Lodgepole
+		There are NO 3M elevation tiles
+	8-digit HUC 10190016: Lower Lodgepole
+		There are NO 3M elevation tiles
+	8-digit HUC 10190017: Sidney Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 10190018: Lower South Platte
+		Number of 3M elevation tiles: 7
+	8-digit HUC 10200101: Middle Platte-Buffalo
+		Number of 3M elevation tiles: 27
+	8-digit HUC 10200102: Wood
+		Number of 3M elevation tiles: 13
+	8-digit HUC 10200103: Middle Platte-Prairie
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10200201: Lower Platte-Shell
+		Number of 3M elevation tiles: 7
+	8-digit HUC 10200202: Lower Platte
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10200203: Salt
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10210001: Upper Middle Loup
+		There are NO 3M elevation tiles
+	8-digit HUC 10210002: Dismal
+		There are NO 3M elevation tiles
+	8-digit HUC 10210003: Lower Middle Loup
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10210004: South Loup
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10210005: Mud
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10210006: Upper North Loup
+		There are NO 3M elevation tiles
+	8-digit HUC 10210007: Lower North Loup
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10210008: Calamus
+		There are NO 3M elevation tiles
+	8-digit HUC 10210009: Loup
+		Number of 3M elevation tiles: 6
+	8-digit HUC 10210010: Cedar
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10220001: Upper Elkhorn
+		There are NO 3M elevation tiles
+	8-digit HUC 10220002: North Fork Elkhorn
+		There are NO 3M elevation tiles
+	8-digit HUC 10220003: Lower Elkhorn
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10220004: Logan
+		Number of 3M elevation tiles: 11
+	8-digit HUC 10230001: Blackbird-Soldier
+		Number of 3M elevation tiles: 41
+	8-digit HUC 10230002: Floyd
+		Number of 3M elevation tiles: 24
+	8-digit HUC 10230003: Little Sioux
+		Number of 3M elevation tiles: 39
+	8-digit HUC 10230004: Monona-Harrison Ditch
+		Number of 3M elevation tiles: 31
+	8-digit HUC 10230005: Maple
+		Number of 3M elevation tiles: 14
+	8-digit HUC 10230006: Big Papillion-Mosquito
+		Number of 3M elevation tiles: 25
+	8-digit HUC 10230007: Boyer
+		Number of 3M elevation tiles: 21
+	8-digit HUC 10240001: Keg-Weeping Water
+		Number of 3M elevation tiles: 19
+	8-digit HUC 10240002: West Nishnabotna
+		Number of 3M elevation tiles: 27
+	8-digit HUC 10240003: East Nishnabotna
+		Number of 3M elevation tiles: 20
+	8-digit HUC 10240004: Nishnabotna
+		Number of 3M elevation tiles: 11
+	8-digit HUC 10240005: Tarkio-Wolf
+		Number of 3M elevation tiles: 35
+	8-digit HUC 10240006: Little Nemaha
+		Number of 3M elevation tiles: 11
+	8-digit HUC 10240007: South Fork Big Nemaha
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10240008: Big Nemaha
+		Number of 3M elevation tiles: 19
+	8-digit HUC 10240009: West Nodaway
+		Number of 3M elevation tiles: 18
+	8-digit HUC 10240010: Nodaway
+		Number of 3M elevation tiles: 17
+	8-digit HUC 10240011: Independence-Sugar
+		Number of 3M elevation tiles: 40
+	8-digit HUC 10240012: Platte
+		Number of 3M elevation tiles: 38
+	8-digit HUC 10240013: One Hundred and Two
+		Number of 3M elevation tiles: 16
+	8-digit HUC 10250001: Arikaree
+		There are NO 3M elevation tiles
+	8-digit HUC 10250002: North Fork Republican
+		There are NO 3M elevation tiles
+	8-digit HUC 10250003: South Fork Republican
+		There are NO 3M elevation tiles
+	8-digit HUC 10250004: Upper Republican
+		Number of 3M elevation tiles: 10
+	8-digit HUC 10250005: Frenchman
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10250006: Stinking Water
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10250007: Red Willow
+		Number of 3M elevation tiles: 10
+	8-digit HUC 10250008: Medicine
+		Number of 3M elevation tiles: 10
+	8-digit HUC 10250009: Harlan County Reservoir
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10250010: Upper Sappa
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10250011: Lower Sappa
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10250012: South Fork Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10250013: Little Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 10250014: Beaver
+		Number of 3M elevation tiles: 9
+	8-digit HUC 10250015: Prairie Dog
+		Number of 3M elevation tiles: 5
+	8-digit HUC 10250016: Middle Republican
+		Number of 3M elevation tiles: 28
+	8-digit HUC 10250017: Lower Republican
+		Number of 3M elevation tiles: 45
+	8-digit HUC 10260001: Smoky Hill Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 10260002: North Fork Smoky Hill
+		There are NO 3M elevation tiles
+	8-digit HUC 10260003: Upper Smoky Hill
+		Number of 3M elevation tiles: 3
+	8-digit HUC 10260004: Ladder
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10260005: Hackberry
+		There are NO 3M elevation tiles
+	8-digit HUC 10260006: Middle Smoky Hill
+		Number of 3M elevation tiles: 16
+	8-digit HUC 10260007: Big
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10260008: Lower Smoky Hill
+		Number of 3M elevation tiles: 49
+	8-digit HUC 10260009: Upper Saline
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10260010: Lower Saline
+		Number of 3M elevation tiles: 26
+	8-digit HUC 10260011: Upper North Fork Solomon
+		There are NO 3M elevation tiles
+	8-digit HUC 10260012: Lower North Fork Solomon
+		Number of 3M elevation tiles: 9
+	8-digit HUC 10260013: Upper South Fork Solomon
+		There are NO 3M elevation tiles
+	8-digit HUC 10260014: Lower South Fork Solomon
+		Number of 3M elevation tiles: 4
+	8-digit HUC 10260015: Solomon
+		Number of 3M elevation tiles: 39
+	8-digit HUC 10270101: Upper Kansas
+		Number of 3M elevation tiles: 38
+	8-digit HUC 10270102: Middle Kansas
+		Number of 3M elevation tiles: 58
+	8-digit HUC 10270103: Delaware
+		Number of 3M elevation tiles: 24
+	8-digit HUC 10270104: Lower Kansas, Kansas
+		Number of 3M elevation tiles: 67
+	8-digit HUC 10270201: Upper Big Blue
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10270202: Middle Big Blue
+		Number of 3M elevation tiles: 20
+	8-digit HUC 10270203: West Fork Big Blue
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10270204: Turkey
+		Number of 3M elevation tiles: 11
+	8-digit HUC 10270205: Lower Big Blue
+		Number of 3M elevation tiles: 49
+	8-digit HUC 10270206: Upper Little Blue
+		Number of 3M elevation tiles: 32
+	8-digit HUC 10270207: Lower Little Blue
+		Number of 3M elevation tiles: 30
+	8-digit HUC 10280101: Upper Grand
+		Number of 3M elevation tiles: 45
+	8-digit HUC 10280102: Thompson
+		Number of 3M elevation tiles: 39
+	8-digit HUC 10280103: Lower Grand
+		Number of 3M elevation tiles: 49
+	8-digit HUC 10280201: Upper Chariton
+		Number of 3M elevation tiles: 28
+	8-digit HUC 10280202: Lower Chariton
+		Number of 3M elevation tiles: 38
+	8-digit HUC 10280203: Little Chariton
+		Number of 3M elevation tiles: 29
+	8-digit HUC 10290101: Upper Marais Des Cygnes
+		Number of 3M elevation tiles: 38
+	8-digit HUC 10290102: Lower Marais Des Cygnes
+		Number of 3M elevation tiles: 32
+	8-digit HUC 10290103: Little Osage
+		Number of 3M elevation tiles: 6
+	8-digit HUC 10290104: Marmaton
+		Number of 3M elevation tiles: 9
+	8-digit HUC 10290105: Harry S. Truman Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 10290106: Sac
+		Number of 3M elevation tiles: 8
+	8-digit HUC 10290107: Pomme De Terre
+		Number of 3M elevation tiles: 2
+	8-digit HUC 10290108: South Grand
+		Number of 3M elevation tiles: 18
+	8-digit HUC 10290109: Lake of the Ozarks
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10290110: Niangua
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10290111: Lower Osage
+		Number of 3M elevation tiles: 9
+	8-digit HUC 10290201: Upper Gasconade
+		There are NO 3M elevation tiles
+	8-digit HUC 10290202: Big Piney
+		Number of 3M elevation tiles: 1
+	8-digit HUC 10290203: Lower Gasconade
+		Number of 3M elevation tiles: 15
+	8-digit HUC 10300101: Lower Missouri-Crooked
+		Number of 3M elevation tiles: 77
+	8-digit HUC 10300102: Lower Missouri-Moreau
+		Number of 3M elevation tiles: 60
+	8-digit HUC 10300103: Lamine
+		Number of 3M elevation tiles: 9
+	8-digit HUC 10300104: Blackwater
+		Number of 3M elevation tiles: 29
+	8-digit HUC 10300200: Lower Missouri
+		Number of 3M elevation tiles: 53
+	8-digit HUC 11010001: Beaver Reservoir
+		Number of 3M elevation tiles: 14
+	8-digit HUC 11010002: James
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11010003: Bull Shoals Lake
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11010004: Middle White
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11010005: Buffalo
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11010006: North Fork White
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11010007: Upper Black
+		Number of 3M elevation tiles: 21
+	8-digit HUC 11010008: Current
+		Number of 3M elevation tiles: 7
+	8-digit HUC 11010009: Lower Black
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11010010: Spring
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11010011: Eleven Point
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11010012: Strawberry
+		There are NO 3M elevation tiles
+	8-digit HUC 11010013: Upper White-Village
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11010014: Little Red
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11020001: Arkansas Headwaters
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11020002: Upper Arkansas
+		There are NO 3M elevation tiles
+	8-digit HUC 11020003: Fountain
+		There are NO 3M elevation tiles
+	8-digit HUC 11020004: Chico
+		There are NO 3M elevation tiles
+	8-digit HUC 11020005: Upper Arkansas-Lake Meredith
+		There are NO 3M elevation tiles
+	8-digit HUC 11020006: Huerfano
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11020007: Apishapa
+		There are NO 3M elevation tiles
+	8-digit HUC 11020008: Horse
+		There are NO 3M elevation tiles
+	8-digit HUC 11020009: Upper Arkansas-John Martin Reservoir
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11020010: Purgatoire
+		There are NO 3M elevation tiles
+	8-digit HUC 11020011: Big Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 11020012: Rush
+		There are NO 3M elevation tiles
+	8-digit HUC 11020013: Two Butte
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11030001: Middle Arkansas-Lake McKinney
+		Number of 3M elevation tiles: 20
+	8-digit HUC 11030002: Whitewoman
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11030003: Arkansas-Dodge City
+		Number of 3M elevation tiles: 15
+	8-digit HUC 11030004: Coon-Pickerel
+		Number of 3M elevation tiles: 20
+	8-digit HUC 11030005: Pawnee
+		Number of 3M elevation tiles: 14
+	8-digit HUC 11030006: Buckner
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11030007: Upper Walnut Creek
+		Number of 3M elevation tiles: 7
+	8-digit HUC 11030008: Lower Walnut Creek
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11030009: Rattlesnake
+		Number of 3M elevation tiles: 12
+	8-digit HUC 11030010: Gar-Peace
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11030011: Cow
+		Number of 3M elevation tiles: 24
+	8-digit HUC 11030012: Little Arkansas
+		Number of 3M elevation tiles: 26
+	8-digit HUC 11030013: Middle Arkansas-Slate
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11030014: North Fork Ninnescah
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11030015: South Fork Ninnescah
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11030016: Ninnescah
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11030017: Upper Walnut River
+		Number of 3M elevation tiles: 22
+	8-digit HUC 11030018: Lower Walnut River
+		Number of 3M elevation tiles: 10
+	8-digit HUC 11040001: Cimarron Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 11040002: Upper Cimarron
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11040003: North Fork Cimarron
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11040004: Sand Arroyo
+		Number of 3M elevation tiles: 4
+	8-digit HUC 11040005: Bear
+		Number of 3M elevation tiles: 10
+	8-digit HUC 11040006: Upper Cimarron-Liberal
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11040007: Crooked
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11040008: Upper Cimarron-Bluff
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11050001: Lower Cimarron-Eagle Chief
+		There are NO 3M elevation tiles
+	8-digit HUC 11050002: Lower Cimarron-Skeleton
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11050003: Lower Cimarron
+		Number of 3M elevation tiles: 10
+	8-digit HUC 11060001: Kaw Lake
+		Number of 3M elevation tiles: 4
+	8-digit HUC 11060002: Upper Salt Fork Arkansas
+		There are NO 3M elevation tiles
+	8-digit HUC 11060003: Medicine Lodge
+		There are NO 3M elevation tiles
+	8-digit HUC 11060004: Lower Salt Fork Arkansas
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11060005: Chikaskia
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11060006: Black Bear-Red Rock
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11070101: Upper Verdigris
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11070102: Fall
+		Number of 3M elevation tiles: 7
+	8-digit HUC 11070103: Middle Verdigris
+		There are NO 3M elevation tiles
+	8-digit HUC 11070104: Elk
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11070105: Lower Verdigris
+		There are NO 3M elevation tiles
+	8-digit HUC 11070106: Caney
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11070107: Bird
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11070201: Neosho Headwaters
+		Number of 3M elevation tiles: 33
+	8-digit HUC 11070202: Upper Cottonwood
+		Number of 3M elevation tiles: 25
+	8-digit HUC 11070203: Lower Cottonwood
+		Number of 3M elevation tiles: 21
+	8-digit HUC 11070204: Upper Neosho
+		Number of 3M elevation tiles: 10
+	8-digit HUC 11070205: Middle Neosho
+		Number of 3M elevation tiles: 13
+	8-digit HUC 11070206: Lake O' The Cherokees
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11070207: Spring
+		Number of 3M elevation tiles: 26
+	8-digit HUC 11070208: Elk
+		Number of 3M elevation tiles: 7
+	8-digit HUC 11070209: Lower Neosho
+		Number of 3M elevation tiles: 9
+	8-digit HUC 11080001: Canadian Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 11080002: Cimarron
+		There are NO 3M elevation tiles
+	8-digit HUC 11080003: Upper Canadian
+		There are NO 3M elevation tiles
+	8-digit HUC 11080004: Mora
+		There are NO 3M elevation tiles
+	8-digit HUC 11080005: Conchas
+		There are NO 3M elevation tiles
+	8-digit HUC 11080006: Upper Canadian-Ute Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 11080007: Ute
+		There are NO 3M elevation tiles
+	8-digit HUC 11080008: Revuelto
+		There are NO 3M elevation tiles
+	8-digit HUC 11090101: Middle Canadian-Trujillo
+		There are NO 3M elevation tiles
+	8-digit HUC 11090102: Punta de Agua
+		There are NO 3M elevation tiles
+	8-digit HUC 11090103: Rita Blanca
+		There are NO 3M elevation tiles
+	8-digit HUC 11090104: Carrizo
+		There are NO 3M elevation tiles
+	8-digit HUC 11090105: Lake Meredith
+		There are NO 3M elevation tiles
+	8-digit HUC 11090106: Middle Canadian-Spring
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11090201: Lower Canadian-Deer
+		Number of 3M elevation tiles: 11
+	8-digit HUC 11090202: Lower Canadian-Walnut
+		Number of 3M elevation tiles: 16
+	8-digit HUC 11090203: Little
+		Number of 3M elevation tiles: 12
+	8-digit HUC 11090204: Lower Canadian
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11100101: Upper Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 11100102: Middle Beaver
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11100103: Coldwater
+		There are NO 3M elevation tiles
+	8-digit HUC 11100104: Palo Duro
+		There are NO 3M elevation tiles
+	8-digit HUC 11100201: Lower Beaver
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11100202: Upper Wolf
+		There are NO 3M elevation tiles
+	8-digit HUC 11100203: Lower Wolf
+		There are NO 3M elevation tiles
+	8-digit HUC 11100301: Middle North Canadian
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11100302: Lower North Canadian
+		Number of 3M elevation tiles: 14
+	8-digit HUC 11100303: Deep Fork
+		Number of 3M elevation tiles: 13
+	8-digit HUC 11110101: Polecat-Snake
+		There are NO 3M elevation tiles
+	8-digit HUC 11110102: Dirty-Greenleaf
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11110103: Illinois
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11110104: Robert S. Kerr Reservoir
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11110105: Poteau
+		There are NO 3M elevation tiles
+	8-digit HUC 11110201: Frog-Mulberry
+		Number of 3M elevation tiles: 4
+	8-digit HUC 11110202: Dardanelle Reservoir
+		Number of 3M elevation tiles: 9
+	8-digit HUC 11110203: Lake Conway-Point Remove
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11110204: Petit Jean
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11110205: Cadron
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11110206: Fourche La Fave
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11110207: Lower Arkansas-Maumelle
+		Number of 3M elevation tiles: 12
+	8-digit HUC 11120101: Tierra Blanca
+		There are NO 3M elevation tiles
+	8-digit HUC 11120102: Palo Duro
+		There are NO 3M elevation tiles
+	8-digit HUC 11120103: Upper Prairie Dog Town Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11120104: Tule
+		There are NO 3M elevation tiles
+	8-digit HUC 11120105: Lower Prairie Dog Town Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11120201: Upper Salt Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11120202: Lower Salt Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11120301: Upper North Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11120302: Middle North Fork Red
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11120303: Lower North Fork Red
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11120304: Elm Fork Red
+		There are NO 3M elevation tiles
+	8-digit HUC 11130101: Groesbeck-Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 11130102: Blue-China
+		There are NO 3M elevation tiles
+	8-digit HUC 11130103: North Pease
+		There are NO 3M elevation tiles
+	8-digit HUC 11130104: Middle Pease
+		There are NO 3M elevation tiles
+	8-digit HUC 11130105: Pease
+		There are NO 3M elevation tiles
+	8-digit HUC 11130201: Farmers-Mud
+		Number of 3M elevation tiles: 6
+	8-digit HUC 11130202: Cache
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11130203: West Cache
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11130204: North Wichita
+		There are NO 3M elevation tiles
+	8-digit HUC 11130205: South Wichita
+		There are NO 3M elevation tiles
+	8-digit HUC 11130206: Wichita
+		There are NO 3M elevation tiles
+	8-digit HUC 11130207: Southern Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 11130208: Northern Beaver
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11130209: Little Wichita
+		There are NO 3M elevation tiles
+	8-digit HUC 11130210: Lake Texoma
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11130301: Washita Headwaters
+		Number of 3M elevation tiles: 11
+	8-digit HUC 11130302: Upper Washita
+		Number of 3M elevation tiles: 27
+	8-digit HUC 11130303: Middle Washita
+		Number of 3M elevation tiles: 21
+	8-digit HUC 11130304: Lower Washita
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11140101: Bois D'arc-Island
+		Number of 3M elevation tiles: 4
+	8-digit HUC 11140102: Blue
+		Number of 3M elevation tiles: 9
+	8-digit HUC 11140103: Muddy Boggy
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11140104: Clear Boggy
+		Number of 3M elevation tiles: 12
+	8-digit HUC 11140105: Kiamichi
+		Number of 3M elevation tiles: 2
+	8-digit HUC 11140106: Pecan-Waterhole
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11140107: Upper Little
+		There are NO 3M elevation tiles
+	8-digit HUC 11140108: Mountain Fork
+		There are NO 3M elevation tiles
+	8-digit HUC 11140109: Lower Little Arkansas, Oklahoma
+		Number of 3M elevation tiles: 1
+	8-digit HUC 11140201: McKinney-Posten Bayous
+		Number of 3M elevation tiles: 8
+	8-digit HUC 11140202: Middle Red-Coushatta
+		Number of 3M elevation tiles: 13
+	8-digit HUC 11140203: Loggy Bayou
+		Number of 3M elevation tiles: 17
+	8-digit HUC 11140204: Red Chute
+		Number of 3M elevation tiles: 9
+	8-digit HUC 11140205: Bodcau Bayou
+		Number of 3M elevation tiles: 11
+	8-digit HUC 11140206: Bayou Pierre
+		Number of 3M elevation tiles: 22
+	8-digit HUC 11140207: Lower Red-Lake Iatt
+		Number of 3M elevation tiles: 26
+	8-digit HUC 11140208: Saline Bayou
+		Number of 3M elevation tiles: 11
+	8-digit HUC 11140209: Black Lake Bayou
+		Number of 3M elevation tiles: 19
+	8-digit HUC 11140301: Sulphur Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 11140302: Lower Sulpher
+		Number of 3M elevation tiles: 3
+	8-digit HUC 11140303: White Oak Bayou
+		There are NO 3M elevation tiles
+	8-digit HUC 11140304: Cross Bayou
+		Number of 3M elevation tiles: 9
+	8-digit HUC 11140305: Lake O'the Pines
+		There are NO 3M elevation tiles
+	8-digit HUC 11140306: Caddo Lake
+		Number of 3M elevation tiles: 5
+	8-digit HUC 11140307: Little Cypress
+		There are NO 3M elevation tiles
+	8-digit HUC 12010001: Upper Sabine
+		There are NO 3M elevation tiles
+	8-digit HUC 12010002: Middle Sabine
+		Number of 3M elevation tiles: 8
+	8-digit HUC 12010003: Lake Fork
+		There are NO 3M elevation tiles
+	8-digit HUC 12010004: Toledo Bend Reservoir
+		Number of 3M elevation tiles: 26
+	8-digit HUC 12010005: Lower Sabine
+		Number of 3M elevation tiles: 32
+	8-digit HUC 12020001: Upper Neches
+		There are NO 3M elevation tiles
+	8-digit HUC 12020002: Middle Neches
+		There are NO 3M elevation tiles
+	8-digit HUC 12020003: Lower Neches
+		Number of 3M elevation tiles: 13
+	8-digit HUC 12020004: Upper Angelina
+		There are NO 3M elevation tiles
+	8-digit HUC 12020005: Lower Angelina
+		Number of 3M elevation tiles: 2
+	8-digit HUC 12020006: Village
+		Number of 3M elevation tiles: 2
+	8-digit HUC 12020007: Pine Island Bayou
+		Number of 3M elevation tiles: 4
+	8-digit HUC 12030101: Upper West Fork Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 12030102: Lower West Fork Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 12030103: Elm Fork Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 12030104: Denton
+		There are NO 3M elevation tiles
+	8-digit HUC 12030105: Upper Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 12030106: East Fork Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 12030107: Cedar
+		There are NO 3M elevation tiles
+	8-digit HUC 12030108: Richland
+		There are NO 3M elevation tiles
+	8-digit HUC 12030109: Chambers
+		There are NO 3M elevation tiles
+	8-digit HUC 12030201: Lower Trinity-Tehuacana
+		There are NO 3M elevation tiles
+	8-digit HUC 12030202: Lower Trinity-Kickapoo
+		Number of 3M elevation tiles: 4
+	8-digit HUC 12030203: Lower Trinity
+		Number of 3M elevation tiles: 7
+	8-digit HUC 12040101: West Fork San Jacinto
+		Number of 3M elevation tiles: 10
+	8-digit HUC 12040102: Spring
+		Number of 3M elevation tiles: 8
+	8-digit HUC 12040103: East Fork San Jacinto
+		Number of 3M elevation tiles: 9
+	8-digit HUC 12040104: Buffalo-San Jacinto
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12040201: Sabine Lake
+		Number of 3M elevation tiles: 21
+	8-digit HUC 12040202: East Galveston Bay
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12040203: North Galveston Bay
+		Number of 3M elevation tiles: 14
+	8-digit HUC 12040204: West Galveston Bay
+		Number of 3M elevation tiles: 22
+	8-digit HUC 12040205: Austin-Oyster
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12050001: Yellow House Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12050002: Blackwater Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12050003: North Fork Double Mountain Fork Brazos
+		There are NO 3M elevation tiles
+	8-digit HUC 12050004: Double Mountain Fork Brazos
+		There are NO 3M elevation tiles
+	8-digit HUC 12050005: Running Water Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12050006: White
+		There are NO 3M elevation tiles
+	8-digit HUC 12050007: Salt Fork Brazos
+		There are NO 3M elevation tiles
+	8-digit HUC 12060101: Middle Brazos-Millers
+		There are NO 3M elevation tiles
+	8-digit HUC 12060102: Upper Clear Fork Brazos
+		There are NO 3M elevation tiles
+	8-digit HUC 12060103: Paint
+		There are NO 3M elevation tiles
+	8-digit HUC 12060104: Lower Clear Fork Brazos
+		There are NO 3M elevation tiles
+	8-digit HUC 12060105: Hubbard
+		There are NO 3M elevation tiles
+	8-digit HUC 12060201: Middle Brazos-Palo Pinto
+		There are NO 3M elevation tiles
+	8-digit HUC 12060202: Middle Brazos-Lake Whitney
+		Number of 3M elevation tiles: 5
+	8-digit HUC 12060203: Bosque
+		Number of 3M elevation tiles: 5
+	8-digit HUC 12060204: North Bosque
+		Number of 3M elevation tiles: 2
+	8-digit HUC 12070101: Lower Brazos-Little Brazos
+		Number of 3M elevation tiles: 11
+	8-digit HUC 12070102: Yegua
+		Number of 3M elevation tiles: 3
+	8-digit HUC 12070103: Navasota
+		Number of 3M elevation tiles: 3
+	8-digit HUC 12070104: Lower Brazos
+		Number of 3M elevation tiles: 17
+	8-digit HUC 12070201: Leon
+		Number of 3M elevation tiles: 10
+	8-digit HUC 12070202: Cowhouse
+		Number of 3M elevation tiles: 7
+	8-digit HUC 12070203: Lampasas
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12070204: Little
+		Number of 3M elevation tiles: 7
+	8-digit HUC 12070205: San Gabriel
+		Number of 3M elevation tiles: 13
+	8-digit HUC 12080001: Lost Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12080002: Colorado Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 12080003: Monument-Seminole Draws
+		There are NO 3M elevation tiles
+	8-digit HUC 12080004: Mustang Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12080005: Johnson Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12080006: Sulphur Springs Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 12080007: Beals
+		There are NO 3M elevation tiles
+	8-digit HUC 12080008: Upper Colorado
+		There are NO 3M elevation tiles
+	8-digit HUC 12090101: Middle Colorado-Elm
+		Number of 3M elevation tiles: 1
+	8-digit HUC 12090102: South Concho
+		There are NO 3M elevation tiles
+	8-digit HUC 12090103: Middle Concho
+		There are NO 3M elevation tiles
+	8-digit HUC 12090104: North Concho
+		There are NO 3M elevation tiles
+	8-digit HUC 12090105: Concho
+		Number of 3M elevation tiles: 3
+	8-digit HUC 12090106: Middle Colorado
+		Number of 3M elevation tiles: 18
+	8-digit HUC 12090107: Pecan Bayou
+		Number of 3M elevation tiles: 11
+	8-digit HUC 12090108: Jim Ned
+		Number of 3M elevation tiles: 5
+	8-digit HUC 12090109: San Saba
+		Number of 3M elevation tiles: 21
+	8-digit HUC 12090110: Brady
+		Number of 3M elevation tiles: 9
+	8-digit HUC 12090201: Buchanan-Lyndon B. Johnson Lakes
+		Number of 3M elevation tiles: 22
+	8-digit HUC 12090202: North Llano
+		Number of 3M elevation tiles: 2
+	8-digit HUC 12090203: South Llano
+		Number of 3M elevation tiles: 2
+	8-digit HUC 12090204: Llano
+		Number of 3M elevation tiles: 27
+	8-digit HUC 12090205: Austin-Travis Lakes
+		Number of 3M elevation tiles: 19
+	8-digit HUC 12090206: Pedernales
+		Number of 3M elevation tiles: 13
+	8-digit HUC 12090301: Lower Colorado-Cummins
+		Number of 3M elevation tiles: 12
+	8-digit HUC 12090302: Lower Colorado
+		Number of 3M elevation tiles: 9
+	8-digit HUC 12090401: San Bernard
+		Number of 3M elevation tiles: 14
+	8-digit HUC 12090402: East Matagorda Bay
+		Number of 3M elevation tiles: 14
+	8-digit HUC 12100101: Lavaca
+		Number of 3M elevation tiles: 9
+	8-digit HUC 12100102: Navidad
+		Number of 3M elevation tiles: 11
+	8-digit HUC 12100201: Upper Guadalupe
+		Number of 3M elevation tiles: 8
+	8-digit HUC 12100202: Middle Guadalupe
+		Number of 3M elevation tiles: 8
+	8-digit HUC 12100203: San Marcos
+		Number of 3M elevation tiles: 13
+	8-digit HUC 12100204: Lower Guadalupe
+		Bad Request
+	8-digit HUC 12100301: Upper San Antonio
+		There are NO 3M elevation tiles
+	8-digit HUC 12100302: Medina
+		There are NO 3M elevation tiles
+	8-digit HUC 12100303: Lower San Antonio
+		Number of 3M elevation tiles: 14
+	8-digit HUC 12100304: Cibolo
+		Number of 3M elevation tiles: 1
+	8-digit HUC 12100401: Central Matagorda Bay
+		Number of 3M elevation tiles: 17
+	8-digit HUC 12100402: West Matagorda Bay
+		Number of 3M elevation tiles: 19
+	8-digit HUC 12100403: East San Antonio Bay
+		Number of 3M elevation tiles: 12
+	8-digit HUC 12100404: West San Antonio Bay
+		Number of 3M elevation tiles: 7
+	8-digit HUC 12100405: Aransas Bay
+		Number of 3M elevation tiles: 19
+	8-digit HUC 12100406: Mission
+		Number of 3M elevation tiles: 12
+	8-digit HUC 12100407: Aransas
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12110101: Nueces Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 12110102: West Nueces
+		There are NO 3M elevation tiles
+	8-digit HUC 12110103: Upper Nueces
+		Number of 3M elevation tiles: 1
+	8-digit HUC 12110104: Turkey
+		Number of 3M elevation tiles: 3
+	8-digit HUC 12110105: Middle Nueces
+		Number of 3M elevation tiles: 1
+	8-digit HUC 12110106: Upper Frio
+		There are NO 3M elevation tiles
+	8-digit HUC 12110107: Hondo
+		There are NO 3M elevation tiles
+	8-digit HUC 12110108: Lower Frio
+		There are NO 3M elevation tiles
+	8-digit HUC 12110109: San Miguel
+		There are NO 3M elevation tiles
+	8-digit HUC 12110110: Atascosa
+		There are NO 3M elevation tiles
+	8-digit HUC 12110111: Lower Nueces
+		Number of 3M elevation tiles: 9
+	8-digit HUC 12110201: North Corpus Christi Bay
+		Number of 3M elevation tiles: 7
+	8-digit HUC 12110202: South Corpus Christi Bay
+		Number of 3M elevation tiles: 15
+	8-digit HUC 12110203: North Laguna Madre
+		Number of 3M elevation tiles: 5
+	8-digit HUC 12110204: San Fernando
+		Number of 3M elevation tiles: 10
+	8-digit HUC 12110205: Baffin Bay
+		Number of 3M elevation tiles: 20
+	8-digit HUC 12110206: Palo Blanco
+		Number of 3M elevation tiles: 3
+	8-digit HUC 12110207: Central Laguna Madre
+		Number of 3M elevation tiles: 16
+	8-digit HUC 12110208: South Laguna Madre
+		Number of 3M elevation tiles: 30
+	8-digit HUC 13010001: Rio Grande Headwaters
+		Number of 3M elevation tiles: 2
+	8-digit HUC 13010002: Alamosa-Trinchera
+		Number of 3M elevation tiles: 20
+	8-digit HUC 13010003: San Luis
+		Number of 3M elevation tiles: 19
+	8-digit HUC 13010004: Saguache
+		Number of 3M elevation tiles: 11
+	8-digit HUC 13010005: Conejos
+		Number of 3M elevation tiles: 9
+	8-digit HUC 13020101: Upper Rio Grande
+		Number of 3M elevation tiles: 7
+	8-digit HUC 13020102: Rio Chama
+		Number of 3M elevation tiles: 3
+	8-digit HUC 13020201: Rio Grande-Santa Fe
+		There are NO 3M elevation tiles
+	8-digit HUC 13020202: Jemez
+		There are NO 3M elevation tiles
+	8-digit HUC 13020203: Rio Grande-Albuquerque
+		There are NO 3M elevation tiles
+	8-digit HUC 13020204: Rio Puerco
+		There are NO 3M elevation tiles
+	8-digit HUC 13020205: Arroyo Chico
+		There are NO 3M elevation tiles
+	8-digit HUC 13020206: North Plains
+		There are NO 3M elevation tiles
+	8-digit HUC 13020207: Rio San Jose
+		There are NO 3M elevation tiles
+	8-digit HUC 13020208: Plains of San Agustin
+		There are NO 3M elevation tiles
+	8-digit HUC 13020209: Rio Salado
+		There are NO 3M elevation tiles
+	8-digit HUC 13020210: Jornada Del Muerto
+		There are NO 3M elevation tiles
+	8-digit HUC 13020211: Elephant Butte Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 13030101: Caballo
+		There are NO 3M elevation tiles
+	8-digit HUC 13030102: El Paso-Las Cruces
+		Number of 3M elevation tiles: 2
+	8-digit HUC 13030103: Jornada Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 13030201: Playas Lake
+		Number of 3M elevation tiles: 4
+	8-digit HUC 13030202: Mimbres
+		There are NO 3M elevation tiles
+	8-digit HUC 13040100: Rio Grande-Fort Quitman
+		Number of 3M elevation tiles: 6
+	8-digit HUC 13040201: Cibolo-Red Light
+		There are NO 3M elevation tiles
+	8-digit HUC 13040202: Alamito
+		There are NO 3M elevation tiles
+	8-digit HUC 13040203: Black Hills-Fresno
+		There are NO 3M elevation tiles
+	8-digit HUC 13040204: Terlingua
+		There are NO 3M elevation tiles
+	8-digit HUC 13040205: Big Bend
+		There are NO 3M elevation tiles
+	8-digit HUC 13040206: Maravillas
+		There are NO 3M elevation tiles
+	8-digit HUC 13040207: Santiago Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 13040208: Reagan-Sanderson
+		There are NO 3M elevation tiles
+	8-digit HUC 13040209: San Francisco
+		There are NO 3M elevation tiles
+	8-digit HUC 13040210: Lozier Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 13040211: Big Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 13040212: Amistad Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 13040301: Upper Devils
+		There are NO 3M elevation tiles
+	8-digit HUC 13040302: Lower Devils
+		Number of 3M elevation tiles: 1
+	8-digit HUC 13040303: Dry Devils
+		There are NO 3M elevation tiles
+	8-digit HUC 13050001: Western Estancia
+		There are NO 3M elevation tiles
+	8-digit HUC 13050002: Eastern Estancia
+		There are NO 3M elevation tiles
+	8-digit HUC 13050003: Tularosa Valley
+		Number of 3M elevation tiles: 2
+	8-digit HUC 13050004: Salt Basin
+		There are NO 3M elevation tiles
+	8-digit HUC 13060001: Pecos Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 13060002: Pintada Arroyo
+		There are NO 3M elevation tiles
+	8-digit HUC 13060003: Upper Pecos
+		There are NO 3M elevation tiles
+	8-digit HUC 13060004: Taiban
+		There are NO 3M elevation tiles
+	8-digit HUC 13060005: Arroyo Del Macho
+		There are NO 3M elevation tiles
+	8-digit HUC 13060006: Gallo Arroyo
+		There are NO 3M elevation tiles
+	8-digit HUC 13060007: Upper Pecos-Long Arroyo
+		There are NO 3M elevation tiles
+	8-digit HUC 13060008: Rio Hondo
+		There are NO 3M elevation tiles
+	8-digit HUC 13060009: Rio Felix
+		There are NO 3M elevation tiles
+	8-digit HUC 13060010: Rio Penasco
+		There are NO 3M elevation tiles
+	8-digit HUC 13060011: Upper Pecos-Black
+		There are NO 3M elevation tiles
+	8-digit HUC 13070001: Lower Pecos-Red Bluff Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 13070002: Delaware
+		There are NO 3M elevation tiles
+	8-digit HUC 13070003: Toyah
+		There are NO 3M elevation tiles
+	8-digit HUC 13070004: Salt Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 13070005: Barrilla Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 13070006: Coyanosa-Hackberry Draws
+		There are NO 3M elevation tiles
+	8-digit HUC 13070007: Landreth-Monument Draws
+		There are NO 3M elevation tiles
+	8-digit HUC 13070008: Pecos
+		There are NO 3M elevation tiles
+	8-digit HUC 13070009: Tunas
+		There are NO 3M elevation tiles
+	8-digit HUC 13070010: Independence
+		There are NO 3M elevation tiles
+	8-digit HUC 13070011: Howard Draw
+		There are NO 3M elevation tiles
+	8-digit HUC 13070012: Lower Pecos
+		Bad Request
+	8-digit HUC 13080001: Elm-Sycamore
+		Number of 3M elevation tiles: 9
+	8-digit HUC 13080002: San Ambrosia-Santa Isabel
+		Number of 3M elevation tiles: 14
+	8-digit HUC 13080003: International Falcon Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 13090001: Los Olmos
+		Number of 3M elevation tiles: 4
+	8-digit HUC 13090002: Lower Rio Grande
+		Number of 3M elevation tiles: 10
+	8-digit HUC 13100000: Rio Conchos
+		Bad Request
+	8-digit HUC 13110000: Rio Salado
+		Bad Request
+	8-digit HUC 13120000: Rio San Juan
+		Bad Request
+	8-digit HUC 14010001: Colorado Headwaters
+		Number of 3M elevation tiles: 10
+	8-digit HUC 14010002: Blue
+		Number of 3M elevation tiles: 5
+	8-digit HUC 14010003: Eagle
+		Number of 3M elevation tiles: 2
+	8-digit HUC 14010004: Roaring Fork
+		Number of 3M elevation tiles: 2
+	8-digit HUC 14010005: Colorado Headwaters-Plateau
+		There are NO 3M elevation tiles
+	8-digit HUC 14020001: East-Taylor
+		Number of 3M elevation tiles: 2
+	8-digit HUC 14020002: Upper Gunnison
+		There are NO 3M elevation tiles
+	8-digit HUC 14020003: Tomichi
+		Number of 3M elevation tiles: 2
+	8-digit HUC 14020004: North Fork Gunnison
+		There are NO 3M elevation tiles
+	8-digit HUC 14020005: Lower Gunnison
+		There are NO 3M elevation tiles
+	8-digit HUC 14020006: Uncompahgre
+		There are NO 3M elevation tiles
+	8-digit HUC 14030001: Westwater Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 14030002: Upper Dolores
+		There are NO 3M elevation tiles
+	8-digit HUC 14030003: San Miguel
+		There are NO 3M elevation tiles
+	8-digit HUC 14030004: Lower Dolores
+		There are NO 3M elevation tiles
+	8-digit HUC 14030005: Upper Colorado-Kane Springs
+		There are NO 3M elevation tiles
+	8-digit HUC 14040101: Upper Green
+		There are NO 3M elevation tiles
+	8-digit HUC 14040102: New Fork
+		There are NO 3M elevation tiles
+	8-digit HUC 14040103: Upper Green-Slate
+		There are NO 3M elevation tiles
+	8-digit HUC 14040104: Big Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 14040105: Bitter
+		There are NO 3M elevation tiles
+	8-digit HUC 14040106: Upper Green-Flaming Gorge Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 14040107: Blacks Fork
+		There are NO 3M elevation tiles
+	8-digit HUC 14040108: Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 14040109: Vermilion
+		There are NO 3M elevation tiles
+	8-digit HUC 14040200: Great Divide Closed Basin
+		There are NO 3M elevation tiles
+	8-digit HUC 14050001: Upper Yampa
+		There are NO 3M elevation tiles
+	8-digit HUC 14050002: Lower Yampa
+		There are NO 3M elevation tiles
+	8-digit HUC 14050003: Little Snake
+		There are NO 3M elevation tiles
+	8-digit HUC 14050004: Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 14050005: Upper White
+		There are NO 3M elevation tiles
+	8-digit HUC 14050006: Piceance-Yellow
+		There are NO 3M elevation tiles
+	8-digit HUC 14050007: Lower White
+		There are NO 3M elevation tiles
+	8-digit HUC 14060003: Duchesne
+		There are NO 3M elevation tiles
+	8-digit HUC 14060004: Strawberry
+		Number of 3M elevation tiles: 1
+	8-digit HUC 14060005: Lower Green-Desolation Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 14060006: Willow
+		There are NO 3M elevation tiles
+	8-digit HUC 14060007: Price
+		Number of 3M elevation tiles: 3
+	8-digit HUC 14060008: Lower Green
+		There are NO 3M elevation tiles
+	8-digit HUC 14060009: San Rafael
+		Number of 3M elevation tiles: 4
+	8-digit HUC 14060010: Lower Green-Diamond
+		Bad Request
+	8-digit HUC 14070001: Upper Lake Powell
+		There are NO 3M elevation tiles
+	8-digit HUC 14070002: Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 14070003: Fremont
+		There are NO 3M elevation tiles
+	8-digit HUC 14070004: Dirty Devil
+		There are NO 3M elevation tiles
+	8-digit HUC 14070005: Escalante
+		There are NO 3M elevation tiles
+	8-digit HUC 14070006: Lower Lake Powell
+		Number of 3M elevation tiles: 1
+	8-digit HUC 14070007: Paria
+		There are NO 3M elevation tiles
+	8-digit HUC 14080101: Upper San Juan
+		Number of 3M elevation tiles: 2
+	8-digit HUC 14080102: Piedra
+		There are NO 3M elevation tiles
+	8-digit HUC 14080103: Blanco Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 14080104: Animas
+		There are NO 3M elevation tiles
+	8-digit HUC 14080105: Middle San Juan
+		Number of 3M elevation tiles: 3
+	8-digit HUC 14080106: Chaco
+		Number of 3M elevation tiles: 5
+	8-digit HUC 14080107: Mancos
+		There are NO 3M elevation tiles
+	8-digit HUC 14080201: Lower San Juan-Four Corners
+		There are NO 3M elevation tiles
+	8-digit HUC 14080202: McElmo
+		There are NO 3M elevation tiles
+	8-digit HUC 14080203: Montezuma
+		There are NO 3M elevation tiles
+	8-digit HUC 14080204: Chinle
+		Number of 3M elevation tiles: 4
+	8-digit HUC 14080205: Lower San Juan
+		There are NO 3M elevation tiles
+	8-digit HUC 15010001: Lower Colorado-Marble Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 15010002: Grand Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 15010003: Kanab
+		There are NO 3M elevation tiles
+	8-digit HUC 15010004: Havasu Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 15010005: Lake Mead
+		There are NO 3M elevation tiles
+	8-digit HUC 15010006: Grand Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15010007: Red Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 15010008: Upper Virgin
+		Number of 3M elevation tiles: 8
+	8-digit HUC 15010009: Fort Pearce Wash
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15010010: Lower Virgin
+		There are NO 3M elevation tiles
+	8-digit HUC 15010011: White
+		There are NO 3M elevation tiles
+	8-digit HUC 15010012: Muddy
+		There are NO 3M elevation tiles
+	8-digit HUC 15010013: Meadow Valley Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15010014: Detrital Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15010015: Las Vegas Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15020001: Little Colorado Headwaters
+		There are NO 3M elevation tiles
+	8-digit HUC 15020002: Upper Little Colorado
+		There are NO 3M elevation tiles
+	8-digit HUC 15020003: Carrizo Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15020004: Zuni
+		There are NO 3M elevation tiles
+	8-digit HUC 15020005: Silver
+		There are NO 3M elevation tiles
+	8-digit HUC 15020006: Upper Puerco
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15020007: Lower Puerco
+		There are NO 3M elevation tiles
+	8-digit HUC 15020008: Middle Little Colorado
+		There are NO 3M elevation tiles
+	8-digit HUC 15020009: Leroux Wash
+		Number of 3M elevation tiles: 1
+	8-digit HUC 15020010: Chevelon Canyon
+		There are NO 3M elevation tiles
+	8-digit HUC 15020011: Cottonwood Wash
+		Number of 3M elevation tiles: 1
+	8-digit HUC 15020012: Corn-Oraibi
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15020013: Polacca Wash
+		Number of 3M elevation tiles: 1
+	8-digit HUC 15020014: Jadito Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15020015: Canyon Diablo
+		There are NO 3M elevation tiles
+	8-digit HUC 15020016: Lower Little Colorado
+		There are NO 3M elevation tiles
+	8-digit HUC 15020017: Dinnebito Wash
+		Number of 3M elevation tiles: 3
+	8-digit HUC 15020018: Moenkopi Wash
+		Number of 3M elevation tiles: 5
+	8-digit HUC 15030101: Havasu-Mohave Lakes
+		There are NO 3M elevation tiles
+	8-digit HUC 15030102: Piute Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15030103: Sacramento Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15030104: Imperial Reservoir
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15030105: Bouse Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15030106: Tyson Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15030107: Lower Colorado
+		Number of 3M elevation tiles: 6
+	8-digit HUC 15030108: Yuma Desert
+		Number of 3M elevation tiles: 11
+	8-digit HUC 15030201: Big Sandy
+		There are NO 3M elevation tiles
+	8-digit HUC 15030202: Burro
+		There are NO 3M elevation tiles
+	8-digit HUC 15030203: Santa Maria
+		There are NO 3M elevation tiles
+	8-digit HUC 15030204: Bill Williams
+		There are NO 3M elevation tiles
+	8-digit HUC 15040001: Upper Gila
+		There are NO 3M elevation tiles
+	8-digit HUC 15040002: Upper Gila-Mangas
+		There are NO 3M elevation tiles
+	8-digit HUC 15040003: Animas Valley
+		Number of 3M elevation tiles: 4
+	8-digit HUC 15040004: San Francisco
+		There are NO 3M elevation tiles
+	8-digit HUC 15040005: Upper Gila-San Carlos Reservoir
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15040006: San Simon
+		There are NO 3M elevation tiles
+	8-digit HUC 15040007: San Carlos
+		Number of 3M elevation tiles: 1
+	8-digit HUC 15050100: Middle Gila
+		Number of 3M elevation tiles: 3
+	8-digit HUC 15050201: Willcox Playa
+		There are NO 3M elevation tiles
+	8-digit HUC 15050202: Upper San Pedro
+		Number of 3M elevation tiles: 12
+	8-digit HUC 15050203: Lower San Pedro
+		Number of 3M elevation tiles: 4
+	8-digit HUC 15050301: Upper Santa Cruz
+		Number of 3M elevation tiles: 20
+	8-digit HUC 15050302: Rillito
+		Number of 3M elevation tiles: 7
+	8-digit HUC 15050303: Lower Santa Cruz
+		Number of 3M elevation tiles: 5
+	8-digit HUC 15050304: Brawley Wash
+		Number of 3M elevation tiles: 17
+	8-digit HUC 15050305: Aguirre Valley
+		Number of 3M elevation tiles: 3
+	8-digit HUC 15050306: Santa Rosa Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15060101: Black
+		Number of 3M elevation tiles: 2
+	8-digit HUC 15060102: White
+		There are NO 3M elevation tiles
+	8-digit HUC 15060103: Upper Salt
+		There are NO 3M elevation tiles
+	8-digit HUC 15060104: Carrizo
+		There are NO 3M elevation tiles
+	8-digit HUC 15060105: Tonto
+		There are NO 3M elevation tiles
+	8-digit HUC 15060106: Lower Salt
+		There are NO 3M elevation tiles
+	8-digit HUC 15060201: Big Chino-Williamson Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 15060202: Upper Verde
+		There are NO 3M elevation tiles
+	8-digit HUC 15060203: Lower Verde
+		There are NO 3M elevation tiles
+	8-digit HUC 15070101: Lower Gila-Painted Rock Reservoir
+		There are NO 3M elevation tiles
+	8-digit HUC 15070102: Agua Fria
+		There are NO 3M elevation tiles
+	8-digit HUC 15070103: Hassayampa
+		There are NO 3M elevation tiles
+	8-digit HUC 15070104: Centennial Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15070201: Lower Gila
+		Number of 3M elevation tiles: 8
+	8-digit HUC 15070202: Tenmile Wash
+		There are NO 3M elevation tiles
+	8-digit HUC 15070203: San Cristobal Wash
+		Number of 3M elevation tiles: 10
+	8-digit HUC 15080101: San Simon Wash
+		Number of 3M elevation tiles: 17
+	8-digit HUC 15080102: Rio Sonoyta
+		Number of 3M elevation tiles: 13
+	8-digit HUC 15080103: Tule Desert
+		Number of 3M elevation tiles: 18
+	8-digit HUC 15080200: Rio De La Concepcion
+		Number of 3M elevation tiles: 11
+	8-digit HUC 15080301: Whitewater Draw
+		Number of 3M elevation tiles: 8
+	8-digit HUC 15080302: San Bernardino Valley
+		Number of 3M elevation tiles: 7
+	8-digit HUC 15080303: Cloverdale
+		Number of 3M elevation tiles: 6
+	8-digit HUC 16010101: Upper Bear
+		Number of 3M elevation tiles: 1
+	8-digit HUC 16010102: Central Bear
+		There are NO 3M elevation tiles
+	8-digit HUC 16010201: Bear Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 16010202: Middle Bear
+		Number of 3M elevation tiles: 1
+	8-digit HUC 16010203: Little Bear-Logan
+		Number of 3M elevation tiles: 7
+	8-digit HUC 16010204: Lower Bear-Malad
+		Number of 3M elevation tiles: 10
+	8-digit HUC 16020101: Upper Weber
+		Number of 3M elevation tiles: 5
+	8-digit HUC 16020102: Lower Weber
+		Number of 3M elevation tiles: 19
+	8-digit HUC 16020201: Utah Lake
+		Number of 3M elevation tiles: 7
+	8-digit HUC 16020202: Spanish Fork
+		Number of 3M elevation tiles: 4
+	8-digit HUC 16020203: Provo
+		Number of 3M elevation tiles: 6
+	8-digit HUC 16020204: Jordan
+		Number of 3M elevation tiles: 13
+	8-digit HUC 16020301: Hamlin-Snake Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16020302: Pine Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16020303: Tule Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16020304: Rush-Tooele Valleys
+		Number of 3M elevation tiles: 9
+	8-digit HUC 16020305: Skull Valley
+		Number of 3M elevation tiles: 2
+	8-digit HUC 16020306: Southern Great Salt Lake Desert
+		There are NO 3M elevation tiles
+	8-digit HUC 16020307: Pilot-Thousand Springs, Nevada, Utah
+		There are NO 3M elevation tiles
+	8-digit HUC 16020308: Northern Great Salt Lake Desert
+		Number of 3M elevation tiles: 3
+	8-digit HUC 16020309: Curlew Valley
+		Number of 3M elevation tiles: 4
+	8-digit HUC 16020310: Great Salt Lake
+		Number of 3M elevation tiles: 24
+	8-digit HUC 16030001: Upper Sevier
+		Number of 3M elevation tiles: 3
+	8-digit HUC 16030002: East Fork Sevier
+		There are NO 3M elevation tiles
+	8-digit HUC 16030003: Middle Sevier
+		There are NO 3M elevation tiles
+	8-digit HUC 16030004: San Pitch
+		Number of 3M elevation tiles: 2
+	8-digit HUC 16030005: Lower Sevier
+		There are NO 3M elevation tiles
+	8-digit HUC 16030006: Escalante Desert
+		Number of 3M elevation tiles: 13
+	8-digit HUC 16030007: Beaver Bottoms-Upper Beaver
+		Number of 3M elevation tiles: 2
+	8-digit HUC 16030008: Lower Beaver
+		There are NO 3M elevation tiles
+	8-digit HUC 16030009: Sevier Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 16040101: Upper Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040102: North Fork Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040103: South Fork Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040104: Pine
+		There are NO 3M elevation tiles
+	8-digit HUC 16040105: Middle Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040106: Rock
+		There are NO 3M elevation tiles
+	8-digit HUC 16040107: Reese
+		There are NO 3M elevation tiles
+	8-digit HUC 16040108: Lower Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040109: Little Humboldt
+		There are NO 3M elevation tiles
+	8-digit HUC 16040201: Upper Quinn
+		There are NO 3M elevation tiles
+	8-digit HUC 16040202: Lower Quinn
+		There are NO 3M elevation tiles
+	8-digit HUC 16040203: Smoke Creek Desert
+		There are NO 3M elevation tiles
+	8-digit HUC 16040204: Massacre Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 16040205: Thousand-Virgin
+		There are NO 3M elevation tiles
+	8-digit HUC 16050101: Lake Tahoe
+		Number of 3M elevation tiles: 14
+	8-digit HUC 16050102: Truckee
+		Number of 3M elevation tiles: 11
+	8-digit HUC 16050103: Pyramid-Winnemucca Lakes
+		There are NO 3M elevation tiles
+	8-digit HUC 16050104: Granite Springs Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16050201: Upper Carson
+		Number of 3M elevation tiles: 5
+	8-digit HUC 16050202: Middle Carson
+		There are NO 3M elevation tiles
+	8-digit HUC 16050203: Carson Desert
+		There are NO 3M elevation tiles
+	8-digit HUC 16050301: East Walker
+		There are NO 3M elevation tiles
+	8-digit HUC 16050302: West Walker
+		There are NO 3M elevation tiles
+	8-digit HUC 16050303: Walker
+		There are NO 3M elevation tiles
+	8-digit HUC 16050304: Walker Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 16060001: Dixie Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16060002: Gabbs Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16060003: Southern Big Smoky Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16060004: Northern Big Smoky Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16060005: Diamond-Monitor Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060006: Little Smoky-Newark Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060007: Long-Ruby Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060008: Spring-Steptoe Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060009: Dry Lake Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 16060010: Fish Lake-Soda Spring Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060011: Ralston-Stone Cabin Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060012: Hot Creek-Railroad Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060013: Cactus-Sarcobatus Flats
+		There are NO 3M elevation tiles
+	8-digit HUC 16060014: Sand Spring-Tikaboo Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 16060015: Ivanpah-Pahrump Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 17010101: Middle Kootenai
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17010102: Fisher
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17010103: Yaak
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17010104: Lower Kootenai
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17010105: Moyie
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17010106: Elk
+		Bad Request
+	8-digit HUC 17010107: Headwaters Kootenai River
+		Bad Request
+	8-digit HUC 17010108: Upper Kootenai River
+		Bad Request
+	8-digit HUC 17010109: Duncan River
+		Bad Request
+	8-digit HUC 17010110: Slocan River
+		Bad Request
+	8-digit HUC 17010201: Upper Clark Fork
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17010202: Flint-Rock
+		There are NO 3M elevation tiles
+	8-digit HUC 17010203: Blackfoot
+		There are NO 3M elevation tiles
+	8-digit HUC 17010204: Middle Clark Fork
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17010205: Bitterroot
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17010206: North Fork Flathead
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17010207: Middle Fork Flathead
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17010208: Flathead Lake
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17010209: South Fork Flathead
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17010210: Stillwater
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17010211: Swan
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17010212: Lower Flathead
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17010213: Lower Clark Fork
+		Number of 3M elevation tiles: 15
+	8-digit HUC 17010214: Pend Oreille Lake
+		Number of 3M elevation tiles: 16
+	8-digit HUC 17010215: Priest
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17010216: Pend Oreille
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17010301: Upper Coeur d'Alene
+		Number of 3M elevation tiles: 15
+	8-digit HUC 17010302: South Fork Coeur d'Alene
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17010303: Coeur d'Alene Lake
+		Number of 3M elevation tiles: 18
+	8-digit HUC 17010304: St. Joe
+		Number of 3M elevation tiles: 12
+	8-digit HUC 17010305: Upper Spokane
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17010306: Hangman
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17010307: Lower Spokane
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17010308: Little Spokane
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17020001: Franklin D. Roosevelt Lake
+		Number of 3M elevation tiles: 22
+	8-digit HUC 17020002: Kettle
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17020003: Colville
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17020004: Sanpoil
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17020005: Chief Joseph
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17020006: Okanogan
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17020007: Similkameen
+		There are NO 3M elevation tiles
+	8-digit HUC 17020008: Methow
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17020009: Lake Chelan
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17020010: Upper Columbia-Entiat
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17020011: Wenatchee
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17020012: Moses Coulee
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17020013: Upper Crab
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17020014: Banks Lake
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17020015: Lower Crab
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17020016: Upper Columbia-Priest Rapids
+		Number of 3M elevation tiles: 14
+	8-digit HUC 17020017: Headwaters Columbia River
+		Bad Request
+	8-digit HUC 17020018: Canoe River-McNaughton Lake
+		Bad Request
+	8-digit HUC 17020019: McNaughton Lake-Columbia River
+		Bad Request
+	8-digit HUC 17020020: Goldstream River-Columbia River
+		Bad Request
+	8-digit HUC 17020021: Upper Arrow Lake-Columbia River
+		Bad Request
+	8-digit HUC 17030001: Upper Yakima
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17030002: Naches
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17030003: Lower Yakima
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17040101: Snake Headwaters
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17040102: Gros Ventre
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040103: Greys-Hoback
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040104: Palisades
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040105: Salt
+		There are NO 3M elevation tiles
+	8-digit HUC 17040201: Idaho Falls
+		There are NO 3M elevation tiles
+	8-digit HUC 17040202: Upper Henrys
+		There are NO 3M elevation tiles
+	8-digit HUC 17040203: Lower Henrys
+		There are NO 3M elevation tiles
+	8-digit HUC 17040204: Teton
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040205: Willow
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040206: American Falls
+		There are NO 3M elevation tiles
+	8-digit HUC 17040207: Blackfoot
+		There are NO 3M elevation tiles
+	8-digit HUC 17040208: Portneuf
+		There are NO 3M elevation tiles
+	8-digit HUC 17040209: Lake Walcott
+		There are NO 3M elevation tiles
+	8-digit HUC 17040210: Raft
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17040211: Goose
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17040212: Upper Snake-Rock
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040213: Salmon Falls
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040214: Beaver-Camas
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040215: Medicine Lodge
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040216: Birch
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040217: Little Lost
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17040218: Big Lost
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17040219: Big Wood
+		There are NO 3M elevation tiles
+	8-digit HUC 17040220: Camas
+		There are NO 3M elevation tiles
+	8-digit HUC 17040221: Little Wood
+		There are NO 3M elevation tiles
+	8-digit HUC 17050101: C.J. Strike Reservoir
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17050102: Bruneau
+		There are NO 3M elevation tiles
+	8-digit HUC 17050103: Middle Snake-Succor
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17050104: Upper Owyhee
+		There are NO 3M elevation tiles
+	8-digit HUC 17050105: South Fork Owyhee
+		There are NO 3M elevation tiles
+	8-digit HUC 17050106: East Little Owyhee
+		There are NO 3M elevation tiles
+	8-digit HUC 17050107: Middle Owyhee
+		There are NO 3M elevation tiles
+	8-digit HUC 17050108: Jordan
+		There are NO 3M elevation tiles
+	8-digit HUC 17050109: Crooked-Rattlesnake
+		There are NO 3M elevation tiles
+	8-digit HUC 17050110: Lower Owyhee
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17050111: North and Middle Forks Boise
+		There are NO 3M elevation tiles
+	8-digit HUC 17050112: Boise-Mores
+		There are NO 3M elevation tiles
+	8-digit HUC 17050113: South Fork Boise
+		There are NO 3M elevation tiles
+	8-digit HUC 17050114: Lower Boise
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17050115: Middle Snake-Payette
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17050116: Upper Malheur
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17050117: Lower Malheur
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17050118: Bully
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17050119: Willow
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17050120: South Fork Payette
+		There are NO 3M elevation tiles
+	8-digit HUC 17050121: Middle Fork Payette
+		There are NO 3M elevation tiles
+	8-digit HUC 17050122: Payette
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17050123: North Fork Payette
+		There are NO 3M elevation tiles
+	8-digit HUC 17050124: Weiser
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17050201: Brownlee Reservoir
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17050202: Burnt
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17050203: Powder
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17060101: Hells Canyon
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17060102: Imnaha
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17060103: Lower Snake-Asotin
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17060104: Upper Grande Ronde
+		Number of 3M elevation tiles: 21
+	8-digit HUC 17060105: Wallowa
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17060106: Lower Grande Ronde
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17060107: Lower Snake-Tucannon
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17060108: Palouse
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17060109: Rock
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17060110: Lower Snake
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17060201: Upper Salmon
+		There are NO 3M elevation tiles
+	8-digit HUC 17060202: Pahsimeroi
+		There are NO 3M elevation tiles
+	8-digit HUC 17060203: Middle Salmon-Panther
+		There are NO 3M elevation tiles
+	8-digit HUC 17060204: Lemhi
+		There are NO 3M elevation tiles
+	8-digit HUC 17060205: Upper Middle Fork Salmon
+		There are NO 3M elevation tiles
+	8-digit HUC 17060206: Lower Middle Fork Salmon
+		Bad Request
+	8-digit HUC 17060207: Middle Salmon-Chamberlain
+		There are NO 3M elevation tiles
+	8-digit HUC 17060208: South Fork Salmon
+		There are NO 3M elevation tiles
+	8-digit HUC 17060209: Lower Salmon
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17060210: Little Salmon
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17060301: Upper Selway
+		There are NO 3M elevation tiles
+	8-digit HUC 17060302: Lower Selway
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17060303: Lochsa
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17060304: Middle Fork Clearwater
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17060305: South Fork Clearwater
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17060306: Clearwater
+		Number of 3M elevation tiles: 19
+	8-digit HUC 17060307: Upper North Fork Clearwater
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17060308: Lower North Fork Clearwater
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17070101: Middle Columbia-Lake Wallula
+		Number of 3M elevation tiles: 17
+	8-digit HUC 17070102: Walla Walla
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17070103: Umatilla
+		Number of 3M elevation tiles: 16
+	8-digit HUC 17070104: Willow
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17070105: Middle Columbia-Hood
+		Number of 3M elevation tiles: 23
+	8-digit HUC 17070106: Klickitat
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17070201: Upper John Day
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17070202: North Fork John Day
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17070203: Middle Fork John Day
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17070204: Lower John Day
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17070301: Upper Deschutes
+		Bad Request
+	8-digit HUC 17070302: Little Deschutes
+		Number of 3M elevation tiles: 18
+	8-digit HUC 17070303: Beaver-South Fork
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17070304: Upper Crooked
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17070305: Lower Crooked
+		Number of 3M elevation tiles: 33
+	8-digit HUC 17070306: Lower Deschutes
+		Number of 3M elevation tiles: 25
+	8-digit HUC 17070307: Trout
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17080001: Lower Columbia-Sandy
+		Number of 3M elevation tiles: 41
+	8-digit HUC 17080002: Lewis
+		Number of 3M elevation tiles: 23
+	8-digit HUC 17080003: Lower Columbia-Clatskanie
+		Number of 3M elevation tiles: 32
+	8-digit HUC 17080004: Upper Cowlitz
+		Number of 3M elevation tiles: 18
+	8-digit HUC 17080005: Lower Cowlitz
+		Number of 3M elevation tiles: 24
+	8-digit HUC 17080006: Lower Columbia
+		Number of 3M elevation tiles: 27
+	8-digit HUC 17090001: Middle Fork Willamette
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17090002: Coast Fork Willamette
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17090003: Upper Willamette
+		Number of 3M elevation tiles: 30
+	8-digit HUC 17090004: Mckenzie
+		Number of 3M elevation tiles: 21
+	8-digit HUC 17090005: North Santiam
+		Number of 3M elevation tiles: 58
+	8-digit HUC 17090006: South Santiam
+		Number of 3M elevation tiles: 19
+	8-digit HUC 17090007: Middle Willamette
+		Number of 3M elevation tiles: 43
+	8-digit HUC 17090008: Yamhill
+		Number of 3M elevation tiles: 33
+	8-digit HUC 17090009: Molalla-Pudding
+		Number of 3M elevation tiles: 34
+	8-digit HUC 17090010: Tualatin
+		Number of 3M elevation tiles: 32
+	8-digit HUC 17090011: Clackamas
+		Number of 3M elevation tiles: 23
+	8-digit HUC 17090012: Lower Willamette
+		Number of 3M elevation tiles: 34
+	8-digit HUC 17100101: Hoh-Quillayute
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17100102: Queets-Quinault
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17100103: Upper Chehalis
+		Number of 3M elevation tiles: 21
+	8-digit HUC 17100104: Lower Chehalis
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17100105: Grays Harbor
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17100106: Willapa Bay
+		Number of 3M elevation tiles: 17
+	8-digit HUC 17100201: Necanicum
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17100202: Nehalem
+		Number of 3M elevation tiles: 31
+	8-digit HUC 17100203: Wilson-Trusk-Nestuccu
+		Number of 3M elevation tiles: 32
+	8-digit HUC 17100204: Siletz-Yaquina
+		Number of 3M elevation tiles: 23
+	8-digit HUC 17100205: Alsea
+		Number of 3M elevation tiles: 18
+	8-digit HUC 17100206: Siuslaw
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17100207: Siltcoos
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17100301: North Umpqua
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17100302: South Umpqua
+		Number of 3M elevation tiles: 22
+	8-digit HUC 17100303: Umpqua
+		Number of 3M elevation tiles: 12
+	8-digit HUC 17100304: Coos
+		Number of 3M elevation tiles: 19
+	8-digit HUC 17100305: Coquille
+		Number of 3M elevation tiles: 16
+	8-digit HUC 17100306: Sixes
+		Bad Request
+	8-digit HUC 17100307: Upper Rogue
+		Number of 3M elevation tiles: 17
+	8-digit HUC 17100308: Middle Rogue
+		Number of 3M elevation tiles: 15
+	8-digit HUC 17100309: Applegate
+		Number of 3M elevation tiles: 12
+	8-digit HUC 17100310: Lower Rogue
+		Number of 3M elevation tiles: 16
+	8-digit HUC 17100311: Illinois
+		Number of 3M elevation tiles: 7
+	8-digit HUC 17100312: Chetco
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17110001: Sumas River
+		Number of 3M elevation tiles: 8
+	8-digit HUC 17110002: Strait of Georgia
+		Number of 3M elevation tiles: 18
+	8-digit HUC 17110003: San Juan Islands
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17110004: Nooksack
+		Number of 3M elevation tiles: 11
+	8-digit HUC 17110005: Upper Skagit
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17110006: Sauk
+		Number of 3M elevation tiles: 2
+	8-digit HUC 17110007: Lower Skagit
+		Number of 3M elevation tiles: 9
+	8-digit HUC 17110008: Stillaguamish
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17110009: Skykomish
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17110010: Snoqualmie
+		Number of 3M elevation tiles: 5
+	8-digit HUC 17110011: Snohomish
+		There are NO 3M elevation tiles
+	8-digit HUC 17110012: Lake Washington
+		Number of 3M elevation tiles: 12
+	8-digit HUC 17110013: Duwamish
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17110014: Puyallup
+		Number of 3M elevation tiles: 22
+	8-digit HUC 17110015: Nisqually
+		Number of 3M elevation tiles: 22
+	8-digit HUC 17110016: Deschutes
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17110017: Skokomish
+		Number of 3M elevation tiles: 6
+	8-digit HUC 17110018: Hood Canal
+		Number of 3M elevation tiles: 13
+	8-digit HUC 17110019: Puget Sound
+		Number of 3M elevation tiles: 36
+	8-digit HUC 17110020: Dungeness-Elwha
+		Number of 3M elevation tiles: 14
+	8-digit HUC 17110021: Crescent-Hoko
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17120001: Harney-Malheur Lakes
+		Number of 3M elevation tiles: 3
+	8-digit HUC 17120002: Silvies
+		Number of 3M elevation tiles: 4
+	8-digit HUC 17120003: Donner und Blitzen
+		There are NO 3M elevation tiles
+	8-digit HUC 17120004: Silver
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17120005: Summer Lake
+		Number of 3M elevation tiles: 10
+	8-digit HUC 17120006: Lake Abert
+		Number of 3M elevation tiles: 1
+	8-digit HUC 17120007: Warner Lakes
+		There are NO 3M elevation tiles
+	8-digit HUC 17120008: Guano
+		There are NO 3M elevation tiles
+	8-digit HUC 17120009: Alvord Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 18010101: Smith
+		Number of 3M elevation tiles: 3
+	8-digit HUC 18010102: Mad-Redwood
+		There are NO 3M elevation tiles
+	8-digit HUC 18010103: Upper Eel
+		There are NO 3M elevation tiles
+	8-digit HUC 18010104: Middle Fork Eel
+		There are NO 3M elevation tiles
+	8-digit HUC 18010105: Lower Eel
+		There are NO 3M elevation tiles
+	8-digit HUC 18010106: South Fork Eel
+		There are NO 3M elevation tiles
+	8-digit HUC 18010107: Mattole
+		There are NO 3M elevation tiles
+	8-digit HUC 18010108: Big-Navarro-Garcia
+		There are NO 3M elevation tiles
+	8-digit HUC 18010109: Gualala-Salmon
+		Number of 3M elevation tiles: 2
+	8-digit HUC 18010110: Russian
+		Number of 3M elevation tiles: 6
+	8-digit HUC 18010201: Williamson
+		Number of 3M elevation tiles: 18
+	8-digit HUC 18010202: Sprague
+		Number of 3M elevation tiles: 16
+	8-digit HUC 18010203: Upper Klamath Lake
+		Number of 3M elevation tiles: 22
+	8-digit HUC 18010204: Lost
+		Number of 3M elevation tiles: 31
+	8-digit HUC 18010205: Butte
+		Number of 3M elevation tiles: 18
+	8-digit HUC 18010206: Upper Klamath
+		Number of 3M elevation tiles: 19
+	8-digit HUC 18010207: Shasta
+		Number of 3M elevation tiles: 7
+	8-digit HUC 18010208: Scott
+		Number of 3M elevation tiles: 2
+	8-digit HUC 18010209: Lower Klamath
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18010210: Salmon
+		There are NO 3M elevation tiles
+	8-digit HUC 18010211: Trinity
+		Number of 3M elevation tiles: 2
+	8-digit HUC 18010212: South Fork Trinity
+		There are NO 3M elevation tiles
+	8-digit HUC 18020001: Goose Lake
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18020002: Upper Pit
+		There are NO 3M elevation tiles
+	8-digit HUC 18020003: Lower Pit
+		Number of 3M elevation tiles: 3
+	8-digit HUC 18020004: McCloud
+		Number of 3M elevation tiles: 6
+	8-digit HUC 18020005: Sacramento Headwaters
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18020104: Sacramento-Stone Corral
+		There are NO 3M elevation tiles
+	8-digit HUC 18020111: Lower American
+		Number of 3M elevation tiles: 5
+	8-digit HUC 18020115: Upper Stony
+		There are NO 3M elevation tiles
+	8-digit HUC 18020116: Upper Cache
+		There are NO 3M elevation tiles
+	8-digit HUC 18020121: North Fork Feather
+		There are NO 3M elevation tiles
+	8-digit HUC 18020122: East Branch North Fork Feather
+		There are NO 3M elevation tiles
+	8-digit HUC 18020123: Middle Fork Feather
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18020125: Upper Yuba
+		Number of 3M elevation tiles: 3
+	8-digit HUC 18020126: Upper Bear
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18020128: North Fork American
+		Number of 3M elevation tiles: 9
+	8-digit HUC 18020129: South Fork American
+		Number of 3M elevation tiles: 6
+	8-digit HUC 18020151: Cow Creek
+		Bad Request
+	8-digit HUC 18020152: Cottonwood Creek
+		Bad Request
+	8-digit HUC 18020153: Battle Creek
+		Bad Request
+	8-digit HUC 18020154: Clear Creek-Sacramento River
+		Bad Request
+	8-digit HUC 18020155: Paynes Creek-Sacramento River
+		Bad Request
+	8-digit HUC 18020156: Thomes Creek-Sacramento River
+		Bad Request
+	8-digit HUC 18020157: Big Chico Creek-Sacramento River
+		Bad Request
+	8-digit HUC 18020158: Butte Creek
+		Bad Request
+	8-digit HUC 18020159: Honcut Headwaters-Lower Feather
+		Bad Request
+	8-digit HUC 18020161: Upper Coon-Upper Auburn
+		Bad Request
+	8-digit HUC 18020162: Upper Putah
+		Bad Request
+	8-digit HUC 18020163: Lower Sacramento
+		Bad Request
+	8-digit HUC 18030001: Upper Kern
+		There are NO 3M elevation tiles
+	8-digit HUC 18030002: South Fork Kern
+		There are NO 3M elevation tiles
+	8-digit HUC 18030003: Middle Kern-Upper Tehachapi-Grapevine
+		There are NO 3M elevation tiles
+	8-digit HUC 18030004: Upper Poso
+		There are NO 3M elevation tiles
+	8-digit HUC 18030005: Upper Deer-Upper White
+		There are NO 3M elevation tiles
+	8-digit HUC 18030006: Upper Tule
+		There are NO 3M elevation tiles
+	8-digit HUC 18030007: Upper Kaweah
+		There are NO 3M elevation tiles
+	8-digit HUC 18030009: Upper Dry
+		There are NO 3M elevation tiles
+	8-digit HUC 18030010: Upper King
+		There are NO 3M elevation tiles
+	8-digit HUC 18030012: Tulare Lake Bed
+		There are NO 3M elevation tiles
+	8-digit HUC 18040001: Middle San Joaquin-Lower Chowchilla
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18040002: Lower San Joaquin River
+		Number of 3M elevation tiles: 7
+	8-digit HUC 18040003: San Joaquin Delta
+		Number of 3M elevation tiles: 14
+	8-digit HUC 18040006: Upper San Joaquin
+		There are NO 3M elevation tiles
+	8-digit HUC 18040007: Fresno River
+		Number of 3M elevation tiles: 2
+	8-digit HUC 18040008: Upper Merced
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18040009: Upper Tuolumne
+		Number of 3M elevation tiles: 8
+	8-digit HUC 18040010: Upper Stanislaus
+		Number of 3M elevation tiles: 9
+	8-digit HUC 18040011: Upper Calaveras California
+		Number of 3M elevation tiles: 5
+	8-digit HUC 18040012: Upper Mokelumne
+		Number of 3M elevation tiles: 7
+	8-digit HUC 18040013: Upper Cosumnes
+		Number of 3M elevation tiles: 5
+	8-digit HUC 18040014: Panoche-San Luis Reservoir
+		Number of 3M elevation tiles: 8
+	8-digit HUC 18040051: Rock Creek-French Camp Slough
+		Bad Request
+	8-digit HUC 18050001: Suisun Bay
+		Number of 3M elevation tiles: 24
+	8-digit HUC 18050002: San Pablo Bay
+		Number of 3M elevation tiles: 31
+	8-digit HUC 18050003: Coyote
+		Number of 3M elevation tiles: 33
+	8-digit HUC 18050004: San Francisco Bay
+		Number of 3M elevation tiles: 46
+	8-digit HUC 18050005: Tomales-Drake Bays
+		Number of 3M elevation tiles: 24
+	8-digit HUC 18050006: San Francisco Coastal South
+		Number of 3M elevation tiles: 29
+	8-digit HUC 18060002: Pajaro
+		Number of 3M elevation tiles: 16
+	8-digit HUC 18060003: Carrizo Plain
+		There are NO 3M elevation tiles
+	8-digit HUC 18060004: Estrella
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18060005: Salinas
+		Number of 3M elevation tiles: 16
+	8-digit HUC 18060006: Central Coastal
+		Number of 3M elevation tiles: 8
+	8-digit HUC 18060007: Cuyama
+		There are NO 3M elevation tiles
+	8-digit HUC 18060008: Santa Maria
+		There are NO 3M elevation tiles
+	8-digit HUC 18060009: San Antonio
+		There are NO 3M elevation tiles
+	8-digit HUC 18060010: Santa Ynez
+		There are NO 3M elevation tiles
+	8-digit HUC 18060013: Santa Barbara Coastal
+		There are NO 3M elevation tiles
+	8-digit HUC 18060014: Santa Barbara Channel Islands
+		Number of 3M elevation tiles: 9
+	8-digit HUC 18060015: Monterey Bay
+		Bad Request
+	8-digit HUC 18070101: Ventura
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18070102: Santa Clara
+		Number of 3M elevation tiles: 5
+	8-digit HUC 18070103: Calleguas
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070104: Santa Monica Bay
+		Number of 3M elevation tiles: 3
+	8-digit HUC 18070105: Los Angeles
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070106: San Gabriel
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070107: San Pedro Channel Islands
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18070201: Seal Beach
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070202: San Jacinto
+		There are NO 3M elevation tiles
+	8-digit HUC 18070203: Santa Ana
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070204: Newport Bay
+		Number of 3M elevation tiles: 4
+	8-digit HUC 18070301: Aliso-San Onofre
+		Number of 3M elevation tiles: 3
+	8-digit HUC 18070302: Santa Margarita
+		There are NO 3M elevation tiles
+	8-digit HUC 18070303: San Luis Rey-Escondido
+		Number of 3M elevation tiles: 7
+	8-digit HUC 18070304: San Diego
+		Number of 3M elevation tiles: 18
+	8-digit HUC 18070305: Cottonwood-Tijuana
+		Number of 3M elevation tiles: 10
+	8-digit HUC 18080001: Surprise Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 18080002: Madeline Plains
+		There are NO 3M elevation tiles
+	8-digit HUC 18080003: Honey-Eagle Lakes
+		There are NO 3M elevation tiles
+	8-digit HUC 18090101: Mono Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 18090102: Crowley Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 18090103: Owens Lake
+		There are NO 3M elevation tiles
+	8-digit HUC 18090201: Eureka-Saline Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 18090202: Upper Amargosa
+		There are NO 3M elevation tiles
+	8-digit HUC 18090203: Death Valley-Lower Amargosa
+		There are NO 3M elevation tiles
+	8-digit HUC 18090204: Panamint Valley
+		There are NO 3M elevation tiles
+	8-digit HUC 18090205: Indian Wells-Searles Valleys
+		There are NO 3M elevation tiles
+	8-digit HUC 18090206: Antelope-Fremont Valleys
+		Number of 3M elevation tiles: 2
+	8-digit HUC 18090207: Coyote-Cuddeback Lakes
+		There are NO 3M elevation tiles
+	8-digit HUC 18090208: Mojave
+		There are NO 3M elevation tiles
+	8-digit HUC 18100100: Southern Mojave
+		Number of 3M elevation tiles: 1
+	8-digit HUC 18100201: Whitewater River
+		Bad Request
+	8-digit HUC 18100202: Carrizo Creek
+		Bad Request
+	8-digit HUC 18100203: San Felipe Creek
+		Bad Request
+	8-digit HUC 18100204: Salton Sea
+		Bad Request
+	8-digit HUC 19010102: Ketchikan
+		Bad Request
+	8-digit HUC 19010103: Prince of Wales
+		Bad Request
+	8-digit HUC 19010104: Bradfield Canal
+		Bad Request
+	8-digit HUC 19010105: Burroughs Bay
+		Bad Request
+	8-digit HUC 19010106: Headwaters Portland Canal
+		Bad Request
+	8-digit HUC 19010107: Outlet Portland Canal
+		Bad Request
+	8-digit HUC 19010204: Admiralty Island
+		Bad Request
+	8-digit HUC 19010205: Lower Iskut
+		Bad Request
+	8-digit HUC 19010206: Holkham Bay
+		Bad Request
+	8-digit HUC 19010207: Stikine River
+		Bad Request
+	8-digit HUC 19010208: Thomas Bay
+		Bad Request
+	8-digit HUC 19010209: Etolin-Zarembo-Wrangell Islands
+		Bad Request
+	8-digit HUC 19010210: Kuiu-Kupreanof-Mitkof Islands
+		Bad Request
+	8-digit HUC 19010211: Chichagof Island
+		Bad Request
+	8-digit HUC 19010212: Baranof Island
+		Bad Request
+	8-digit HUC 19010301: Lynn Canal
+		Bad Request
+	8-digit HUC 19010302: Glacier Bay
+		Bad Request
+	8-digit HUC 19010303: Chilkat-Skagway Rivers
+		Bad Request
+	8-digit HUC 19010304: Taku River
+		Bad Request
+	8-digit HUC 19010402: Bering Glacier
+		Bad Request
+	8-digit HUC 19010403: Tatshenshini River
+		Bad Request
+	8-digit HUC 19010404: Alsek River
+		Bad Request
+	8-digit HUC 19010405: Yakutat Bay-Gulf of Alaska
+		Bad Request
+	8-digit HUC 19010406: Palma Bay
+		Bad Request
+	8-digit HUC 19010500: Icy Strait-Chatham Strait
+		Bad Request
+	8-digit HUC 19020101: Upper Copper River
+		Bad Request
+	8-digit HUC 19020102: Middle Copper River
+		Bad Request
+	8-digit HUC 19020103: Chitina River
+		Bad Request
+	8-digit HUC 19020104: Lower Copper River
+		Bad Request
+	8-digit HUC 19020201: Eastern Prince William Sound
+		Bad Request
+	8-digit HUC 19020202: Resurrection River-Frontal Resurrection Bay
+		Bad Request
+	8-digit HUC 19020203: Prince William Sound
+		Bad Request
+	8-digit HUC 19020301: Lower Kenai Peninsula
+		Bad Request
+	8-digit HUC 19020302: Upper Kenai Peninsula
+		Bad Request
+	8-digit HUC 19020401: Anchorage
+		Bad Request
+	8-digit HUC 19020402: Matanuska
+		Bad Request
+	8-digit HUC 19020501: Upper Susitna River
+		Bad Request
+	8-digit HUC 19020502: Chulitna River
+		Bad Request
+	8-digit HUC 19020503: Talkeetna River
+		Bad Request
+	8-digit HUC 19020504: Yentna River
+		Bad Request
+	8-digit HUC 19020505: Lower Susitna River
+		Bad Request
+	8-digit HUC 19020601: Redoubt-Trading Bays
+		Bad Request
+	8-digit HUC 19020602: Tuxedni-Kamishak Bays
+		Bad Request
+	8-digit HUC 19020701: Kodiak-Afognak Islands
+		Bad Request
+	8-digit HUC 19020702: Shelikof Strait
+		Bad Request
+	8-digit HUC 19020800: Cook Inlet
+		Bad Request
+	8-digit HUC 19030101: Cold Bay
+		Bad Request
+	8-digit HUC 19030102: Fox Islands
+		Bad Request
+	8-digit HUC 19030103: Western Aleutian Islands
+		Bad Request
+	8-digit HUC 19030104: Pribilof Islands
+		Bad Request
+	8-digit HUC 19030201: Port Heiden
+		Bad Request
+	8-digit HUC 19030202: Ugashik Bay
+		Bad Request
+	8-digit HUC 19030203: Egegik Bay
+		Bad Request
+	8-digit HUC 19030204: Naknek
+		Bad Request
+	8-digit HUC 19030205: Lake Clark
+		Bad Request
+	8-digit HUC 19030206: Lake Iliamna
+		Bad Request
+	8-digit HUC 19030301: Upper Nushagak River
+		Bad Request
+	8-digit HUC 19030302: Mulchatna River
+		Bad Request
+	8-digit HUC 19030303: Lower Nushagak River
+		Bad Request
+	8-digit HUC 19030304: Wood River
+		Bad Request
+	8-digit HUC 19030305: Togiak
+		Bad Request
+	8-digit HUC 19030306: Nushagak Bay
+		Bad Request
+	8-digit HUC 19030401: North Fork Kuskokwim River
+		Bad Request
+	8-digit HUC 19030403: Takotna River
+		Bad Request
+	8-digit HUC 19030404: Holitna River
+		Bad Request
+	8-digit HUC 19030405: Stony River
+		Bad Request
+	8-digit HUC 19030406: Middle Fork Kuskokwim River
+		Bad Request
+	8-digit HUC 19030407: South Fork Kuskokwim River
+		Bad Request
+	8-digit HUC 19030501: Aniak
+		Bad Request
+	8-digit HUC 19030502: Kuskokwim Delta
+		Bad Request
+	8-digit HUC 19030503: Nunavak-St.Matthew Islands
+		Bad Request
+	8-digit HUC 19050101: St. Lawrence Island
+		Bad Request
+	8-digit HUC 19050102: Unalakleet
+		Bad Request
+	8-digit HUC 19050103: Norton Bay
+		Bad Request
+	8-digit HUC 19050104: Nome
+		Bad Request
+	8-digit HUC 19050105: Imuruk Basin
+		Bad Request
+	8-digit HUC 19050201: Shishmaref
+		Bad Request
+	8-digit HUC 19050202: Goodhope-Spafarief Bay
+		Bad Request
+	8-digit HUC 19050203: Buckland River
+		Bad Request
+	8-digit HUC 19050301: Selawik Lake
+		Bad Request
+	8-digit HUC 19050302: Upper Kobuk River
+		Bad Request
+	8-digit HUC 19050303: Middle Kobuk River
+		Bad Request
+	8-digit HUC 19050304: Lower Kobuk River
+		Bad Request
+	8-digit HUC 19050401: Upper Noatak River
+		Bad Request
+	8-digit HUC 19050402: Middle Noatak River
+		Bad Request
+	8-digit HUC 19050403: Lower Noatak River
+		There are NO 3M elevation tiles
+	8-digit HUC 19050404: Wulik-Kivalina Rivers
+		Bad Request
+	8-digit HUC 19050405: Lisburne Peninsula
+		Bad Request
+	8-digit HUC 19050500: Kotzebue Sound
+		Bad Request
+	8-digit HUC 19060101: Kukpowruk River
+		Bad Request
+	8-digit HUC 19060102: Kokolik River
+		Bad Request
+	8-digit HUC 19060103: Utukok River
+		Bad Request
+	8-digit HUC 19060201: Kuk River
+		Bad Request
+	8-digit HUC 19060202: Northwest Coast
+		Bad Request
+	8-digit HUC 19060203: Meade River
+		Bad Request
+	8-digit HUC 19060204: Ikpikpuk River
+		Bad Request
+	8-digit HUC 19060205: Harrison Bay
+		Bad Request
+	8-digit HUC 19060206: Admiralty Bay-Dease Inlet
+		Bad Request
+	8-digit HUC 19060301: Upper Colville River
+		Bad Request
+	8-digit HUC 19060302: Killik River
+		Bad Request
+	8-digit HUC 19060303: Chandler-Anaktuvuk Rivers
+		Bad Request
+	8-digit HUC 19060304: Lower Colville River
+		Bad Request
+	8-digit HUC 19060401: Kuparuk River
+		Bad Request
+	8-digit HUC 19060402: Sagavanirktok River
+		Bad Request
+	8-digit HUC 19060403: Mikkelson Bay
+		Bad Request
+	8-digit HUC 19060501: Canning River
+		Bad Request
+	8-digit HUC 19060502: Camden Bay
+		Bad Request
+	8-digit HUC 19060504: Kongakut River-Beaufort Lagoon
+		Bad Request
+	8-digit HUC 19060505: Firth River
+		Bad Request
+	8-digit HUC 19060506: Babbage River
+		Bad Request
+	8-digit HUC 19070101: Atlin Lake
+		Bad Request
+	8-digit HUC 19070102: Bennett Lake
+		Bad Request
+	8-digit HUC 19070103: Tagish Lake
+		Bad Request
+	8-digit HUC 19070104: Takhini River
+		Bad Request
+	8-digit HUC 19070402: White River
+		Bad Request
+	8-digit HUC 19070403: Ladue River-White River
+		Bad Request
+	8-digit HUC 19070502: Fortymile River
+		Bad Request
+	8-digit HUC 19070503: Sixtymile River-Yukon River
+		Bad Request
+	8-digit HUC 19070505: Tatonduk River-Yukon River
+		Bad Request
+	8-digit HUC 19070506: Charley River-Yukon River
+		Bad Request
+	8-digit HUC 19080103: Old Crow River
+		Bad Request
+	8-digit HUC 19080104: Coleen River
+		Bad Request
+	8-digit HUC 19080105: Sheenjek River
+		Bad Request
+	8-digit HUC 19080106: Black River
+		Bad Request
+	8-digit HUC 19080107: Grass River
+		Bad Request
+	8-digit HUC 19080108: Porcupine Flats-Porcupine River
+		Bad Request
+	8-digit HUC 19080201: Middle Fork-North Fork Chandalar Rivers
+		Bad Request
+	8-digit HUC 19080202: East Fork Chandalar River
+		Bad Request
+	8-digit HUC 19080203: Christian River
+		Bad Request
+	8-digit HUC 19080204: Lower Chandalar River
+		Bad Request
+	8-digit HUC 19080301: Nebesna-Chisana Rivers
+		Bad Request
+	8-digit HUC 19080302: Tok-Tanana River
+		Bad Request
+	8-digit HUC 19080303: Healy Lake-Tanana River
+		Bad Request
+	8-digit HUC 19080304: Delta River
+		Bad Request
+	8-digit HUC 19080305: Salcha River
+		Bad Request
+	8-digit HUC 19080306: Chena River
+		Bad Request
+	8-digit HUC 19080307: Tanana Flats-Tanana River
+		Bad Request
+	8-digit HUC 19080308: Nenana River
+		Bad Request
+	8-digit HUC 19080309: Tolovana River
+		Bad Request
+	8-digit HUC 19080310: Kantishna River
+		Bad Request
+	8-digit HUC 19080311: Lower Tanana River
+		Bad Request
+	8-digit HUC 19080401: Birch Creek
+		Bad Request
+	8-digit HUC 19080402: Beaver Creek
+		Bad Request
+	8-digit HUC 19080403: Yukon Flats-Yukon River
+		Bad Request
+	8-digit HUC 19080404: Ramparts-Yukon River
+		Bad Request
+	8-digit HUC 19090101: Upper Koyukuk River
+		Bad Request
+	8-digit HUC 19090102: South Fork Koyukuk River
+		Bad Request
+	8-digit HUC 19090103: Alatna River
+		Bad Request
+	8-digit HUC 19090104: Kanuti River
+		Bad Request
+	8-digit HUC 19090105: Allakaket-Koyukuk River
+		Bad Request
+	8-digit HUC 19090106: Huslia River
+		Bad Request
+	8-digit HUC 19090107: Dulbi River
+		Bad Request
+	8-digit HUC 19090108: Koyukuk Flats-Koyukuk River
+		Bad Request
+	8-digit HUC 19090109: Kateel River-Koyukuk River
+		Bad Request
+	8-digit HUC 19090201: Tozitna River
+		Bad Request
+	8-digit HUC 19090202: Nowitna River
+		Bad Request
+	8-digit HUC 19090203: Melozitna River
+		Bad Request
+	8-digit HUC 19090204: Klatsuta River-Yukon River
+		Bad Request
+	8-digit HUC 19090205: Galena-Yukon River
+		Bad Request
+	8-digit HUC 19090301: Anvik River-Yukon River
+		Bad Request
+	8-digit HUC 19090302: Upper Innoko River
+		Bad Request
+	8-digit HUC 19090303: Lower Innoko River
+		Bad Request
+	8-digit HUC 19090304: Chuilnuk River-Yukon River
+		Bad Request
+	8-digit HUC 19090305: Yukon Delta
+		Bad Request
+	8-digit HUC 20010000: Hawaii
+		Bad Request
+	8-digit HUC 20020000: Maui
+		Bad Request
+	8-digit HUC 20030000: Kahoolawe
+		Bad Request
+	8-digit HUC 20040000: Lanai
+		Bad Request
+	8-digit HUC 20050000: Molokai
+		Bad Request
+	8-digit HUC 20060000: Oahu
+		Bad Request
+	8-digit HUC 20070000: Kauai
+		Bad Request
+	8-digit HUC 20080000: Niihau
+		Bad Request
+	8-digit HUC 21010002: Cibuco-Guajataca
+		There are NO 3M elevation tiles
+	8-digit HUC 21010003: Culebrinas-Guanajibo
+		There are NO 3M elevation tiles
+	8-digit HUC 21010004: Southern Puerto Rico
+		There are NO 3M elevation tiles
+	8-digit HUC 21010005: Eastern Puerto Rico
+		There are NO 3M elevation tiles
+	8-digit HUC 21010007: Puerto Rican Western Islands
+		Bad Request
+	8-digit HUC 21010008: Puerto Rican Eastern Islands
+		Bad Request
+	8-digit HUC 21020001: St. John-St. Thomas
+		There are NO 3M elevation tiles
+	8-digit HUC 21020002: St. Croix
+		There are NO 3M elevation tiles
+	8-digit HUC 22010000: Guam
+		Bad Request
+	8-digit HUC 22020101: Saipan Island
+		Bad Request
+	8-digit HUC 22020102: Tinian Island
+		Bad Request
+	8-digit HUC 22020103: Aguijan Island
+		Bad Request
+	8-digit HUC 22020104: Rota Island
+		Bad Request
+	8-digit HUC 22020201: Farallon de Pajaros
+		Bad Request
+	8-digit HUC 22020202: Maug Islands
+		Bad Request
+	8-digit HUC 22020203: Asuncion Island
+		Bad Request
+	8-digit HUC 22020204: Agrihan Island
+		Bad Request
+	8-digit HUC 22020205: Pagan Island
+		Bad Request
+	8-digit HUC 22020206: Alamagan Island
+		Bad Request
+	8-digit HUC 22020207: Guguan Island
+		Bad Request
+	8-digit HUC 22020208: Sarigan Island
+		Bad Request
+	8-digit HUC 22020209: Anatahan Island
+		Bad Request
+	8-digit HUC 22020210: Farallon de Medinilla
+		Bad Request
+	8-digit HUC 22030001: Tutuila Island
+		Bad Request
+	8-digit HUC 22030002: Ofu Island-Olosega Island
+		Bad Request
+	8-digit HUC 22030003: Ta'u Island
+		Bad Request
+	8-digit HUC 22030004: Rose Atoll
+		Bad Request
+	8-digit HUC 22030005: Swains Island
+		Bad Request
+	8-digit HUC 22040001: Wake Island
+		Bad Request
+	8-digit HUC 22040002: Johnston Atoll
+		Bad Request
+	8-digit HUC 22040003: Kingman Reef
+		Bad Request
+	8-digit HUC 22040004: Palmyra Atoll
+		Bad Request
+	8-digit HUC 22040005: Jarvis Island
+		Bad Request
+	8-digit HUC 22040006: Howland Island
+		Bad Request
+	8-digit HUC 22040007: Baker Island
+		Bad Request
+
+Elevation File Summary:
+	Total # of Watersheds: 2,400
+	Total # of Watersheds w/ NO Data: 639
+	Total # of Files: 20,034
+	Total Duplicate Files: 12,073
+	Total Qualified Files: 7,961
+	Total Download Size: 605.8 GB
+	Total # of Bad API Requests: 363
+		These requests will have a -999 in num_of_tiles column
+
+Total Processing Time: 33 minute(s): 18 second(s)
