@@ -660,7 +660,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 localHost = '10.11.11.10'
                 port = '5432'
 
-                r2pgsqlCommand = f"raster2pgsql -s {srid} -b 1 -t {tileSize} -F -a -R -I {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
+                r2pgsqlCommand = f"raster2pgsql -s {srid} -b 1 -t {tileSize} -F -a -R {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
 
                 if recCount == masterElevRecCount:
                     g.write(r2pgsqlCommand)
@@ -862,7 +862,7 @@ def main(dlFile,bReplace):
                             j=1
                             for printMessage in future.result():
                                 if j==1:
-                                    AddMsgAndPrint(f"{printMessage} -- ({dlTracker} of {recCount:,})")
+                                    AddMsgAndPrint(f"{printMessage} -- ({dlTracker:,} of {recCount:,})")
                                 else:
                                     AddMsgAndPrint(printMessage)
                                 j+=1
@@ -1024,4 +1024,4 @@ if __name__ == '__main__':
 
     main(dlFile,bReplace)
     input("\nHit Enter to Continue: ")
-    sys.exit()
+    exit()
