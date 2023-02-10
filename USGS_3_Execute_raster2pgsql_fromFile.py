@@ -1,18 +1,21 @@
-#-------------------------------------------------------------------------------
-# Name:        module1
-# Purpose:
-#
-# Author:      Adolfo.Diaz
-#
-# Created:     02/12/2022
-# Copyright:   (c) Adolfo.Diaz 2022
-# Licence:     <your licence>
+# -*- coding: utf-8 -*-
+"""
+Script Name: USGS_3_Execute_raster2pgsql_fromFile.py
+Created on Thu Jan 26 2023
+updated 2/6/2023
 
+@author: Adolfo.Diaz
+GIS Business Analyst
+USDA - NRCS - SPSD - Soil Services and Information
+email address: adolfo.diaz@usda.gov
+cell: 608.215.7291
+
+This is script #3 in the USGS Elevation acquisition workflow developed for the DS Hub.
 # Need to figure out if a raster is already registered.  The following error gets
 # printed many times if a raster is registered.
 # ERROR:  current transaction is aborted, commands ignored until end of transaction block
 
-# Need to embed multithreading capability
+"""
 
 #-------------------------------------------------------------------------------
 
@@ -97,7 +100,7 @@ def runRaster2pgsql(cmd):
 
     try:
         cmdItems = cmd.split(' ')
-        DEMpath = cmdItems[11]
+        DEMname = os.path.basename(cmdItems[10])
 
         msgDict = dict()
         errorList = ['error','failed','fail','uncommit','aborted','notice',
@@ -117,7 +120,7 @@ def runRaster2pgsql(cmd):
         if words_re.search(errors.lower()) or not execCmd.returncode == 0:
             msgDict['Error'] = f"{cmd}\n\t{errors}"
         else:
-            msgDict['Success'] = f"Successfully loaded {DEMpath}"
+            msgDict['Success'] = f"Successfully loaded {DEMname}"
 
         return msgDict
 

@@ -498,7 +498,6 @@ if __name__ == '__main__':
 ##        downloadFile = r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_Update_DL_StatusFile\TEMP_testingFiles\DevTesting\USGS_3DEP_1M_Metadata_Elevation_11202022_TEST.txt'
 ##        dlStatusFile = r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_Update_DL_StatusFile\TEMP_testingFiles\DevTesting\USGS_3DEP_1M_Metadata_Elevation_11202022_Download_Status_TEST.txt'
 
-
         dlFileHeaderItems = {
             "huc8_digit":0,
             "prod_title":1,

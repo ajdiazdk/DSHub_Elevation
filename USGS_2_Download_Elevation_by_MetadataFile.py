@@ -5,8 +5,12 @@ Created on Fri Sep  2 10:12:13 2022
 updated 1/10/2022
 
 @author: Adolfo.Diaz
+GIS Business Analyst
+USDA - NRCS - SPSD - Soil Services and Information
+email address: adolfo.diaz@usda.gov
+cell: 608.215.7291
 
-This is script #2 in the USGS Elevation workflow developed for the DS Hub.
+This is script #2 in the USGS Elevation acquisition workflow developed for the DS Hub.
 
 The purpose of this script is to download elevation data published by USGS.  The script
 takes in a text file (i.e. USGS_3DEP_3M_Metadata_Elevation_12132022.txt) produced by
@@ -44,7 +48,7 @@ for each tile to be registered.  NOT COMPLETE.  Needed to grab raster informatio
 Created getRasterInformation function that will take in a raster and describe it's properties
 and return them.  This will be used to append to the DLStatus file.
 
-1/10/20232
+1/10/2023
   - Rewrote the download status file so that it looks like the input download file with additional raster information.
     This file can then be registered in the database and will contain all relevant elevation and raster information.
     Additional information includes:
@@ -53,6 +57,9 @@ and return them.  This will be used to append to the DLStatus file.
   - Renamed this file to: Master_DB.txt.  Generated after the unzipping happens for better effeciency.
   - Remove bUnzipFiles boolean in main function so that unzipping happens by default.  This can be overriden
     in the main function by the user.
+
+2/8/2023
+  - update getDownloadFolder to discern between huc2,4 and 8.
 
 Things to consider/do:
   - Rewrite the createErrorLogFile function utilize the elevMetadataDict instead of the original dl file.
@@ -204,6 +211,7 @@ def DownloadElevationTile(itemCollection,downloadFolder):
 
         # if download file already exists, delete it if bReplaceData is True;
         # otherwise no data will be collected for this elevation file b/c it already exists.
+        # File will be excluded from master elevation file.
         if os.path.isfile(local_file):
             if bReplaceData:
                 try:
@@ -267,13 +275,21 @@ def getDownloadFolder(huc,res):
 
     try:
 
-        if len(huc) != 8:
-            AddMsgAndPrint(f"\n\tHUC digits are incorrect for {huc}. Should be 8")
+        hucLength = len(huc)
+        if not hucLength in (2,4,8):
+            AddMsgAndPrint(f"\n\tHUC digits are incorrect for {huc}. Should be 2,4 or 8")
             return False
 
-        region = huc[:2]
-        subregion = huc[:4]
-        basin = huc[:6]
+        if hucLength == 4:
+            region = huc[:2]
+        elif hucLength == 8:
+            region = huc[:2]
+            subregion = huc[:4]
+            basin = huc[:6]
+        else:
+            pass
+
+        # last digit
         ld = huc[-1]
 
         if ld in ["1","9","0"]:
@@ -285,7 +301,12 @@ def getDownloadFolder(huc,res):
         elif ld in ["4","5"]:
             root = "/data05/gisdata/elev"
 
-        downloadFolder = root + os.sep + region + os.sep + subregion + os.sep + basin + os.sep + huc + os.sep + res.lower()
+        if hucLength == 2:
+            downloadFolder = root + os.sep + huc + os.sep + res.lower()
+        elif hucLength == 4:
+            downloadFolder = root + os.sep + region + os.sep + huc + os.sep + res.lower()
+        else:
+            downloadFolder = root + os.sep + region + os.sep + subregion + os.sep + basin + os.sep + huc + os.sep + res.lower()
 
         if not os.path.exists(downloadFolder):
             os.makedirs(downloadFolder)
@@ -436,7 +457,7 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}{dlMasterLogFile}"
 
         g = open(dlMasterFilePath,'a+')
-        header = ('huc8_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
+        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
                   'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
                   'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
         g.write(header)
@@ -972,7 +993,7 @@ def main(dlFile,bReplace):
 if __name__ == '__main__':
 
     # DOWNLOAD FILE
-    dlFile =     input("\nEnter full path to USGS Metadata Download Text File: ")
+    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
     while not os.path.exists(dlFile):
         print(f"{dlFile} does NOT exist. Try Again")
         dlFile = input("Enter full path to USGS Metadata Download Text File: ")
@@ -1006,10 +1027,10 @@ if __name__ == '__main__':
 ##        bdlmt = False
 
     # REPLACE DATA
-    bReplace =   input("\nDo you want to replace existing data? (Yes/No): ")
+    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
     while not bReplace.lower() in ("yes","no","y","n"):
         print(f"Please Enter Yes or No")
-        bReplace =    input("Do you want to replace existing data? (Yes/No): ")
+        bReplace = input("Do you want to replace existing data? (Yes/No): ")
 
     if bReplace.lower() in ("yes","y"):
         bReplace = True
