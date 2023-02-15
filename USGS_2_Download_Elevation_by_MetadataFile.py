@@ -2,7 +2,7 @@
 """
 Script Name: USGS_Download_Elevation_by_MetadataFile.py
 Created on Fri Sep  2 10:12:13 2022
-updated 1/10/2022
+updated 2/15/2023
 
 @author: Adolfo.Diaz
 GIS Business Analyst
@@ -34,10 +34,13 @@ Sequence of workflow:
         a) determine if local version of dl file exists; honor bReplaceData boolean
         b) download data to appropriate drive
         c) track zip files separate from single files (unzip) in 2 different dicts
-    5) Unzip Data -
+    5) Unzip Data - If any zips were donwloaded
         a) unzip files logged in dlZipFileDict
         b) collect size of unzipped files to update total size in the summary portion
         c) Delete zip files if bDeleteZipFiles is True
+        d) Add sourceID and DEMfilePath to dlImgFileDict
+    6) Create Master Elevation File
+    7) Create RASTER2PGSQL File
 
 ---------------- UPDATES
 12/01/2022
@@ -62,9 +65,9 @@ and return them.  This will be used to append to the DLStatus file.
   - update getDownloadFolder to discern between huc2,4 and 8.
 
 Things to consider/do:
-  - Rewrite the createErrorLogFile function utilize the elevMetadataDict instead of the original dl file.
+  - Rewrite the createErrorLogFile function to utilize the elevMetadataDict instead of the original dl file.
     In order to do this, the failedDownloadList will need to be converted to a dictionary and the sourceID used
-    as a key; sourceID:hucURL
+    as a key; sourceID:dlURL
   - possibly add the sum of the sizes for all files within individual zip files.  Within the unzip function, write
     the unzipTally to a dictionary using sourceID:unzipTally.  This sum can be appended at the very end of the master_db
     file with the header 'unzipSize'.  This will only be added for zipped files.
@@ -73,9 +76,15 @@ Things to consider/do:
     but it becomes difficult if x.zip is deleted.
   - Need to handle bad zip files.
   - Need to handle replacing data.  Similar to first issue.
+  - Modify createMasterDBfile to start the iteration process from the dlImgFileDict instead of the elevMetadataDict.
+    This will be a much cleaner approach by only iterating through the downloaded files vs all of the files in the
+    original download file (elevMetadataDict). EXAMPLE -- You rerun the Script#1 on USGS 1M data and notice that there are
+    an additional 4,000 new files.  You can use this script to download the 4,000 additional files with a bReplace parameter
+    set to 'No' however, during the process of creating the master elevation file, you will have to iterate through all 65,000
+    files.
 """
 
-# Import modules
+## ========================================== Import modules ===============================================================
 import sys, string, os, traceback, glob, csv
 import urllib, re, time, json, socket, zipfile
 import threading, multiprocessing
@@ -106,6 +115,12 @@ def AddMsgAndPrint(msg):
 
 ## ===================================================================================
 def errorMsg(errorOption=1):
+
+    """ By default, error messages will be printed and logged immediately.
+        If errorOption is set to 2, return the message back to the function that it
+        was called from.  This is used in DownloadElevationTile function or in functions
+        that use multi-threading functionality"""
+
     try:
 
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -196,13 +211,13 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         global dlZipFileDict
         global dlImgFileDict
 
-        hucURL = itemCollection[0]
+        dlURL = itemCollection[0]
         sourceID = itemCollection[1]
 
         theTab = "\t\t"
 
         # 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n30x50_w091x75_la_atchafalayabasin_2010.zip'
-        fileName = hucURL.split('/')[-1]
+        fileName = dlURL.split('/')[-1]
 
         # set the download's output location and filename
         local_file = f"{downloadFolder}{os.sep}{fileName}"
@@ -219,14 +234,14 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                     #messageList.append(f"{theTab}{'File Exists; Deleted':<35} {fileName:<60}")
                 except:
                     messageList.append(f"{theTab:q!}{'File Exists; Failed to Delete':<35} {fileName:<60}")
-                    failedDownloadList.append(hucURL)
+                    failedDownloadList.append(dlURL)
                     return messageList
             else:
                 messageList.append(f"{theTab}{'File Exists, Skipping:':<35} {fileName:<60} {convert_bytes(os.stat(local_file).st_size):>15}")
                 return messageList
 
         # Download elevation zip file
-        request = urlopen(hucURL)
+        request = urlopen(dlURL)
 
         # save the download file to the specified folder
         output = open(local_file, "wb")
@@ -252,18 +267,18 @@ def DownloadElevationTile(itemCollection,downloadFolder):
     except URLError as e:
         messageList.append(f"{theTab}{'Failed to Download:':<35} {fileName:<60} {str(e):>15}")
         #messageList.append(f"\t{theTab}{e.__dict__}")
-        failedDownloadList.append(hucURL)
+        failedDownloadList.append(dlURL)
         return messageList
 
     except HTTPError as e:
         messageList.append(f"{theTab}{'Failed to Download:':<35} {fileName:<60} {str(e):>15}")
         #messageList.append(f"\t{theTab}{e.__dict__}")
-        failedDownloadList.append(hucURL)
+        failedDownloadList.append(dlURL)
         return messageList
 
     except:
-        messageList.append(f"{theTab}{'Unexpected Error:':<35} {fileName:<60} -- {hucURL}")
-        failedDownloadList.append(hucURL)
+        messageList.append(f"{theTab}{'Unexpected Error:':<35} {fileName:<60} -- {dlURL}")
+        failedDownloadList.append(dlURL)
         messageList.append(f"\t{theTab}{errorMsg(errorOption=2)}")
         return messageList
 
@@ -440,15 +455,19 @@ def print_progress_bar(index, total, label):
 
 ## ===================================================================================
 def createMasterDBfile(dlImgFileDict,elevMetadataDict):
-# function to create download status CSV file
-# [sourceID,prod_title,local_file,str(numOfFiles),str(size),now,'True']
-    # 5eacf54a82cefae35a24e177,
-    # USGS one meter x44y515 ME Eastern B1 2017
-    # /data03/gisdata/elev/01/0101/010100/01010002/1m/USGS_one_meter_x44y515_ME_Eastern_B1_2017.tif
-    # 1
-    # 62690309
-    # 11232022 16:19:44
-    # True
+    """ This function creates the Master Database CSV file for the DEM files
+        that were successfully downloaded.  Successfully downloaded DEM files
+        are logged to the dlImgFileDict dictionary, which is passed to this
+        function.
+
+        The Master Database CSV file is created in the same directory as the input
+        download file.  The original information from the download file is automatically
+        appended to the Master Database CSV file. 20 additional raster information items
+        are also added to the master CSV file.  These items are collected within the
+        getRasterInformation function.
+
+        When completed, this function will retrun the file path of the master CSV file.
+    """
 
     try:
         global downloadFile
@@ -466,11 +485,13 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         index = 1
         label = "Gathering Raster Metadata Information"
 
+        # Iterate through all of the sourceID files in the download file (elevMetadatDict)
         for srcID,demInfo in elevMetadataDict.items():
 
-            # huc8_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
             firstPart = ','.join(str(e) for e in demInfo)
 
+            # srcID must exist in dlImgFileDict (successully populated during download)
             if srcID in dlImgFileDict:
                 demFilePath = dlImgFileDict[srcID]
                 demFileName = os.path.basename(demFilePath)
@@ -484,7 +505,7 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
                     g.write(f"\n{firstPart},{demFileName},{os.path.dirname(demFilePath)},{','.join('#'*20)}")
 
             else:
-                print(f"SourceID: {srcID} COULD NOT FIND A .TIF OR .IMG DEM FILe")
+                print(f"SourceID: {srcID} NO .TIF OR .IMG FOUND -- Perhaps not downloaded")
 
             print_progress_bar(index, total, label)
             index+=1
@@ -513,7 +534,8 @@ def getRasterInformation(raster):
 
         if not os.path.exists(raster):
             print("\t{raster} DOES NOT EXIST. Could not get Raster Information")
-            return ','.join('#'*20)
+            return False
+            #return ','.join('#'*20)
 
         gdal.UseExceptions()    # Enable exceptions
 
@@ -723,7 +745,7 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerItems):
                     g.write(line.strip())
                     lineNum +=1
 
-                huc8digit = items[headerItems["huc8_digit"]]
+                huc8digit = items[headerItems["huc_digit"]]
                 downloadURL = items[headerItems["download_url"]].strip()
 
                 if downloadURL in failedDownloadList:
@@ -766,7 +788,7 @@ def main(dlFile,bReplace):
         resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
         headerItems = {
-            "huc8_digit":0,
+            "huc_digit":0,
             "prod_title":1,
             "pub_date":2,
             "last_updated":3,
@@ -796,7 +818,7 @@ def main(dlFile,bReplace):
                     badLines+=1
                     continue
 
-                huc8digit = items[headerItems["huc8_digit"]]
+                hucDigit = items[headerItems["huc_digit"]]
                 prod_title = items[headerItems["prod_title"]]
                 pub_date = items[headerItems["pub_date"]]
                 last_updated = items[headerItems["last_updated"]]
@@ -807,13 +829,13 @@ def main(dlFile,bReplace):
                 downloadURL = items[headerItems["download_url"]].strip()
 
                 # Add info to urlDownloadDict
-                if huc8digit in urlDownloadDict:
-                    urlDownloadDict[huc8digit].append([downloadURL,sourceID])
+                if hucDigit in urlDownloadDict:
+                    urlDownloadDict[hucDigit].append([downloadURL,sourceID])
                 else:
-                    urlDownloadDict[huc8digit] = [[downloadURL,sourceID]]
+                    urlDownloadDict[hucDigit] = [[downloadURL,sourceID]]
 
                 # Add info to elevMetadataDict
-                elevMetadataDict[sourceID] = [huc8digit,prod_title,pub_date,last_updated,
+                elevMetadataDict[sourceID] = [hucDigit,prod_title,pub_date,last_updated,
                                               size,fileFormat,sourceID,metadata_url,downloadURL]
                 recCount+=1
 
