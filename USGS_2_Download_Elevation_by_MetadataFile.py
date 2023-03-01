@@ -41,6 +41,12 @@ Sequence of workflow:
         d) Add sourceID and DEMfilePath to dlImgFileDict
     6) Create Master Elevation File
     7) Create RASTER2PGSQL File
+    8) Provide Summary
+        a) Total Download time
+        b) # of downloaded files
+        c) # of files that failed to download
+        d) # of files that were unzipped (if any)
+        e) Total processing time
 
 ---------------- UPDATES
 12/01/2022
@@ -64,6 +70,29 @@ and return them.  This will be used to append to the DLStatus file.
 2/8/2023
   - update getDownloadFolder to discern between huc2,4 and 8.
 
+2/24/2023
+    -update createRaster2pgSQLFile to print invalid raster2pgsql commands.  It is important
+     That the user fixes them here before proceeeding to the next step#3.
+
+2/27/2023
+    - Updated headerItems (dictionary of headers with positions) to headerValues (list created by
+      opening up the download file and automatically grabbing the header values).  This is a better method
+      moving forward in case header items are updated.
+    - Bug with unzip function.  zipName was established within the first if statement when it should've been
+      established before in case an error with zipName is encountered.
+    - Added additional test case scenario in createMasterDBFile when srcID is not in dlImgFileDict.  check
+      failedDownloadList to see if URL is in there, if so simply pass.  If not, resulting sourceID should be
+      inspected.
+
+2/28/2023
+    - Update DownloadElevationTile to check for zero-sized files.  This potentially happens when a download process
+      is terminaged and leaves an empty file behind.  When rerunning this process, the file technically exists.
+      If so, delete it and redownload it.
+    - Added a check for establishing download folder depending on operating system.  NT vs. POSIX
+    - Incorporated multi-threading capability in createMasterDBFile for gathering raster information.  The
+      problem is that statistics need to be calculated for DEM files and this takes approximately 10 secs
+      per file.
+
 Things to consider/do:
   - Rewrite the createErrorLogFile function to utilize the elevMetadataDict instead of the original dl file.
     In order to do this, the failedDownloadList will need to be converted to a dictionary and the sourceID used
@@ -82,6 +111,10 @@ Things to consider/do:
     an additional 4,000 new files.  You can use this script to download the 4,000 additional files with a bReplace parameter
     set to 'No' however, during the process of creating the master elevation file, you will have to iterate through all 65,000
     files.
+  - Add windows vs Linux test for determining file path of DEM.  It's annoying to have to switch that back
+    and forth for testing purposes.
+  - Add boolean for rewriting raster2pgsql file for all DEM files or only those that are downloaded.
+
 """
 
 ## ========================================== Import modules ===============================================================
@@ -210,6 +243,7 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         messageList = list()
         global dlZipFileDict
         global dlImgFileDict
+        global totalDownloadSize
 
         dlURL = itemCollection[0]
         sourceID = itemCollection[1]
@@ -237,8 +271,30 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                     failedDownloadList.append(dlURL)
                     return messageList
             else:
-                messageList.append(f"{theTab}{'File Exists, Skipping:':<35} {fileName:<60} {convert_bytes(os.stat(local_file).st_size):>15}")
-                return messageList
+                #messageList.append(f"{theTab}{'File Exists, Skipping:':<35} {fileName:<60} {convert_bytes(os.stat(local_file).st_size):>15}")
+
+                # ---------------------------------These 8 lines were added temporary to remove duplicates from 1M data
+                dlSize = os.stat(local_file).st_size
+
+                if dlSize > 0:
+                    totalDownloadSize+=dlSize
+                    # Add downloaded file to appropriate dictionary; sourceID:local_file
+                    if zipfile.is_zipfile(local_file):
+                        dlZipFileDict[sourceID] = local_file
+                        messageList.append(f"{theTab}{'File will be added to Raster2pgsql file:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
+                    else:
+                        dlImgFileDict[sourceID] = local_file
+                        messageList.append(f"{theTab}{'DEM will be added to Raster2pgsql file:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
+                    return messageList
+
+                else:
+                    try:
+                        os.remove(local_file)
+                        messageList.append(f"{theTab}{'File was 0 bytes; Deleted':<35} {fileName:<60}")
+                    except:
+                        messageList.append(f"{theTab:q!}{'File was 0 bytes; Failed to Delete':<35} {fileName:<60}")
+                        failedDownloadList.append(dlURL)
+                        return messageList
 
         # Download elevation zip file
         request = urlopen(dlURL)
@@ -249,7 +305,6 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         output.close()
 
         # Log the size of the file downloaded; could be zip or individual file
-        global totalDownloadSize
         dlSize = os.stat(local_file).st_size
         totalDownloadSize+=dlSize
 
@@ -341,10 +396,11 @@ def unzip(itemCollection,bDeleteZipFiles):
         messageList = list()
         sourceID = itemCollection[0]
         local_zip = itemCollection[1]
+        zipName = local_zip.split(os.sep)[-1]
 
         global totalUnzipSize
         global elevMetadataDict
-        global headerItems
+        global headerValues
         global dlImgFileDict
 
         if bDeleteZipFiles: leftAlign = 40
@@ -356,12 +412,11 @@ def unzip(itemCollection,bDeleteZipFiles):
             zipFile = zipfile.ZipFile(local_zip)
             zipFileList = zipFile.filelist           # list of files within the zipfile
             zipSize = os.stat(local_zip).st_size     # size in bytes
-            zipName = local_zip.split(os.sep)[-1]
             unzipFolder = os.path.dirname(local_zip)
 
             # Isolate DEM file based on the format
             demFilePath = ""
-            fileFormat = elevMetadataDict[sourceID][headerItems['format']].lower()
+            fileFormat = elevMetadataDict[sourceID][headerValues.index("format")].lower()
             if fileFormat == 'geotiff':
                 fileType = 'tif'        # 1M DEMs
             else:
@@ -454,6 +509,81 @@ def print_progress_bar(index, total, label):
     sys.stdout.flush()
 
 ## ===================================================================================
+def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
+
+    # dlImgFileDict: sourceID = rasterPath
+
+    try:
+        demStatDict = dict()
+        goodStats = 0
+        badStats = 0
+
+        # Step #1 Gather Statistic Information for all rasters
+        AddMsgAndPrint(f"\tGathering Individual DEM Statistical Information")
+        with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+
+            # use a set comprehension to start all tasks.  This creates a future object
+            rasterStatInfo = {executor.submit(getRasterInformation_MT, rastItem): rastItem for rastItem in dlImgFileDict.items()}
+
+            # yield future objects as they are done.
+            for stats in as_completed(rasterStatInfo):
+                resultDict = stats.result()
+                for results in resultDict.items():
+                    ID = results[0]
+                    rastInfo = results[1]
+
+                    if rastInfo.find('#')>-1:
+                        badStats+=1
+                    else:
+                        goodStats+=1
+                    demStatDict[ID] = rastInfo
+
+        AddMsgAndPrint(f"\t\t\tSuccessfully Gathered stats for {goodStats:,} DEMs")
+        AddMsgAndPrint(f"\t\t\tProblems with Gathering stats for {badStats:,} DEMs")
+        global downloadFile
+
+        # Create Master Elevation File
+        dlMasterLogFile = os.path.basename(downloadFile).split('.')[0] + "_MASTER_DB.txt"
+        dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}{dlMasterLogFile}"
+
+        g = open(dlMasterFilePath,'a+')
+        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
+                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
+                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+        g.write(header)
+
+        total = len(elevMetadataDict)
+        index = 1
+
+        # Iterate through all of the sourceID files in the download file (elevMetadatDict)
+        for srcID,demInfo in elevMetadataDict.items():
+
+            # 9 item INFO: huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            firstPart = ','.join(str(e) for e in demInfo)
+
+            # srcID must exist in dlImgFileDict (successully populated during download)
+            if srcID in dlImgFileDict:
+                demFilePath = dlImgFileDict[srcID]
+                demFileName = os.path.basename(demFilePath)
+                secondPart = demStatDict[srcID]
+
+                g.write(f"\n{firstPart},{demFileName},{os.path.dirname(demFilePath)},{secondPart}")
+
+            # srcID failed during the download process.  Pass since it will be accounted for in error file
+            elif demInfo[headerValues.index("download_url")] in failedDownloadList:
+                continue
+
+            else:
+                AddMsgAndPrint(f"SourceID: {srcID} NO .TIF OR .IMG FOUND -- Inspect this process")
+
+        g.close()
+        return dlMasterFilePath
+
+    except:
+        errorMsg()
+        return False
+
+## ===================================================================================
 def createMasterDBfile(dlImgFileDict,elevMetadataDict):
     """ This function creates the Master Database CSV file for the DEM files
         that were successfully downloaded.  Successfully downloaded DEM files
@@ -468,7 +598,6 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
 
         When completed, this function will retrun the file path of the master CSV file.
     """
-
     try:
         global downloadFile
 
@@ -504,8 +633,12 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
                     AddMsgAndPrint(f"\tError in getting raster information for sourceID: {srcID}")
                     g.write(f"\n{firstPart},{demFileName},{os.path.dirname(demFilePath)},{','.join('#'*20)}")
 
+            # srcID failed during the download process.  Pass since it will be accounted for in error file
+            elif demInfo[headerValues.index("download_url")] in failedDownloadList:
+                continue
+
             else:
-                print(f"SourceID: {srcID} NO .TIF OR .IMG FOUND -- Perhaps not downloaded")
+                AddMsgAndPrint(f"SourceID: {srcID} NO .TIF OR .IMG FOUND -- Inspect this process")
 
             print_progress_bar(index, total, label)
             index+=1
@@ -519,7 +652,142 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
     except:
         errorMsg()
 
-## ===================================================================================
+
+#### ===================================================================================
+def getRasterInformation_MT(rasterItem):
+
+    # Raster information will be added to dlStatusList
+    # sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus --
+    # add additional data:
+    # columns,rows,cellsize,bandcount,bitDepth,nodatavalue,
+
+    # query srid
+    # describe num of bands; what if it is more than 1
+
+    # Input example
+    # rasterItem = (sourceID, raster path)
+    # ('60d2c0ddd34e840986528ae4', 'E:\\DSHub\\Elevation\\1M\\USGS_1M_19_x44y517_ME_CrownofMaine_2018_A18.tif')
+
+    # Return example
+    # rasterStatDict
+    # '5eacfc1d82cefae35a250bec' = '10012,10012,1,1.0,GeoTIFF,Float32,-999999.0,PROJECTED,26919,NAD83 / UTM zone 19N,5150006.0,439994.0,450006.0,5139994.0,366.988,444.228,577.808,34.396,256,256'
+
+    try:
+        srcID = rasterItem[0]
+        raster = rasterItem[1]
+        rasterStatDict = dict()  # temp dict that will return raster information
+
+        # Raster doesn't exist; download error
+        if not os.path.exists(raster):
+            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} DOES NOT EXIST. Could not get Raster Information")
+            rasterStatDict[srcID] = ','.join('#'*20)
+            return rasterStatDict
+
+        # Raster size is 0 bytes; download error
+        if not os.stat(raster).st_size > 0:
+            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} Is EMPTY. Could not get Raster Information")
+            rasterStatDict[srcID] = ','.join('#'*20)
+            return rasterStatDict
+
+        gdal.UseExceptions()    # Enable exceptions
+
+        rds = gdal.Open(raster)
+        rdsInfo = gdal.Info(rds,format="json")
+
+        # Raster Properties
+        columns = rdsInfo['size'][0]
+        rows = rdsInfo['size'][1]
+        bandCount = rds.RasterCount
+        bitDepth = rdsInfo['bands'][0]['type']
+        cellSize = rds.GetGeoTransform()[1]
+        rdsFormat = rdsInfo['driverLongName']
+        noDataVal = rdsInfo['bands'][0]['noDataValue']
+
+        # Raster Statistics
+        # ComputeStatistics vs. GetStatistics(0,1) vs. ComputeBandStats
+        # bandInfo = rds.GetRasterBand(1).ComputeStatistics(0) VS.
+        # bandInfo = rds.GetRasterBand(1).GetStatistics(0,1)
+        # bandInfo = rds.GetRasterBand(1).ComputeBandStats
+        # (Min, Max, Mean, StdDev)
+
+        # Take stat info from JSON info above; This should work for 1M
+        # May not work for 3M or 10M
+        try:
+            minStat = rdsInfo['bands'][0]['min']
+            meanStat = rdsInfo['bands'][0]['mean']
+            maxStat = rdsInfo['bands'][0]['max']
+            stDevStat = rdsInfo['bands'][0]['stdDev']
+            blockXsize = rdsInfo['bands'][0]['block'][0]
+            blockYsize = rdsInfo['bands'][0]['block'][1]
+
+            # stat info is included in JSON info but stats are not calculated;
+            # calc statistics if min,max or mean are not greater than 0.0
+            # this can add significant overhead to the process
+            if not minStat > 0 or not meanStat > 0 or not maxStat > 0:
+                print(f"\t\t{os.path.basename(raster)} - Stats are set to 0 -- Calculating")
+                bandInfo = rds.GetRasterBand(1)
+                bandStats = bandInfo.ComputeStatistics(0)
+                minStat = bandStats[0]
+                maxStat = bandStats[1]
+                meanStat = bandStats[2]
+                stDevStat = bandStats[3]
+                blockXsize = bandInfo.GetBlockSize()[0]
+                blockYsize = bandInfo.GetBlockSize()[1]
+
+        # Stat info is not included in JSON info above.
+        # Force calculation of Raster Statistics
+        # this can add significant overhead to the process
+        except:
+            print(f"\t\t{os.path.basename(raster)} Stats not present in info -- Forcing Calc'ing of raster info")
+            bandInfo = rds.GetRasterBand(1)
+            bandStats = bandInfo.ComputeStatistics(0)
+            minStat = bandStats[0]
+            maxStat = bandStats[1]
+            meanStat = bandStats[2]
+            stDevStat = bandStats[3]
+            blockXsize = bandInfo.GetBlockSize()[0]
+            blockYsize = bandInfo.GetBlockSize()[1]
+
+        # Raster CRS Information
+        # What is returned when a raster is undefined??
+        prj = rds.GetProjection()  # GDAL returns projection in WKT
+        srs = osr.SpatialReference(prj)
+        srs.AutoIdentifyEPSG()
+        epsg = srs.GetAttrValue('AUTHORITY',1)
+
+        if not srs.GetAttrValue('projcs') is None:
+            srsType = 'PROJECTED'
+            srsName = srs.GetAttrValue('projcs')
+        else:
+            srsType = 'GEOGRAPHIC'
+            srsName = srs.GetAttrValue('geogcs')
+
+        if srs.IsProjected:
+            srsName = srs.GetAttrValue('projcs')
+        else:
+            srsName = srs.GetAttrValue('geogcs')
+
+        # 'lowerLeft': [439994.0, 5139994.0]
+        #lowerLeft = rdsInfo['cornerCoordinates']['lowerLeft']
+        #lowerRight = rdsInfo['cornerCoordinates']['lowerRight']
+        #upperRight = rdsInfo['cornerCoordinates']['upperRight']
+        #upperLeft = rdsInfo['cornerCoordinates']['upperLeft']
+
+        right,top = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
+        left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
+
+        rasterInfoList = [columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
+                          top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
+
+        rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
+        return rasterStatDict
+
+    except:
+        errorMsg()
+        rasterStatDict[srcID] = ','.join('#'*20)
+        return rasterStatDict
+
+#### ===================================================================================
 def getRasterInformation(raster):
 
     # Raster information will be added to dlStatusList
@@ -572,7 +840,7 @@ def getRasterInformation(raster):
             # calc statistics if min,max or mean are not greater than 0.0
             # this can add significant overhead to the process
             if not minStat > 0 or not meanStat > 0 or not maxStat > 0:
-                print(" Stats are set to 0 -- Calculating")
+                AddMsgAndPrint(f"\t\t{os.path.basename(raster)} - Stats are set to 0 -- Calculating")
                 bandInfo = rds.GetRasterBand(1)
                 bandStats = bandInfo.ComputeStatistics(0)
                 minStat = bandStats[0]
@@ -586,7 +854,7 @@ def getRasterInformation(raster):
         # Force calculation of Raster Statistics
         # this can add significant overhead to the process
         except:
-            print(" Stats not present in info -- Forcing Calc'ing of raster info")
+            print(f"{os.path.basename(raster)} Stats not present in info -- Forcing Calc'ing of raster info")
             bandInfo = rds.GetRasterBand(1)
             bandStats = bandInfo.ComputeStatistics(0)
             minStat = bandStats[0]
@@ -610,10 +878,10 @@ def getRasterInformation(raster):
             srsType = 'GEOGRAPHIC'
             srsName = srs.GetAttrValue('geogcs')
 
-##        if srs.IsProjected:
-##            srsName = srs.GetAttrValue('projcs')
-##        else:
-##            srsName = srs.GetAttrValue('geogcs')
+        if srs.IsProjected:
+            srsName = srs.GetAttrValue('projcs')
+        else:
+            srsName = srs.GetAttrValue('geogcs')
 
         # 'lowerLeft': [439994.0, 5139994.0]
         #lowerLeft = rdsInfo['cornerCoordinates']['lowerLeft']
@@ -671,7 +939,7 @@ def createRaster2pgSQLFile(masterElevFile):
 
     try:
         global resolution
-        masterElevRecCount = len(open(masterElevFile).readlines())
+        masterElevRecCount = len(open(masterElevFile).readlines()) - 1  # subtract header
 
         recCount = 0
         r2pgsqlFileName = os.path.basename(downloadFile).split('.')[0] + "_RASTER2PGSQL.txt"
@@ -679,7 +947,9 @@ def createRaster2pgSQLFile(masterElevFile):
         g = open(r2pgsqlFilePath,'a+')
 
         total = sum(1 for line in open(masterElevFile)) -1
-        label = "Generating Raster2PGSQL Statements"
+        #label = "Generating Raster2PGSQL Statements"
+
+        invalidCommands = list()
 
         """ ------------------- Open Master Elevation File and write raster2pgsql statements ---------------------"""
         with open(masterElevFile, 'r') as fp:
@@ -697,26 +967,36 @@ def createRaster2pgSQLFile(masterElevFile):
                 tileSize = '507x507'
                 demPath = f"{items[10]}{os.sep}{items[9]}"
                 dbName = 'elevation'
-                dbTable = f"elevation_{resolution.lower()}"  # elevation_3m
+                dbTable = f"elevation_{resolution.lower()}_new"  # elevation_3m
                 demName = items[9]
                 password = 'itsnotflat'
                 localHost = '10.11.11.10'
-                port = '5432'
+                port = '6432'
 
                 r2pgsqlCommand = f"raster2pgsql -s {srid} -b 1 -t {tileSize} -F -a -R {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
+
+                # Add check to look for # in r2pgsqlCommand
+                if r2pgsqlCommand.find('#') > -1:
+                    invalidCommands.append(r2pgsqlCommand)
 
                 if recCount == masterElevRecCount:
                     g.write(r2pgsqlCommand)
                 else:
                     g.write(r2pgsqlCommand + "\n")
 
-                print_progress_bar(recCount, total, label)
+                #print_progress_bar(recCount, total, label)
                 recCount+=1
 
         g.close()
         del masterElevRecCount
 
-        print("\n")
+        # Inform user about invalid raster2pgsql commands so that they can be fixed.
+        numOfInvalidCommands = len(invalidCommands)
+        if numOfInvalidCommands:
+            AddMsgAndPrint(f"\tThere are {numOfInvalidCommands:,} invalid raster2pgsql commands or that contain invalid parameters:")
+            for invalidCmd in invalidCommands:
+                AddMsgAndPrint(f"\t\t{invalidCmd}")
+
         return r2pgsqlFilePath
 
     except:
@@ -724,7 +1004,7 @@ def createRaster2pgSQLFile(masterElevFile):
 
 
 ## ===================================================================================
-def createErrorLogFile(downloadFile,failedDownloadList,headerItems):
+def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
     try:
 
@@ -745,8 +1025,8 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerItems):
                     g.write(line.strip())
                     lineNum +=1
 
-                huc8digit = items[headerItems["huc_digit"]]
-                downloadURL = items[headerItems["download_url"]].strip()
+                huc8digit = items[headerValues.index("huc_digit")]
+                downloadURL = items[headerValues.index("download_url")].strip()
 
                 if downloadURL in failedDownloadList:
                     g.write("\n" + line.strip())
@@ -772,7 +1052,7 @@ def main(dlFile,bReplace):
         global bReplaceData
         global downloadFile
         global elevMetadataDict
-        global headerItems
+        global headerValues
         global resolution
 
         # 6 Tool Parameters
@@ -787,21 +1067,25 @@ def main(dlFile,bReplace):
         # USGS_3DEP_3M_Metadata_Elevation_11102022.txt
         resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
-        headerItems = {
-            "huc_digit":0,
-            "prod_title":1,
-            "pub_date":2,
-            "last_updated":3,
-            "size":4,
-            "format":5,
-            "sourceID":6,
-            "metadata_url":7,
-            "download_url":8}
+        # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
+        headerValues = open(downloadFile).readline().rstrip().split(',')
+
+##        headerItems = {
+##            "huc_digit":0,
+##            "prod_title":1,
+##            "pub_date":2,
+##            "last_updated":3,
+##            "size":4,
+##            "format":5,
+##            "sourceID":6,
+##            "metadata_url":7,
+##            "download_url":8}
 
         urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by HUC; 07040006:[[ur1],[url2]]
         elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
         recCount = 0
         badLines = 0
+        uniqueSourceIDList = list()
 
         """ ---------------------------- Open Download File and Parse Information into dictionary ------------------------"""
         with open(downloadFile, 'r') as fp:
@@ -814,19 +1098,20 @@ def main(dlFile,bReplace):
                     continue
 
                 # Skip if number of items are incorrect
-                if len(items) != len(headerItems):
+                if len(items) != len(headerValues):
                     badLines+=1
+                    recCount+=1
                     continue
 
-                hucDigit = items[headerItems["huc_digit"]]
-                prod_title = items[headerItems["prod_title"]]
-                pub_date = items[headerItems["pub_date"]]
-                last_updated = items[headerItems["last_updated"]]
-                size = items[headerItems["size"]]
-                fileFormat = items[headerItems["format"]]
-                sourceID = items[headerItems["sourceID"]]
-                metadata_url = items[headerItems["metadata_url"]]
-                downloadURL = items[headerItems["download_url"]].strip()
+                hucDigit = items[headerValues.index("huc_digit")]
+                prod_title = items[headerValues.index("prod_title")]
+                pub_date = items[headerValues.index("pub_date")]
+                last_updated = items[headerValues.index("last_updated")]
+                size = items[headerValues.index("size")]
+                fileFormat = items[headerValues.index("format")]
+                sourceID = items[headerValues.index("sourceID")]
+                metadata_url = items[headerValues.index("metadata_url")]
+                downloadURL = items[headerValues.index("download_url")].strip()
 
                 # Add info to urlDownloadDict
                 if hucDigit in urlDownloadDict:
@@ -883,13 +1168,17 @@ def main(dlFile,bReplace):
             if bDownloadMultithread: AddMsgAndPrint(f"\nDownloading in Multi-threading Mode - # of Files: {recCount:,}")
             else:                    AddMsgAndPrint(f"\nDownloading in Single Request Mode - # of Files: {recCount:,}")
 
+            # 01010201:[URL,sourceID]
             for huc,items in urlDownloadDict.items():
                 i = 1
                 numOfHUCelevTiles = len(items)
 
-                downloadFolder = getDownloadFolder(huc,resolution)
-                if not downloadFolder: continue
-                #downloadFolder = r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_Update_DL_StatusFile\TEMP_testingFiles\DevTesting\10M'
+                # Windows vs Linux
+                if os.name == 'posix':
+                    downloadFolder = getDownloadFolder(huc,resolution)
+                    if not downloadFolder: continue
+                else:
+                    downloadFolder = r'E:\DSHub\Elevation\1M'
 
                 AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles} elevation tiles for HUC: {huc} ---> {downloadFolder}")
 
@@ -952,34 +1241,41 @@ def main(dlFile,bReplace):
         else:
             print("\nThere are no elevation tiles to download")
 
-        # Create Master Elevation File & Raster2pgsql File
+
+        """ ----------------------------- Create Master Elevation File ----------------------------- """
         if len(dlImgFileDict):
             AddMsgAndPrint(f"\nCreating Master Database Elevation File")
             dlMasterFileStart = tic()
-
-            dlMasterFile = createMasterDBfile(dlImgFileDict,elevMetadataDict)
+            dlMasterFile = createMasterDBfile_MT(dlImgFileDict,elevMetadataDict)
             AddMsgAndPrint(f"\tMaster Database Elevation File Path: {dlMasterFile}")
             dlMasterFileStop = toc(dlMasterFileStart)
 
-            # Create Raster2pgsql Files
-            AddMsgAndPrint(f"\nCreating Raster2pgsql File")
-            r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
-            AddMsgAndPrint(f"\tRaster2pgsql File Path: {dlMasterFile}")
-            AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
+            """ ----------------------------- Create Raster2pgsql File ---------------------------------- """
+            if os.path.exists(dlMasterFile):
+                AddMsgAndPrint(f"\nCreating Raster2pgsql File")
+                r2pgsqlStart = tic()
+                r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
+                AddMsgAndPrint(f"\tRaster2pgsql File Path: {dlMasterFile}")
+                AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
+                r2pgsqlStop = toc(r2pgsqlStart)
+            else:
+                AddMsgAndPrint(f"\nRaster2pgsql File will NOT be created")
         else:
             AddMsgAndPrint(f"\nNo information available to produce Master Database Elevation File")
             AddMsgAndPrint(f"\nNo information available to produce Raster2pgsql File")
 
-        """ ------------------------------------ SUMMARY -------------------------------------- """
+        """ ------------------------------------ SUMMARY -------------------------------------------- """
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
-        AddMsgAndPrint(f"\nTotal Download Time: {dlStop}")
+
+        AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
+        AddMsgAndPrint(f"\tDownload Time: {dlStop}")
+        if len(dlZipFileDict) > 0:
+                AddMsgAndPrint(f"\tUnzip Data Time: {unzipStop}")
+        AddMsgAndPrint(f"\tCreate Master Elevation File Time: {dlMasterFileStop}")
+        AddMsgAndPrint(f"\tCreate Raster2pgsql File Time: {r2pgsqlStop}")
 
         if totalDownloadSize > 0:
             AddMsgAndPrint(f"\nTotal Download Size: {convert_bytes(totalDownloadSize)}")
-
-            # Create raster2pgsql file
-            #raster2pgSQLFile = createRaster2pgSQLFile(dlStatusList)
-            #AddMsgAndPrint(f"\nDownload Status File: {dlStatusFile}")
 
         # Report number of DEMs downloaded
         if len(dlImgFileDict) == recCount:
@@ -992,20 +1288,14 @@ def main(dlFile,bReplace):
         # Create Download Error File
         if len(failedDownloadList):
             AddMsgAndPrint(f"\nFailed to Download {len(failedDownloadList):,} elevation files:")
-            errorlogFile = createErrorLogFile(downloadFile,failedDownloadList,headerItems)
+            errorlogFile = createErrorLogFile(downloadFile,failedDownloadList,headerValues)
 
         if bUnzipFiles:
             if len(dlZipFileDict) > 0:
-                AddMsgAndPrint(f"\nTotal Time to unzip data: {unzipStop}")
+                #totalUnzipSize = sum([os.stat(x).st_size for x in glob.glob(f"{downloadFolder}\\*") if not x.endswith(".zip")])
+                AddMsgAndPrint(f"\tNumber of files to unzip: {len(dlZipFileDict):,}")
+                AddMsgAndPrint(f"\tTotal Unzipped Size: {convert_bytes(totalUnzipSize)}")
 
-                try:
-                    #totalUnzipSize = sum([os.stat(x).st_size for x in glob.glob(f"{downloadFolder}\\*") if not x.endswith(".zip")])
-                    AddMsgAndPrint(f"\tNumber of files to unzip: {len(zipFileList):,}")
-                    AddMsgAndPrint(f"\tTotal Unzipped Size: {convert_bytes(totalUnzipSize)}")
-                except:
-                    pass
-
-        AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
         AddMsgAndPrint(f"\nAll console messages were logged to: {msgLogFile}")
 
     except:
@@ -1059,10 +1349,10 @@ if __name__ == '__main__':
     else:
         bReplace = False
 
-##    dlFile = r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_Update_DL_StatusFile\TEMP_testingFiles\USGS_3DEP_10M_Metadata_Elevation_01262023.txt'
+##    dlFile = r'E:\DSHub\Elevation\USGS_3DEP_1M_Metadata_Elevation_02082023.txt'
 ##    bHead = True
 ##    bdlmt = True
-##    bReplace = True
+##    bReplace = False
 ##    bDltZips = False
 
     main(dlFile,bReplace)

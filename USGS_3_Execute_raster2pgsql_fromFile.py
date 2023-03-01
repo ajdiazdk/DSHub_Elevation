@@ -15,6 +15,11 @@ This is script #3 in the USGS Elevation acquisition workflow developed for the D
 # printed many times if a raster is registered.
 # ERROR:  current transaction is aborted, commands ignored until end of transaction block
 
+---------------- UPDATES
+2/24/2023
+    -update to print and log invalid raster2pgsql commands to a seperate log file so
+     it is easy to reference, fix and rerun seperate raster2pgsql commands.
+
 """
 
 #-------------------------------------------------------------------------------
@@ -177,13 +182,17 @@ if __name__ == '__main__':
                     iCount+=1
                     continue
 
-                    logError = open(raster2pgsqlErrorFile,'a+')
-                    logError.write(f"\n{cmd}")
-                    logError.close
-                    del logError
-
                 iCount+=1
                 raster2pgsqlList.append(cmd)
+
+        numOfInvalidCommands = len(invalidCommands)
+        if numOfInvalidCommands:
+            AddMsgAndPrint(f"\tThere are {numOfInvalidCommands:,} invalid raster2pgsql command or that contain invalid parameters:")
+            logError = open(raster2pgsqlErrorFile,'a+')
+            for invalidCmd in invalidCommands:
+                logError.write(f"\n{invalidCmd}")
+            logError.close
+            del logError
 
         # Run commands in multi-threading mode
         if len(raster2pgsqlList):
@@ -227,9 +236,11 @@ if __name__ == '__main__':
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
         AddMsgAndPrint(f"Total raster2pgsql DEM Loading Time: {end}")
 
+        # Invalid RASTER2PGSQL command
         if len(invalidCommands):
             AddMsgAndPrint(f"\nThere were {len(invalidCommands):,} of {recCount:,} records that were invalid")
 
+        # All rasters loaded successfully
         if successCount == recCount:
             AddMsgAndPrint(f"\nALL {recCount:,} DEMs were successfully loaded to the database")
 

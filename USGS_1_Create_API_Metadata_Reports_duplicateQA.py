@@ -40,7 +40,8 @@ Text file #1 - USGS_3DEP_3M_Metadata_API_12132022.txt
 This file contains the following information:
     1. HUC 8 Digit (07040006)
     2. HUC 8 Name (La Crosse-Pine)
-    3. Number of elevation tiles that intersect watershed (14)
+    3. Number of elevation files associated with the watershed; This number might be reduced (14)
+       in file #2 to account for duplicate DEMs from adjacent watersheds.
     4. USGS API URL to elevation metadata information for above tiles in JSON format
 
 Text file #2 - USGS_3DEP_3M_Metadata_Elevation_12132022.txt
@@ -103,6 +104,24 @@ duplicate or unique' would be written out.  Set the maxProdsPerPage to 1000.
 
 Updated the # of elevation tiles logged to metadata file#1.  The total number of DEMs returned from
 the API was being logged.  This includes duplicates.  Replaced it with counter i.
+
+2/23/2023
+Modified entire code to account for a quality control inconsistency that was detected with DEM files
+that have a different sourceIDs but whose product title and download url were identical.  The problem
+with this situation is that the same file ultimately gets loaded twice into postgres b/c there will be
+duplicate records in the raster2pgsql file.  This will have an adverse effect on any post-processing
+that is done to these elevation files.
+
+- Added new function to check for duplicate elements.  All API items from the metadata elevation file
+  were parsed into individual lists so that duplicates could easily be found.  Currently, only sourceID,
+  product title and download URLs are being assessed for duplicate records.  Other items will be assessed
+  as they pose a problem.  If a duplicate item is found, it's index position is logged.  Once all items are
+  checked, the index positions are removed from all lists.
+- Updated Summary report to account for:
+    - files that are overlapped
+    - HUCs that do have elevation data but are accounted for by adjacent HUCs
+    - Number of records that were removed due to duplicate items (sourceID, titles, URLs)
+- Write Metadata elevation file after duplicate records have been removed.
 
 """
 ## ===================================================================================
@@ -191,13 +210,119 @@ def convert_bytes(sizeInBytes):
     except:
         errorMsg()
 
+## ================================================================================================================
+def checkForDuplicateElements():
+    """ This function only exists independently for organizing purposes.  The purpose
+    is to find duplicate items in 3 lists: sourceIDList, titleList, downloadURLList
+    and record their list index position.  If sourceIDs are found to be duplicated, then
+    simply notify user.  If downloadURLs are duplicated then grab the most current record
+    from the duplicated items and deleted the others.  If duplicate titles are found, return
+    the name of the file that will be registered to postgres.  Duplicate titles should be
+    handled differently but thus far they seem to be handled by the duplicate URLs.
+
+    This function returns a list of index positions that need to be removed from all lists
+    of elevation items.
+    """
+
+    try:
+        idxPositionsToRemove = list()
+
+        # Create counter object to summarize unique element in a list and provide a count summary
+        # 'USGS 1 Meter 13 x61y385 NM_NRCS_FEMA_Northeast_2017': 1
+        sourceIDsummary = dict(Counter(sourceIDList))
+        titleSummary = dict(Counter(titleList))
+        downloadURLSummary = dict(Counter(downloadURLList))
+
+        # Takes counter object from above and isolates any counts greater than 1 and creates
+        # a Dict from them k,v = {USGS one meter x21y385 TX Panhandle B5 2017': 2}
+        duplicateSourcIDs = {key:value for key, value in sourceIDsummary.items() if value > 1}
+        duplicateTitles = {key:value for key, value in titleSummary.items() if value > 1}
+        duplicateDLurls = {key:value for key, value in downloadURLSummary.items() if value > 1}
+
+        if len(duplicateSourcIDs) or len(duplicateDLurls) or len(duplicateTitles):
+
+            numOfDEMdupURLs = sum([value for key, value in downloadURLSummary.items() if value > 1])
+            numOfDEMdupTitles = sum([value for key, value in titleSummary.items() if value > 1])
+            # list of index positions to be removed from master lists
+            prodTitle = list()
+
+            # Unlikely that there will be unique sourceIDs --- Not handled
+            if len(duplicateSourcIDs):
+                AddMsgAndPrint(f"\tThere are {len(duplicateSourcIDs):,} duplicate sourceIDs.")
+
+            # Find Duplicate DownloadURLs and take the item that has the most recent modified date.
+            if numOfDEMdupURLs:
+
+                AddMsgAndPrint(f"\n\t{numOfDEMdupURLs:,} DEM files have duplicate Download URLs:")
+                for url,count in duplicateDLurls.items():
+
+                    # positions of duplicated DL URLs.
+                    indexVal = [i for i, x in enumerate(downloadURLList) if x == url]
+                    #AddMsgAndPrint(f"\n\t\tURL: {url} is duplicated {count}x at index positions {indexVal}")
+
+                    # Get the last modified dates for the duplicate URLs and drop the oldest date
+                    dates = list()
+                    srcID = list()
+                    for idx in indexVal:
+                        dates.append(lastModifiedDate[idx])
+                        srcID.append(sourceIDList[idx])
+                        prodTitle.append(titleList[idx])
+
+                    oldestDate = min(dates)
+                    oldestDatePos = indexVal[dates.index(oldestDate)]
+                    idxPositionsToRemove.append(oldestDatePos)
+
+                    # shorten the URL for formatting purposes; assumes 'Elevation' is part of the URL
+                    urlShortened = '/'.join(e for e in url.split('/')[url.split('/').index('Elevation'):])
+                    AddMsgAndPrint(f"\t\tURL: {urlShortened} is duplicated {count}x for sourceIDs {srcID}")
+                    AddMsgAndPrint(f"\t\t\tDates: {dates} -- Date Dropped: {oldestDate}")
+
+            # Find Duplicate product titles.  If duplicate titles are not handled by the duplicate url method
+            # above then simply inform the user of how the DEM will be loaded.
+            if numOfDEMdupTitles:
+
+                AddMsgAndPrint(f"\n\t{numOfDEMdupTitles:,} DEM files have duplicate Titles:")
+                accountedFor = 0
+                for title,count in duplicateTitles.items():
+
+                    if title in prodTitle:
+                        #AddMsgAndPrint(f"\t\tTitle: {title} is duplicated {count}x but has been accounted for above")
+                        accountedFor+=1
+                        continue
+                    else:
+                        indexVal = [i for i, x in enumerate(titleList) if x == title]
+
+                        url = list()
+                        srcID = list()
+                        msgs = list()
+                        for idx in indexVal:
+                            urlLink = downloadURLList[idx]
+                            ID = sourceIDList[idx]
+                            url.append(urlLink)
+                            srcID.append(ID)
+                            msgs.append(f"\t\t\t{titleList[idx]} ({ID}) will be loaded as {os.path.basename(urlLink)}")
+
+                        AddMsgAndPrint(f"\t\tTitle: {title} is duplicated {count}x for sourceIDs {srcID}")
+                        for msg in msgs:
+                            AddMsgAndPrint(msg)
+
+                if accountedFor == numOfDEMdupTitles:
+                    AddMsgAndPrint(f"\t\tAll duplicated titles have been resolved")
+
+        return idxPositionsToRemove
+
+    except:
+        errorMsg()
+        return False
+
 ## ====================================== Main Body ==================================
 # Import modules
-import sys, string, os, traceback, glob
-import urllib, re, time, json, socket, zipfile
-import arcgisscripting, arcpy, threading, multiprocessing
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+import sys, string, os, traceback
+import urllib, re, time, json, socket
+import arcgisscripting, arcpy
 from datetime import datetime
+from dateutil.parser import parse
+from collections import Counter
 
 from urllib.request import Request, urlopen, URLError
 from urllib.error import HTTPError
@@ -211,12 +336,12 @@ if __name__ == '__main__':
         startTime = tic()
 
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU8'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_05120201'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\DSHub\Elevation'
+        metadataPath = r'E:\DSHub\Elevation\ERROR'
         tnmResolution = '1M'
-        bAlaska = True
+        bAlaska = False
 
         if not arcpy.Exists(hucBoundaries):
             AddMsgAndPrint(f"\n{hucBoundaries} does NOT exist! EXITING!")
@@ -264,8 +389,6 @@ if __name__ == '__main__':
         else:
             metadataFile2 = f"USGS_3DEP_{tnmResolution}_Metadata_Elevation_{today}.txt"
         metadataFile2path =  f"{metadataPath}\\{metadataFile2}"
-        g = open(metadataFile2path,'a+')
-        g.write(f"huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url") # log headers
 
         # Log file that captures console messages
         logFile = f"USGS_3DEP_{tnmResolution}_Metadata_API_ConsoleMsgs_{today}.txt"
@@ -278,17 +401,28 @@ if __name__ == '__main__':
         h.write(f"\tMetadata File Path: {metadataPath}\n")
         h.close()
 
-        badAPIurls = dict()
-        emptyHUCs = list()            # Watershed with NO DEMS associated to it
+        uniqueHUCs = list()           # unique list of huc code fields - should match totalWatersheds
+        duplicateHUC = list()         # duplicate HUC - error in water huc code field
+        invalidHUC = list()           # invalid hucs; must be 2,4,8 huc-digits - must be integer
+        badAPIurls = dict()           # huc:API URL - These URLs returned an error code
+        emptyHUCs = list()            # Watershed with NO DEMS associated to it; according to API
+        allAccountedFor = list()
         unaccountedHUCs = list()      # Not a Bad url, not an empty watershed, unaccounted for result
         numOfTotalTiles = 0           # Total of all DEMS from watersheds; including overalp DEMs
+        numOfTotalOverlaps = 0
         numOfUniqueDEMs = 0           # Number of unique DEMs
-        totalSizeBytes = 0
+        uniqueSourceIDlist = list()   # unique list of sourceIDs
 
-        elevMetadataDict = dict()     # info that will be written to Metadata elevation file - sourceID:huc,title,date...etc
-        uniqueSourceIDList = list()   # list of unique sourceIDs
-        uniqueURLs = list()
-        uniqueTitle = list()
+        # master lists for each data element collected from USGS API
+        hucDigitList = list()
+        titleList = list()
+        pubDateList = list()
+        lastModifiedDate = list()
+        sizeList = list()
+        fileFormatList = list()
+        sourceIDList = list()
+        metadataURLList = list()
+        downloadURLList = list()
 
         AddMsgAndPrint(f"\nCOMPILING USGS API URL REQUESTS FOR {totalWatersheds:,} Watershed(s) -- {tnmProductAlias[tnmResolution]}")
 
@@ -299,19 +433,28 @@ if __name__ == '__main__':
 
             hucDigit = row[0]
             hucName = row[1]
+            hucLength = len(hucDigit)
+
+            AddMsgAndPrint(f"\t{hucLength}-digit HUC {hucDigit}: {hucName}")
+
+            if hucDigit in uniqueHUCs:
+                AddMsgAndPrint(f"\tDUPLICATE HUC.  Skipping Record")
+                duplicateHUC.append(hucDigit)
+                continue
+            else:
+                uniqueHUCs.append(hucDigit)
 
             # Need a valid hucDigit code; must be integer and not character
             if hucDigit in (None,' ','NULL','Null') or not hucDigit.isdigit():
                 AddMsgAndPrint(f"\t{hucDigit} value is invalid.  Skipping Record")
+                invalidHUC.append(hucDigit)
                 continue
 
             # USGS API only handles 2,4,8 huc-digits
-            hucLength = len(hucDigit)
             if not hucLength in (2,4,8):
                 AddMsgAndPrint(f"\tUSGS API only handles HUC digits 2, 4 and 8. Not {hucLength}-digit")
+                invalidHUC.append(hucDigit)
                 continue
-
-            AddMsgAndPrint(f"\t{hucLength}-digit HUC {hucDigit}: {hucName}")
 
             # Formulate API rquest
             params = urllibEncode({'f': 'json',
@@ -339,17 +482,20 @@ if __name__ == '__main__':
 
             if 'errorMessage' in results:
                 AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
+                badAPIurls[hucDigit] = tnmURLhuc
 
             elif results['errors']:
                 AddMsgAndPrint(f"\t\tError Message in results: {results['errors']}")
+                badAPIurls[hucDigit] = tnmURLhuc
 
             # JSON results
             elif 'total' in results:
-                if results['total'] > 0:
 
-                    # the # of DEMs associated with query
-                    totalNumOfTiles = results['total']
-                    numOfTotalTiles += totalNumOfTiles
+                # the # of DEMs associated with the watershed
+                numOfHucDEMfiles = results['total']
+                if numOfHucDEMfiles > 0:
+
+                    numOfTotalTiles += numOfHucDEMfiles
 
                     # collect info from unique elevation files
                     for itemInfo in results['items']:
@@ -363,52 +509,50 @@ if __name__ == '__main__':
                         metadataURL = itemInfo['metaUrl']
                         downloadURL = itemInfo['downloadURL']
 
-                        # --------------- Check for duplicate DEMs
-                        # check for duplicate sourceIDs in DEM
-                        if sourceID in elevMetadataDict:
-                        #if sourceID in uniqueSourceIDlist:
-                            AddMsgAndPrint(f"\t\tDEM sourceID {sourceID} already exists")
+                        # use sourceID to filter out duplicate DEMs from adjacent watersheds
+                        if sourceID in uniqueSourceIDlist:
+                            #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
                             j+=1
+                            numOfTotalOverlaps+=1
                             continue
                         else:
                             uniqueSourceIDlist.append(sourceID)
 
-                        # check for duplicate download URLs in DEM
-                        if downloadURL in uniqueURLs:
-                            AddMsgAndPrint(f"\t\tDEM download URL: {downloadURL} already exists")
-                            j+=1
-                            continue
-                        else:
-                            uniqueURLs.append(downloadURL)
-
-                        # check for duplicate product titles;
-                        if title in uniqueTitle:
-                            AddMsgAndPrint(f"\t\tDEM Title: {title} already exists")
-                            j+=1
-                            continue
-                        else:
-                            uniqueTitle.append(title)
-
                         # Ran into a situation where size was incorrectly populated as none
                         # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
-                        if size: totalSizeBytes += size
-                        else: size = 0
+                        if not size:
+                            size = 0
 
-                        elevMetadataDict[sourceID] = [hucDigit,title,pubDate,lastModified,size,fileFormat,sourceID,metadataURL,downloadURL]
+                        hucDigitList.append(hucDigit)
+                        titleList.append(title)
+                        pubDateList.append(pubDate)
+                        lastModifiedDate.append(lastModified)
+                        sizeList.append(size)
+                        fileFormatList.append(fileFormat)
+                        sourceIDList.append(sourceID)
+                        metadataURLList.append(metadataURL)
+                        downloadURLList.append(downloadURL)
+
                         #g.write(f"\n{hucDigit},{title},{pubDate},{lastModified},{size},{fileFormat},{sourceID},{metadataURL},{downloadURL}")
                         numOfUniqueDEMs += 1
                         i+=1
 
-                    AddMsgAndPrint(f"\t\tNumber of {tnmResolution} elevation tiles: {i}")
-                    f.write(f"\n{hucDigit},{hucName},{i},{tnmURLhuc}")
+                    # Format Statements depending on DEM quantities
+                    if i==0:
+                        allAccountedFor.append(hucDigit)
+
+                    AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles}")
+                    AddMsgAndPrint(f"\t\t# of overlap DEMs: {j}")
+                    AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i}")
+                    f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
 
                     # total number of tiles for this watershed are neither unique nor duplicate.
-                    if totalNumOfTiles != (i+j):
-                        AddMsgAndPrint(f"\t\t\tThere are {totalNumOfTiles - (i+j)} tiles that are not accounted for.")
+                    if numOfHucDEMfiles != (i+j):
+                        AddMsgAndPrint(f"\t\t\tThere are {numOfHucDEMfiles - (i+j)} files that are not accounted for.")
                         AddMsgAndPrint(f"\t\t\tTry INCREASING max # of products per page; Currently set to {maxProdsPerPage}")
 
                 else:
-                    AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation tiles")
+                    AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation files")
                     f.write(f"\n{hucDigit},{hucName},0,{tnmURLhuc}")
                     emptyHUCs.append(hucDigit)
 
@@ -419,8 +563,33 @@ if __name__ == '__main__':
 
         f.close()
 
-        # Check for duplicates
+        #-------------------------------------------------- Check for and fix duplicate elements
+        AddMsgAndPrint("\nChecking for DEM files for duplicated sourceIDs, Product Titles and Download URLs")
+        idxValuesToRemove = checkForDuplicateElements()
 
+        if len(idxValuesToRemove):
+
+            idxValuesToRemove.sort(reverse=True)
+            AddMsgAndPrint(f"\n\tThere are {len(idxValuesToRemove):,} records that will be removed due to duplicate elements")
+
+            masterLists = [hucDigitList,titleList,pubDateList,lastModifiedDate,sizeList,
+                            fileFormatList,sourceIDList,metadataURLList,downloadURLList]
+            for mList in masterLists:
+                for idx in idxValuesToRemove:
+                    mList.pop(idx)
+        else:
+            AddMsgAndPrint(f"\tNo duplicate DEM elements found were found")
+
+        hucsWithData = len(set(hucDigitList))
+        duplicateElements = len(idxValuesToRemove)
+
+        #-------------------------------------------------- Write Elevation download file
+        g = open(metadataFile2path,'a+')
+        g.write(f"huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url") # log headers
+
+        for i in range(0,len(hucDigitList)):
+            g.write(f"\n{hucDigitList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
+        g.close()
 
         if unaccountedHUCs:
             AddMsgAndPrint(f"\nThere are {len(unaccountedHUCs):,} HUCs that are completely unaccounted for:")
@@ -428,24 +597,29 @@ if __name__ == '__main__':
 
         """ ------------------------------------ SUMMARY -------------------------------------- """
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
-        if numOfTotalTiles > numOfUniqueDEMs:
-            AddMsgAndPrint(f"Total # of Watersheds: {totalWatersheds:,}")
-            if len(emptyHUCs):
-                AddMsgAndPrint(f"Total # of Watersheds w/ NO Data: {len(emptyHUCs):,}")
 
-            AddMsgAndPrint(f"\nTotal # of Elevation Files for all watersheds: {numOfTotalTiles:,}")
-            AddMsgAndPrint(f"Total # of Overlap Elevation Files: {(numOfTotalTiles - numOfUniqueDEMs):,}")
-            AddMsgAndPrint(f"Total # of Unique Elevation Files to download: {numOfUniqueDEMs:,}")
-            AddMsgAndPrint(f"\nTotal Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
-
-        else:
-            AddMsgAndPrint(f"Total # of Elevation Files: {numOfUniqueDEMs:,}")
-            AddMsgAndPrint(f"Total Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
-
+        # Summary of HUCs
+        AddMsgAndPrint(f"Total # of Input HUCs: {totalWatersheds:,}")
+        AddMsgAndPrint(f"\t# of HUCs with Elevation Data: {hucsWithData:,}")
+        if len(emptyHUCs):
+            AddMsgAndPrint(f"\t# of HUCs without Elevation Data: {len(emptyHUCs):,}")
+        if len(allAccountedFor):
+            AddMsgAndPrint(f"\t# of HUCs whose DEMs are accounted for by adjacent HUCs: {len(allAccountedFor):,}")
         if len(badAPIurls) > 0:
-            AddMsgAndPrint(f"\nTotal # of Bad API Requests: {len(badAPIurls):,}")
-            AddMsgAndPrint("\tThese requests will have a -999 in num_of_tiles column")
+            AddMsgAndPrint(f"\t# of HUCs with Bad API Requests: {len(badAPIurls):,}")
+            AddMsgAndPrint("\t\tThese requests will have a -999 in num_of_tiles column")
 
+        # Summary of DEMs to download
+        AddMsgAndPrint(f"\nTotal # of DEMs for all HUCs: {numOfTotalTiles:,}")
+        AddMsgAndPrint(f"\t# of Overlap DEMs: {numOfTotalOverlaps:,}")
+        if duplicateElements:
+            AddMsgAndPrint(f"\t# of DEMs with duplicate elements: {duplicateElements:,}")
+        AddMsgAndPrint(f"\tTotal # of Unique DEMs to download: {len(hucDigitList):,}")
+
+        # Size Summary
+        AddMsgAndPrint(f"\nTotal Download Size (According to USGS Metadata): {convert_bytes(sum(sizeList))}")
+
+        # Time Summary
         AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
 
     except:

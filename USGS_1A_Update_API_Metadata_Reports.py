@@ -22,7 +22,7 @@ Parameters:
     3) tnmResolution - Elevation resolution (1M, 3M, 10M, 30M, 5M_AK, 60M_AK)
     4) DOWNLOAD ELEVATION DATA PARAMETERS -- REMOVE THESE
 
-- This script takes in a HUC feature class along with the USGS Elevation API
+- This script takes in a HUC-8 feature class along with the USGS Elevation API
   'https://tnmaccess.nationalmap.gov/api/v1/products?' to retrieve metadata information about
   the elevation tiles that intersect these watersheds.
 - Watershed feature class must contain 2 fields: 'HUC8' & 'Name'.  It is best to download
@@ -56,7 +56,7 @@ This file contains the following information:
     8. URL to Metadata (https://www.sciencebase.gov/catalog/item/581d2d68e4b08da350d665a5)
     9. URL to download elevation tile (https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n43x75_w091x00_wi_lacrosseco_2008.zip)
 
-When converted to a table, these 2 files can be related using the HUC 8 Digit field to establish a one-to-many
+When converted to a table, these 2 files can be related using the HUC Digit field to establish a one-to-many
 relationship from table1 to table2 to relate a watershed to its corresponding elevation files.
 
 3DEP Elevation Identify service:
@@ -103,6 +103,10 @@ duplicate or unique' would be written out.  Set the maxProdsPerPage to 1000.
 
 Updated the # of elevation tiles logged to metadata file#1.  The total number of DEMs returned from
 the API was being logged.  This includes duplicates.  Replaced it with counter i.
+
+2/17/2023
+Made a copy of'USGS_1_Create_API_Metadata_Reports.py' and made the following changes:
+-
 
 """
 ## ===================================================================================
@@ -191,6 +195,197 @@ def convert_bytes(sizeInBytes):
     except:
         errorMsg()
 
+## ================================================================================================================
+def compileUSGStnmAccessAPIurl(hucDataset,hucCode,hucName,tnmURL):
+    """This function will loop through the watershed polygons and compile
+       a TNM URL to get DEM information:
+       https://tnmaccess.nationalmap.gov/api/v1/products?f=json&datasets=Digital+Elevation+Model+%28DEM%29+1+meter&polyType=huc8&polyCode=01030002&max=1000
+       """
+
+    try:
+
+        urlDict = dict()
+
+        # Iterate through every watershed to gather elevation info
+        # create dictionary of Watershed digits (keys) and API request (values)
+        orderByClause = f"ORDER BY {hucCode} ASC"
+        for row in arcpy.da.SearchCursor(hucDataset, [hucCode,hucName], sql_clause=(None, orderByClause)):
+
+            hucDigit = row[0]
+            hucName = row[1]
+
+            # Need a valid hucDigit code; must be integer and not character
+            if hucDigit in (None,' ','NULL','Null') or not hucDigit.isdigit():
+                AddMsgAndPrint(f"\t{hucDigit} HUC digit is invalid.  Skipping Record")
+                continue
+
+            # USGS API only handles 2,4,8 huc-digits
+            hucLength = len(hucDigit)
+            if not hucLength in (2,4,8):
+                AddMsgAndPrint(f"\tUSGS API only handles HUC digits 2, 4 and 8. Not {hucLength}-digit")
+                continue
+
+            AddMsgAndPrint(f"\t{hucLength}-digit HUC {hucDigit}: {hucName}")
+
+            # Formulate API rquest
+            params = urllibEncode({'f': 'json',
+                                   'datasets': tnmProductAlias[tnmResolution],
+                                   'polyType': f"huc{hucLength}",
+                                   'polyCode': hucDigit,
+                                   'max':maxProdsPerPage})
+
+            # concatenate URL and API parameters
+            tnmURLforHUC = f"{tnmURL}{params}"
+
+            urlDict[hucDigit] = tnmURLforHUC
+            #urlList.append(tnmURLforHUC)
+
+        if not len(urlDict):
+            AddMsgAndPrint(f"\tFailed to compile any USGS API requests")
+            return False
+        else:
+            return urlDict
+
+    except:
+        errorMsg()
+        return False
+
+## ================================================================================================================
+def sendHUCrequest(tnmURLhuc):
+
+    try:
+
+        i = 0  # Counter for unique DEMs within a unique HUC
+        j = 0  # Counter for duplicate DEM that exists in a different HUC
+
+        # Send REST API request
+        try:
+            with urllib.request.urlopen(tnmURLhuc) as conn:
+                resp = conn.read()
+            results = json.loads(resp)
+        except:
+            badAPIurls[hucDigit] = tnmURLhuc
+            AddMsgAndPrint(f"\t\tBad Request")
+            f.write(f"\n{hucDigit},{hucName},-999,{tnmURLhuc}")
+            continue
+
+        if 'errorMessage' in results:
+            AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
+
+        elif results['errors']:
+            AddMsgAndPrint(f"\t\tError Message in results: {results['errors']}")
+
+        # JSON results
+        elif 'total' in results:
+            if results['total'] > 0:
+
+                # the # of DEMs associated with query
+                totalNumOfTiles = results['total']
+                numOfTotalTiles += totalNumOfTiles
+
+                # collect info from unique elevation files
+                for itemInfo in results['items']:
+                    sourceID = itemInfo['sourceId']
+                    prod_title = itemInfo['title']
+
+                    # use the sourceID to avoid duplicate tiles
+                    if sourceID in uniqueSourceIDlist:
+                        #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
+                        j+=1
+                        continue
+                    else:
+                        uniqueSourceIDlist.append(sourceID)
+
+                    pubDate = itemInfo['publicationDate']
+                    lastModified = itemInfo['modificationInfo']
+                    size = itemInfo['sizeInBytes']
+                    fileFormat = itemInfo['format']
+                    metadataURL = itemInfo['metaUrl']
+                    downloadURL = itemInfo['downloadURL']
+
+                    # Ran into a situation where size was incorrectly populated as none
+                    # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
+                    if size: totalSizeBytes += size
+                    else: size = 0
+
+                    metadataDLElevationDict[sourceID] = [hucDigit,prod_title,pub_date,lastModified,
+                                                       size,fileFormat,sourceID,metadataURL,downloadURL]
+                    #g.write(f"\n{hucDigit},{prod_title},{pubDate},{lastModified},{size},{fileFormat},{sourceID},{metadataURL},{downloadURL}")
+                    numOfUniqueDEMs += 1
+                    i+=1
+
+                AddMsgAndPrint(f"\t\tNumber of {tnmResolution} elevation tiles: {i}")
+                f.write(f"\n{hucDigit},{hucName},{i},{tnmURLhuc}")
+
+                # total number of tiles for this watershed are neither unique nor duplicate.
+                if totalNumOfTiles != (i+j):
+                    AddMsgAndPrint(f"\t\t\tThere are {totalNumOfTiles - (i+j)} tiles that are not accounted for.")
+                    AddMsgAndPrint(f"\t\t\tTry INCREASING max # of products per page; Currently set to {maxProdsPerPage}")
+
+            else:
+                AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation tiles")
+                f.write(f"\n{hucDigit},{hucName},0,{tnmURLhuc}")
+                emptyHUCs.append(hucDigit)
+
+        else:
+            # I haven't seen an error like this
+            AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {hucDigit}: {hucName}")
+            unaccountedHUCs.append(hucDigit)
+
+    except:
+        errorMsg()
+
+## ================================================================================================================
+def createMasterElevDict(masterElevFile):
+    # This functions converts the master elevation database file, that was previsously created
+    # by script#2, into a dictionary and will be used to compare against the metadata
+    # metadata elevation dictionary created by gathering
+
+    try:
+
+        # contains all input info from master elevation file: sourceID:dlFile items
+        elevMetadataDict = dict()
+        recCount = 0
+        badLines = 0
+
+        totalRecords = len(open(masterElevFile).readlines())
+
+        # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
+        headerValues = open(masterElevFile).readline().rstrip().split(',')
+
+        with open(masterElevFile, 'r') as fp:
+            for line in fp:
+                items = line.rstrip().split(',')
+
+                # Skip header line and empty lines
+                if recCount == 0 or line == "\n":
+                    recCount+=1
+                    continue
+
+                # Skip if number of items are incorrect
+                if len(items) != len(headerValues):
+                    badLines+=1
+                    AddMsgAndPrint(f"\tRecord #{recCount:,} only has {len(items)} values; Should have {len(headerValues)}")
+                    recCount+=1
+                    continue
+
+                # extract sourceID from record values
+                sourceID = items[headerValues.index('sourceID')]
+
+                # Add info to elevMetadataDict - sourceID:[items...etc]
+                elevMetadataDict[sourceID] = items
+                recCount+=1
+
+        if recCount != totalRecords:
+            AddMsgAndPrint(f"\tNumber of records imported are incorrect:")
+            AddMsgAndPrint(f"\t\tRecords Imported: {recCount:,}")
+            AddMsgAndPrint(f"\t\tMaster Elevation File Records: {totalRecords:,}")
+
+        return elevMetadataDict
+
+    except:
+        errorMsg()
+
 ## ====================================== Main Body ==================================
 # Import modules
 import sys, string, os, traceback, glob
@@ -210,13 +405,23 @@ if __name__ == '__main__':
         # Start the clock
         startTime = tic()
 
+##        # 9 Tool Parameters
+##        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU8'
+##        hucCodeFld = 'huc8'
+##        hucNameFld = 'name'
+##        metadataPath = r'E:\DSHub\Elevation'
+##        tnmResolution = '1M'
+##        bAlaska = False
+##        masterElevDBfile = r'E:\DSHub\Elevation\USGS_3DEP_1M_Metadata_Elevation_02082023_MASTER_DB.txt'
+
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU8'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBD_TEST4'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
         metadataPath = r'E:\DSHub\Elevation'
         tnmResolution = '1M'
-        bAlaska = True
+        bAlaska = False
+        masterElevDBfile = r'E:\DSHub\Elevation\USGS_3DEP_1M_Metadata_Elevation_02082023_MASTER_DB.txt'
 
         if not arcpy.Exists(hucBoundaries):
             AddMsgAndPrint(f"\n{hucBoundaries} does NOT exist! EXITING!")
@@ -246,7 +451,8 @@ if __name__ == '__main__':
         """ ---------------------------- Establish Metdata and log FILES ---------------------------------------------------"""
         today = datetime.today().strftime('%m%d%Y')  #11192022
 
-        # Metadata file#1; USGS_3DEP_1M_Metadata_API_02082023.txt
+        # ----------------------------------------- Metadata file#1
+        # USGS_3DEP_1M_Metadata_API_02082023.txt
         # huc_digit, Number of tiles associated with huc, URL for TNM API
         if bAlaska and not tnmResolution == '5M_AK':
             metadataFile1 = f"USGS_3DEP_{tnmResolution}_AK_Metadata_API_{today}.txt"
@@ -257,17 +463,18 @@ if __name__ == '__main__':
         f = open(metadataFile1path,'a+')
         f.write(f"huc_digit,huc_name,num_of_tiles,API_URL") # log headers
 
-        # Metadata file#2; USGS_3DEP_1M_Metadata_Elevation_02082023.txt
+        # ----------------------------------------- Metadata file#2
+        # USGS_3DEP_1M_Metadata_Elevation_02082023.txt
         # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
         if bAlaska and not tnmResolution == '5M_AK':
             metadataFile2 = f"USGS_3DEP_{tnmResolution}_AK_Metadata_Elevation_{today}.txt"
         else:
             metadataFile2 = f"USGS_3DEP_{tnmResolution}_Metadata_Elevation_{today}.txt"
         metadataFile2path =  f"{metadataPath}\\{metadataFile2}"
-        g = open(metadataFile2path,'a+')
-        g.write(f"huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url") # log headers
+        #g = open(metadataFile2path,'a+')
+        #g.write(f"huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url") # log headers
 
-        # Log file that captures console messages
+        # ---------------------------------------- Log file that captures console messages
         logFile = f"USGS_3DEP_{tnmResolution}_Metadata_API_ConsoleMsgs_{today}.txt"
         logFilePath = f"{metadataPath}\\{logFile}"
         h = open(logFilePath,'a+')
@@ -278,61 +485,35 @@ if __name__ == '__main__':
         h.write(f"\tMetadata File Path: {metadataPath}\n")
         h.close()
 
+        """ ---------------------------- Iterate through ever watershed and get info from USGS API -------------------------"""
         badAPIurls = dict()
         emptyHUCs = list()            # Watershed with NO DEMS associated to it
+        uniqueSourceIDlist = list()   # list of sourceIDs that are unique
         unaccountedHUCs = list()      # Not a Bad url, not an empty watershed, unaccounted for result
         numOfTotalTiles = 0           # Total of all DEMS from watersheds; including overalp DEMs
         numOfUniqueDEMs = 0           # Number of unique DEMs
         totalSizeBytes = 0
 
-        elevMetadataDict = dict()     # info that will be written to Metadata elevation file - sourceID:huc,title,date...etc
-        uniqueSourceIDList = list()   # list of unique sourceIDs
-        uniqueURLs = list()
-        uniqueTitle = list()
+        metadataDLElevationDict = dict()
 
         AddMsgAndPrint(f"\nCOMPILING USGS API URL REQUESTS FOR {totalWatersheds:,} Watershed(s) -- {tnmProductAlias[tnmResolution]}")
+        tnmAccessURLlist = compileUSGStnmAccessAPIurl(hucBoundaries,hucCodeFld,hucNameFld,tnmAPIurl)
 
-        # Iterate through every watershed to gather elevation info
-        # create dictionary of Watershed digits (keys) and API request (values)
-        orderByClause = f"ORDER BY {hucCodeFld} ASC"
-        for row in arcpy.da.SearchCursor(hucBoundaries, [hucCodeFld,hucNameFld], sql_clause=(None, orderByClause)):
+        with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
-            hucDigit = row[0]
-            hucName = row[1]
+            # use a set comprehension to start all tasks.  This creates a future object
+            future_to_url = {executor.submit(sendHUCrequest, url): url for url in tnmAccessURLlist}
 
-            # Need a valid hucDigit code; must be integer and not character
-            if hucDigit in (None,' ','NULL','Null') or not hucDigit.isdigit():
-                AddMsgAndPrint(f"\t{hucDigit} value is invalid.  Skipping Record")
-                continue
-
-            # USGS API only handles 2,4,8 huc-digits
-            hucLength = len(hucDigit)
-            if not hucLength in (2,4,8):
-                AddMsgAndPrint(f"\tUSGS API only handles HUC digits 2, 4 and 8. Not {hucLength}-digit")
-                continue
-
-            AddMsgAndPrint(f"\t{hucLength}-digit HUC {hucDigit}: {hucName}")
-
-            # Formulate API rquest
-            params = urllibEncode({'f': 'json',
-                                   'datasets': tnmProductAlias[tnmResolution],
-                                   'polyType': f"huc{hucLength}",
-                                   'polyCode': hucDigit,
-                                   'max':maxProdsPerPage})
-
-            # concatenate URL and API parameters
-            tnmURLhuc = f"{tnmAPIurl}{params}"
-
-            # Send REST API request
-            try:
-                with urllib.request.urlopen(tnmURLhuc) as conn:
-                    resp = conn.read()
-                results = json.loads(resp)
-            except:
-                badAPIurls[hucDigit] = tnmURLhuc
-                AddMsgAndPrint(f"\t\tBad Request")
-                f.write(f"\n{hucDigit},{hucName},-999,{tnmURLhuc}")
-                continue
+            # yield future objects as they are done.
+            for future in as_completed(future_to_url):
+                dlTracker+=1
+                j=1
+                for printMessage in future.result():
+                    if j==1:
+                        AddMsgAndPrint(f"{printMessage} -- ({dlTracker:,} of {recCount:,})")
+                    else:
+                        AddMsgAndPrint(printMessage)
+                    j+=1
 
             i = 0  # Counter for unique DEMs within a unique HUC
             j = 0  # Counter for duplicate DEM that exists in a different HUC
@@ -353,9 +534,8 @@ if __name__ == '__main__':
 
                     # collect info from unique elevation files
                     for itemInfo in results['items']:
-
                         sourceID = itemInfo['sourceId']
-                        title = itemInfo['title']
+                        prod_title = itemInfo['title']
                         pubDate = itemInfo['publicationDate']
                         lastModified = itemInfo['modificationInfo']
                         size = itemInfo['sizeInBytes']
@@ -363,39 +543,22 @@ if __name__ == '__main__':
                         metadataURL = itemInfo['metaUrl']
                         downloadURL = itemInfo['downloadURL']
 
-                        # --------------- Check for duplicate DEMs
-                        # check for duplicate sourceIDs in DEM
-                        if sourceID in elevMetadataDict:
-                        #if sourceID in uniqueSourceIDlist:
-                            AddMsgAndPrint(f"\t\tDEM sourceID {sourceID} already exists")
+                        # use the sourceID to avoid duplicate tiles
+                        if sourceID in uniqueSourceIDlist:
+                            #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
                             j+=1
                             continue
                         else:
                             uniqueSourceIDlist.append(sourceID)
-
-                        # check for duplicate download URLs in DEM
-                        if downloadURL in uniqueURLs:
-                            AddMsgAndPrint(f"\t\tDEM download URL: {downloadURL} already exists")
-                            j+=1
-                            continue
-                        else:
-                            uniqueURLs.append(downloadURL)
-
-                        # check for duplicate product titles;
-                        if title in uniqueTitle:
-                            AddMsgAndPrint(f"\t\tDEM Title: {title} already exists")
-                            j+=1
-                            continue
-                        else:
-                            uniqueTitle.append(title)
 
                         # Ran into a situation where size was incorrectly populated as none
                         # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
                         if size: totalSizeBytes += size
                         else: size = 0
 
-                        elevMetadataDict[sourceID] = [hucDigit,title,pubDate,lastModified,size,fileFormat,sourceID,metadataURL,downloadURL]
-                        #g.write(f"\n{hucDigit},{title},{pubDate},{lastModified},{size},{fileFormat},{sourceID},{metadataURL},{downloadURL}")
+                        metadataDLElevationDict[sourceID] = [hucDigit,prod_title,pub_date,lastModified,
+                                                           size,fileFormat,sourceID,metadataURL,downloadURL]
+                        #g.write(f"\n{hucDigit},{prod_title},{pubDate},{lastModified},{size},{fileFormat},{sourceID},{metadataURL},{downloadURL}")
                         numOfUniqueDEMs += 1
                         i+=1
 
@@ -416,37 +579,36 @@ if __name__ == '__main__':
                 # I haven't seen an error like this
                 AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {hucDigit}: {hucName}")
                 unaccountedHUCs.append(hucDigit)
-
         f.close()
-
-        # Check for duplicates
-
-
-        if unaccountedHUCs:
-            AddMsgAndPrint(f"\nThere are {len(unaccountedHUCs):,} HUCs that are completely unaccounted for:")
-            AddMsgAndPrint(f"{str(unaccountedHUCs)}")
-
-        """ ------------------------------------ SUMMARY -------------------------------------- """
-        AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
-        if numOfTotalTiles > numOfUniqueDEMs:
-            AddMsgAndPrint(f"Total # of Watersheds: {totalWatersheds:,}")
-            if len(emptyHUCs):
-                AddMsgAndPrint(f"Total # of Watersheds w/ NO Data: {len(emptyHUCs):,}")
-
-            AddMsgAndPrint(f"\nTotal # of Elevation Files for all watersheds: {numOfTotalTiles:,}")
-            AddMsgAndPrint(f"Total # of Overlap Elevation Files: {(numOfTotalTiles - numOfUniqueDEMs):,}")
-            AddMsgAndPrint(f"Total # of Unique Elevation Files to download: {numOfUniqueDEMs:,}")
-            AddMsgAndPrint(f"\nTotal Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
-
-        else:
-            AddMsgAndPrint(f"Total # of Elevation Files: {numOfUniqueDEMs:,}")
-            AddMsgAndPrint(f"Total Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
-
-        if len(badAPIurls) > 0:
-            AddMsgAndPrint(f"\nTotal # of Bad API Requests: {len(badAPIurls):,}")
-            AddMsgAndPrint("\tThese requests will have a -999 in num_of_tiles column")
-
-        AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
+##
+##        AddMsgAndPrint("\nImporting Master Elevation DB File")
+##        masterElevationDict = createMasterElevDict(masterElevDBfile)
+##
+##        if unaccountedHUCs:
+##            AddMsgAndPrint(f"\nThere are {len(unaccountedHUCs):,} HUCs that are completely unaccounted for:")
+##            AddMsgAndPrint(f"{str(unaccountedHUCs)}")
+##
+##        """ ------------------------------------ SUMMARY -------------------------------------- """
+##        AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
+##        if numOfTotalTiles > numOfUniqueDEMs:
+##            AddMsgAndPrint(f"Total # of Watersheds: {totalWatersheds:,}")
+##            if len(emptyHUCs):
+##                AddMsgAndPrint(f"Total # of Watersheds w/ NO Data: {len(emptyHUCs):,}")
+##
+##            AddMsgAndPrint(f"\nTotal # of Elevation Files for all watersheds: {numOfTotalTiles:,}")
+##            AddMsgAndPrint(f"Total # of Overlap Elevation Files: {(numOfTotalTiles - numOfUniqueDEMs):,}")
+##            AddMsgAndPrint(f"Total # of Unique Elevation Files to download: {numOfUniqueDEMs:,}")
+##            AddMsgAndPrint(f"\nTotal Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
+##
+##        else:
+##            AddMsgAndPrint(f"Total # of Elevation Files: {numOfUniqueDEMs:,}")
+##            AddMsgAndPrint(f"Total Download Size (According to USGS Metadata): {convert_bytes(totalSizeBytes)}")
+##
+##        if len(badAPIurls) > 0:
+##            AddMsgAndPrint(f"\nTotal # of Bad API Requests: {len(badAPIurls):,}")
+##            AddMsgAndPrint("\tThese requests will have a -999 in num_of_tiles column")
+##
+##        AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
 
     except:
         try:
