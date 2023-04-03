@@ -336,11 +336,11 @@ if __name__ == '__main__':
         startTime = tic()
 
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_05120201'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_AndyTest'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\DSHub\Elevation\ERROR'
-        tnmResolution = '1M'
+        metadataPath = r'D:\projects\DSHub\Andy'
+        tnmResolution = '3M'
         bAlaska = False
 
         if not arcpy.Exists(hucBoundaries):

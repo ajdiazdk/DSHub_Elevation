@@ -19,8 +19,6 @@ that contains the download url for the elevation files.
 
 Parameters:
     1) dlFile - path to text file that contains elevation download information
-    2) bHeader - boolean indicator for presence of a header in dlFile
-    3) bDownloadMultithread - boolean indicator to download files using multithreading functionality
     4) bReplaceData - boolean indicator to replace download file
     5) bDeleteZipFiles - boolean to delete or leave downloaded zipped files (only relevant if dl files are zip files)
                          set to False by default but can be overwritten in main.
@@ -47,6 +45,12 @@ Sequence of workflow:
         c) # of files that failed to download
         d) # of files that were unzipped (if any)
         e) Total processing time
+
+How to QA the outputs.  Look for the following:
+    - 'File will be added' - These are only for zip files and not .img or tifs.  If file is a legit
+       DEM than look into this.
+    - '0 bytes' - empty DEMs.  Perhaps script crashed somewhere leaving ghost files.
+    - '#' look for this in the master DB file and the raster2pgsql
 
 ---------------- UPDATES
 12/01/2022
@@ -92,8 +96,17 @@ and return them.  This will be used to append to the DLStatus file.
     - Incorporated multi-threading capability in createMasterDBFile for gathering raster information.  The
       problem is that statistics need to be calculated for DEM files and this takes approximately 10 secs
       per file.
+    - Added code to determine operating system for get download folder.  This was mainly for testing purpose.
+      I didn't want to change it temporarily and forget to change it back.
 
 Things to consider/do:
+  - rename key sql reserved words:
+        - top, bottom, left, right --> rast_top,rast_bottom,rast_left,rast_right
+        - size --> rast_size
+        - columns,rows --> rast_columns,rast_rows
+  - Explore option of converting '#' to 'None' in getRasterInformation function.  This will be more consistent in
+    postgres for integer and varchar fields.
+  - Add code to change group in POSIX to 'gis' so that .xml containing DEM statistics can be updated correctly.
   - Rewrite the createErrorLogFile function to utilize the elevMetadataDict instead of the original dl file.
     In order to do this, the failedDownloadList will need to be converted to a dictionary and the sourceID used
     as a key; sourceID:dlURL
@@ -111,8 +124,6 @@ Things to consider/do:
     an additional 4,000 new files.  You can use this script to download the 4,000 additional files with a bReplace parameter
     set to 'No' however, during the process of creating the master elevation file, you will have to iterate through all 65,000
     files.
-  - Add windows vs Linux test for determining file path of DEM.  It's annoying to have to switch that back
-    and forth for testing purposes.
   - Add boolean for rewriting raster2pgsql file for all DEM files or only those that are downloaded.
 
 """
@@ -574,7 +585,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
                 continue
 
             else:
-                AddMsgAndPrint(f"SourceID: {srcID} NO .TIF OR .IMG FOUND -- Inspect this process")
+                AddMsgAndPrint(f"\n\t\tSourceID: {srcID} NO .TIF OR .IMG FOUND -- Inspect this process")
 
         g.close()
         return dlMasterFilePath
@@ -1135,7 +1146,7 @@ def main(dlFile,bReplace):
         global msgLogFile
         msgLogFile = f"{os.path.dirname(dlFile)}{os.sep}{logFile}"
         h = open(msgLogFile,'a+')
-        h.write(f"Executing: Linux_Download_USGSElevation_by_MetadataFile {today}\n\n")
+        h.write(f"Executing: USGS_2_Download_Elevation_by_MetadataFile {today}\n\n")
         h.write(f"User Selected Parameters:\n")
         h.write(f"\tDownload File: {downloadFile}\n")
         h.write(f"\tFile has header: {bHeader}\n")
@@ -1178,7 +1189,7 @@ def main(dlFile,bReplace):
                     downloadFolder = getDownloadFolder(huc,resolution)
                     if not downloadFolder: continue
                 else:
-                    downloadFolder = r'E:\DSHub\Elevation\1M'
+                    downloadFolder = r'D:\projects\DSHub\Andy\3M'
 
                 AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles} elevation tiles for HUC: {huc} ---> {downloadFolder}")
 
