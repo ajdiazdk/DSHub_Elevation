@@ -336,10 +336,10 @@ if __name__ == '__main__':
         startTime = tic()
 
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_AndyTest'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBD\WBDHU8'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'D:\projects\DSHub\Andy'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\20230405'
         tnmResolution = '3M'
         bAlaska = False
 

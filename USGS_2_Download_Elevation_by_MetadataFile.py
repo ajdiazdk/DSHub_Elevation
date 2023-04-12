@@ -2,7 +2,7 @@
 """
 Script Name: USGS_Download_Elevation_by_MetadataFile.py
 Created on Fri Sep  2 10:12:13 2022
-updated 2/15/2023
+updated 4/5/2023
 
 @author: Adolfo.Diaz
 GIS Business Analyst
@@ -125,6 +125,8 @@ Things to consider/do:
     set to 'No' however, during the process of creating the master elevation file, you will have to iterate through all 65,000
     files.
   - Add boolean for rewriting raster2pgsql file for all DEM files or only those that are downloaded.
+  - In DownloadElevationTile: if zip file already exists then it will get unzipped again.  Check if contents have
+    been unzipped before adding it to the dlZipFileDict dictionary.  This should maybe go in the unzip function.
 
 """
 
@@ -252,8 +254,8 @@ def DownloadElevationTile(itemCollection,downloadFolder):
 
     try:
         messageList = list()
-        global dlZipFileDict
-        global dlImgFileDict
+        global dlZipFileDict     # dict containing zip files that will be unzipped; sourceID:filepath
+        global dlImgFileDict     # dict containing DEM files; sourceID:filepath
         global totalDownloadSize
 
         dlURL = itemCollection[0]
@@ -261,10 +263,11 @@ def DownloadElevationTile(itemCollection,downloadFolder):
 
         theTab = "\t\t"
 
+        # Filename could be a zipfile or DEM file (.TIF, .IMG)
         # 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n30x50_w091x75_la_atchafalayabasin_2010.zip'
         fileName = dlURL.split('/')[-1]
 
-        # set the download's output location and filename
+        # path to where file will be downloaded to
         local_file = f"{downloadFolder}{os.sep}{fileName}"
 
         now = datetime.today().strftime('%m%d%Y %H:%M:%S')
@@ -290,6 +293,7 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                 if dlSize > 0:
                     totalDownloadSize+=dlSize
                     # Add downloaded file to appropriate dictionary; sourceID:local_file
+                    # if file is a zip file it will be unzipped again and it's unzipped content overwritten.
                     if zipfile.is_zipfile(local_file):
                         dlZipFileDict[sourceID] = local_file
                         messageList.append(f"{theTab}{'File will be added to Raster2pgsql file:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
@@ -427,7 +431,10 @@ def unzip(itemCollection,bDeleteZipFiles):
 
             # Isolate DEM file based on the format
             demFilePath = ""
+
+            # Lookup the file format from the elevMetadataDict
             fileFormat = elevMetadataDict[sourceID][headerValues.index("format")].lower()
+
             if fileFormat == 'geotiff':
                 fileType = 'tif'        # 1M DEMs
             else:
@@ -437,7 +444,7 @@ def unzip(itemCollection,bDeleteZipFiles):
             if zipSize > 0:
 
                 try:
-                    # Unzip zip file
+                    # Unzip the zip file
                     with zipfile.ZipFile(local_zip, "r") as z:
                         # a bad zip file returns exception zipfile.BadZipFile
                         z.extractall(unzipFolder)
@@ -463,7 +470,7 @@ def unzip(itemCollection,bDeleteZipFiles):
                         messageList.append(f"\t\t{errorMessage}")
                         return messageList
 
-                # Add up the unzipped file size of all files that were unzipped;
+                # tally size of all recently unzipped files.
                 # capture path of DEM file in dlImgFileDict
                 unzipTally = 0
                 for zinfo in zipFileList:
@@ -1189,7 +1196,7 @@ def main(dlFile,bReplace):
                     downloadFolder = getDownloadFolder(huc,resolution)
                     if not downloadFolder: continue
                 else:
-                    downloadFolder = r'D:\projects\DSHub\Andy\3M'
+                    downloadFolder = r'D:\projects\DSHub\reampling\10M'
 
                 AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles} elevation tiles for HUC: {huc} ---> {downloadFolder}")
 
@@ -1315,56 +1322,25 @@ def main(dlFile,bReplace):
 ## ============================================================================================================
 if __name__ == '__main__':
 
-    # DOWNLOAD FILE
-    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
-    while not os.path.exists(dlFile):
-        print(f"{dlFile} does NOT exist. Try Again")
-        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
+##    # DOWNLOAD FILE
+##    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
+##    while not os.path.exists(dlFile):
+##        print(f"{dlFile} does NOT exist. Try Again")
+##        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
 ##
-####    # ROOT DIRECTORY
-####    rootFolder = input("\nEnter path to the root directory where elevation data will be downloaded to: ")
-####    while not os.path.isdir(rootFolder):
-####        print(f"{rootFolder} is not a valid directory path")
-####        rootFolder = input("Enter path to the root directory where elevation data will be downloaded to: ")
-
-##    # CONTAINS HEADER
-##    bHead =    input("\nDoes the Metadata text file contain a header? (Yes/No): ")
-##    while not bHead.lower() in ("yes","no","y","n"):
+##    # REPLACE DATA
+##    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
+##    while not bReplace.lower() in ("yes","no","y","n"):
 ##        print(f"Please Enter Yes or No")
-##        bHead =    input("Does the Metadata text file contain a header? (Yes/No): ")
+##        bReplace = input("Do you want to replace existing data? (Yes/No): ")
 ##
-##    if bHead.lower() in ("yes","y"):
-##        bHead = True
+##    if bReplace.lower() in ("yes","y"):
+##        bReplace = True
 ##    else:
-##        bHead = False
-##
-##    # MULTI-THREADING MODE
-##    bdlmt =      input("\nDo you want to execute the script in multi-threading mode? (Yes/No): ")
-##    while not bdlmt.lower() in ("yes","no","y","n"):
-##        print(f"Please Enter Yes or No")
-##        bdlmt =    input("Do you want to execute the script in multi-threading mode? (Yes/No): ")
-##
-##    if bdlmt.lower() in ("yes","y"):
-##        bdlmt = True
-##    else:
-##        bdlmt = False
+##        bReplace = False
 
-    # REPLACE DATA
-    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
-    while not bReplace.lower() in ("yes","no","y","n"):
-        print(f"Please Enter Yes or No")
-        bReplace = input("Do you want to replace existing data? (Yes/No): ")
-
-    if bReplace.lower() in ("yes","y"):
-        bReplace = True
-    else:
-        bReplace = False
-
-##    dlFile = r'E:\DSHub\Elevation\USGS_3DEP_1M_Metadata_Elevation_02082023.txt'
-##    bHead = True
-##    bdlmt = True
-##    bReplace = False
-##    bDltZips = False
+    dlFile = r'D:\projects\DSHub\reampling\USGS_3DEP_10M_Metadata_Elevation_03142023.txt'
+    bReplace = False
 
     main(dlFile,bReplace)
     input("\nHit Enter to Continue: ")
