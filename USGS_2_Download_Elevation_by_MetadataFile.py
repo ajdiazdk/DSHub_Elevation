@@ -99,6 +99,14 @@ and return them.  This will be used to append to the DLStatus file.
     - Added code to determine operating system for get download folder.  This was mainly for testing purpose.
       I didn't want to change it temporarily and forget to change it back.
 
+4/14/2023
+    - If script is being called from Linux than downloadfolder is not set; If script is called from windows
+      then downloadfolder is set by user.
+    - Updated the names of the output files to be more intuitive.
+        - USGS_3DEP_1M_Metadata_Elevation_02242023_MASTER_DB.txt -- > USGS_3DEP_1M_Step2_Elevation Metadata.txt
+        - USGS_3DEP_1M_Metadata_Elevation_02242023_Download_ConsoleMsgs.txt --> USGS_3DEP_1M_Step2_Download_ConsoleMsgs.txt
+        - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL.txt --> USGS_3DEP_1M_Step2_RASTER2PGSQL.txt
+
 Things to consider/do:
   - rename key sql reserved words:
         - top, bottom, left, right --> rast_top,rast_bottom,rast_left,rast_right
@@ -537,7 +545,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         badStats = 0
 
         # Step #1 Gather Statistic Information for all rasters
-        AddMsgAndPrint(f"\tGathering Individual DEM Statistical Information")
+        AddMsgAndPrint(f"\n\tGathering Individual DEM Statistical Information")
         with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
             # use a set comprehension to start all tasks.  This creates a future object
@@ -561,8 +569,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         global downloadFile
 
         # Create Master Elevation File
-        dlMasterLogFile = os.path.basename(downloadFile).split('.')[0] + "_MASTER_DB.txt"
-        dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}{dlMasterLogFile}"
+        dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
         header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
@@ -619,8 +626,7 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
     try:
         global downloadFile
 
-        dlMasterLogFile = os.path.basename(downloadFile).split('.')[0] + "_MASTER_DB.txt"
-        dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}{dlMasterLogFile}"
+        dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
         header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
@@ -896,7 +902,8 @@ def getRasterInformation(raster):
             srsType = 'GEOGRAPHIC'
             srsName = srs.GetAttrValue('geogcs')
 
-        if srs.IsProjected:
+        # Returns 0 or 1; opposite would be IsGeographic
+        if srs.IsProjected():
             srsName = srs.GetAttrValue('projcs')
         else:
             srsName = srs.GetAttrValue('geogcs')
@@ -960,8 +967,8 @@ def createRaster2pgSQLFile(masterElevFile):
         masterElevRecCount = len(open(masterElevFile).readlines()) - 1  # subtract header
 
         recCount = 0
-        r2pgsqlFileName = os.path.basename(downloadFile).split('.')[0] + "_RASTER2PGSQL.txt"
-        r2pgsqlFilePath = f"{os.path.dirname(downloadFile)}{os.sep}{r2pgsqlFileName}"
+        r2pgsqlFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_RASTER2PGSQL.txt"
+
         g = open(r2pgsqlFilePath,'a+')
 
         total = sum(1 for line in open(masterElevFile)) -1
@@ -985,7 +992,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 tileSize = '507x507'
                 demPath = f"{items[10]}{os.sep}{items[9]}"
                 dbName = 'elevation'
-                dbTable = f"elevation_{resolution.lower()}_new"  # elevation_3m
+                dbTable = f"elevation_{resolution.lower()}"  # elevation_3m
                 demName = items[9]
                 password = 'itsnotflat'
                 localHost = '10.11.11.10'
@@ -1025,9 +1032,7 @@ def createRaster2pgSQLFile(masterElevFile):
 def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
     try:
-
-        errorFileName = os.path.basename(downloadFile).split('.')[0] + "_Download_FAILED.txt"
-        errorFile = f"{os.path.dirname(downloadFile)}{os.sep}{errorFileName}"
+        errorFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_FAILED.txt"
 
         AddMsgAndPrint(f"\tDownload Errors Logged to: {errorFile}")
         g = open(errorFile,'a+')
@@ -1062,7 +1067,8 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
         errorMsg()
 
 ## ====================================== Main Body ==================================
-def main(dlFile,bReplace):
+def main(dlFile,dlDir,bReplace):
+
     try:
 
         startTime = tic()
@@ -1074,7 +1080,8 @@ def main(dlFile,bReplace):
         global resolution
 
         # 6 Tool Parameters
-        downloadFile = dlFile
+        downloadFile = dlFile         # Download File
+        dlFolder = dlDir              # Download Directory
         bHeader = True
         bDownloadMultithread = True
         bReplaceData = bReplace
@@ -1082,7 +1089,7 @@ def main(dlFile,bReplace):
         bDeleteZipFiles = False
 
         # Pull elevation resolution from file name
-        # USGS_3DEP_3M_Metadata_Elevation_11102022.txt
+        # USGS_3DEP_1M_Step1B_ElevationDL_04132023.txt
         resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
@@ -1149,9 +1156,10 @@ def main(dlFile,bReplace):
         today = datetime.today().strftime('%m%d%Y')
 
         # Log file that captures console messages
-        logFile = os.path.basename(downloadFile).split('.')[0] + "_Download_ConsoleMsgs.txt"
+        #logFile = os.path.basename(downloadFile).split('.')[0] + "_Download_ConsoleMsgs.txt"
         global msgLogFile
-        msgLogFile = f"{os.path.dirname(dlFile)}{os.sep}{logFile}"
+        msgLogFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_ConsoleMsgs.txt"
+
         h = open(msgLogFile,'a+')
         h.write(f"Executing: USGS_2_Download_Elevation_by_MetadataFile {today}\n\n")
         h.write(f"User Selected Parameters:\n")
@@ -1161,7 +1169,7 @@ def main(dlFile,bReplace):
         h.write(f"\tReplace Data: {bReplaceData}\n")
         h.write(f"\tUnzip Files: {bUnzipFiles}\n")
         h.write(f"\tDelete Zip Files: {bDeleteZipFiles}\n")
-        h.write(f"\tLog File Path: {logFile}\n")
+        h.write(f"\tLog File Path: {msgLogFile}\n")
         h.close()
 
         AddMsgAndPrint(f"\n{'='*125}")
@@ -1191,14 +1199,24 @@ def main(dlFile,bReplace):
                 i = 1
                 numOfHUCelevTiles = len(items)
 
-                # Windows vs Linux
-                if os.name == 'posix':
+                # if OS is Linux then downloadfolder will have to be set
+                # if OS is Windows then downloadfolder was passed in.
+                if not dlFolder:
                     downloadFolder = getDownloadFolder(huc,resolution)
-                    if not downloadFolder: continue
+                    if not downloadFolder:
+                        AddMsgAndPrint(f"\n\tFailed to set download folder for {huc}. {numOfHUCelevTiles:,} will NOT be downloaded")
+                        continue
                 else:
-                    downloadFolder = r'D:\projects\DSHub\reampling\10M'
+                    downloadFolder = dlFolder
 
-                AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles} elevation tiles for HUC: {huc} ---> {downloadFolder}")
+##                # Windows vs Linux
+##                if os.name == 'posix':
+##                    downloadFolder = getDownloadFolder(huc,resolution)
+##                    if not downloadFolder: continue
+##                else:
+##                    downloadFolder = r'D:\projects\DSHub\reampling\10M'
+
+                AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles:,} elevation tiles for HUC: {huc} ---> {downloadFolder}")
 
                 if bDownloadMultithread:
                     with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
@@ -1260,12 +1278,12 @@ def main(dlFile,bReplace):
             print("\nThere are no elevation tiles to download")
 
 
-        """ ----------------------------- Create Master Elevation File ----------------------------- """
+        """ ----------------------------- Create Elevation Metadata File ----------------------------- """
         if len(dlImgFileDict):
-            AddMsgAndPrint(f"\nCreating Master Database Elevation File")
+            AddMsgAndPrint(f"\nCreating Elevation Metadata File")
             dlMasterFileStart = tic()
             dlMasterFile = createMasterDBfile_MT(dlImgFileDict,elevMetadataDict)
-            AddMsgAndPrint(f"\tMaster Database Elevation File Path: {dlMasterFile}")
+            AddMsgAndPrint(f"\n\tElevation Metadata File Path: {dlMasterFile}")
             dlMasterFileStop = toc(dlMasterFileStart)
 
             """ ----------------------------- Create Raster2pgsql File ---------------------------------- """
@@ -1322,26 +1340,37 @@ def main(dlFile,bReplace):
 ## ============================================================================================================
 if __name__ == '__main__':
 
-##    # DOWNLOAD FILE
-##    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
-##    while not os.path.exists(dlFile):
-##        print(f"{dlFile} does NOT exist. Try Again")
-##        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
-##
-##    # REPLACE DATA
-##    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
-##    while not bReplace.lower() in ("yes","no","y","n"):
-##        print(f"Please Enter Yes or No")
-##        bReplace = input("Do you want to replace existing data? (Yes/No): ")
-##
-##    if bReplace.lower() in ("yes","y"):
-##        bReplace = True
-##    else:
-##        bReplace = False
+    # DOWNLOAD FILE
+    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
+    while not os.path.exists(dlFile):
+        print(f"{dlFile} does NOT exist. Try Again")
+        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
 
-    dlFile = r'D:\projects\DSHub\reampling\USGS_3DEP_10M_Metadata_Elevation_03142023.txt'
-    bReplace = False
+    # DOWNLOAD FOLDER
+    # Windows (nt) vs Linux (posix)
+    if os.name == 'nt':
+        dlFolder = input("\nEnter path where elevation files will be download to: ")
+        while not os.path.exists(dlFolder):
+            print(f"{dlFolder} does NOT exist. Try Again")
+            dlFolder = input("Enter path where elevation files will be download to: ")
+    else:
+        dlFolder = False
 
-    main(dlFile,bReplace)
+    # REPLACE DATA
+    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
+    while not bReplace.lower() in ("yes","no","y","n"):
+        print(f"Please Enter Yes or No")
+        bReplace = input("Do you want to replace existing data? (Yes/No): ")
+
+    if bReplace.lower() in ("yes","y"):
+        bReplace = True
+    else:
+        bReplace = False
+
+##    dlFile = r'D:\projects\DSHub\reampling\USGS_3DEP_10M_Metadata_Elevation_03142023.txt'
+##    dlFolder = r''
+##    bReplace = False
+
+    main(dlFile,dlFolder,bReplace)
     input("\nHit Enter to Continue: ")
     exit()

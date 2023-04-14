@@ -123,6 +123,12 @@ that is done to these elevation files.
     - Number of records that were removed due to duplicate items (sourceID, titles, URLs)
 - Write Metadata elevation file after duplicate records have been removed.
 
+4/14/2023
+Updated the name of the 3 output files to be more intuitive.
+- USGS_3DEP_1M_Metadata_API_02242023.txt --> USGS_3DEP_1M_Step1A_API_URLs_04132023.txt
+- USGS_3DEP_1M_Metadata_Elevation_02242023.txt --> USGS_3DEP_1M_Step1B_ElevationDL_04132023.txt
+- USGS_3DEP_1M_Metadata_API_ConsoleMsgs_02242023.txt --> USGS_3DEP_1M_Step1C_ConsoleMsgs_04132023.txt
+
 """
 ## ===================================================================================
 def AddMsgAndPrint(msg):
@@ -336,11 +342,11 @@ if __name__ == '__main__':
         startTime = tic()
 
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBD\WBDHU8'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_Resample_Test'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\20230405'
-        tnmResolution = '3M'
+        metadataPath = r'D:\projects\DSHub\reampling\test'
+        tnmResolution = '1M'
         bAlaska = False
 
         if not arcpy.Exists(hucBoundaries):
@@ -371,12 +377,12 @@ if __name__ == '__main__':
         """ ---------------------------- Establish Metdata and log FILES ---------------------------------------------------"""
         today = datetime.today().strftime('%m%d%Y')  #11192022
 
-        # Metadata file#1; USGS_3DEP_1M_Metadata_API_02082023.txt
+        # Metadata file#1; USGS_3DEP_1M_Step1_Metadata_API_02082023.txt
         # huc_digit, Number of tiles associated with huc, URL for TNM API
         if bAlaska and not tnmResolution == '5M_AK':
-            metadataFile1 = f"USGS_3DEP_{tnmResolution}_AK_Metadata_API_{today}.txt"
+            metadataFile1 = f"USGS_3DEP_{tnmResolution}_AK_Step1A_API_URLs_{today}.txt"
         else:
-            metadataFile1 = f"USGS_3DEP_{tnmResolution}_Metadata_API_{today}.txt"
+            metadataFile1 = f"USGS_3DEP_{tnmResolution}_Step1A_API_URLs_{today}.txt"
 
         metadataFile1path = f"{metadataPath}\\{metadataFile1}"
         f = open(metadataFile1path,'a+')
@@ -385,13 +391,13 @@ if __name__ == '__main__':
         # Metadata file#2; USGS_3DEP_1M_Metadata_Elevation_02082023.txt
         # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
         if bAlaska and not tnmResolution == '5M_AK':
-            metadataFile2 = f"USGS_3DEP_{tnmResolution}_AK_Metadata_Elevation_{today}.txt"
+            metadataFile2 = f"USGS_3DEP_{tnmResolution}_AK_Step1B_ElevationDL_{today}.txt"
         else:
-            metadataFile2 = f"USGS_3DEP_{tnmResolution}_Metadata_Elevation_{today}.txt"
+            metadataFile2 = f"USGS_3DEP_{tnmResolution}_Step1B_ElevationDL_{today}.txt"
         metadataFile2path =  f"{metadataPath}\\{metadataFile2}"
 
         # Log file that captures console messages
-        logFile = f"USGS_3DEP_{tnmResolution}_Metadata_API_ConsoleMsgs_{today}.txt"
+        logFile = f"USGS_3DEP_{tnmResolution}_Step1C_ConsoleMsgs_{today}.txt"
         logFilePath = f"{metadataPath}\\{logFile}"
         h = open(logFilePath,'a+')
         h.write(f"Executing: USGS_1_Create_API_Metadata Script {today}\n\n")

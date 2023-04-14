@@ -55,26 +55,31 @@ import os
 import threading, multiprocessing
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from datetime import datetime
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
+from osgeo import gdal, osr, ogr
 
 
 if __name__ == '__main__':
 
-    input_raster = r'D:\projects\DSHub\Elevation\1M\USGS_1M_16_x54y443_IN_Indiana_Statewide_LiDAR_2017_B17.tif'
+    input_raster = r'D:\projects\DSHub\reampling\1M\USGS_1M_14_x34y421_KS_StatewideFordGray_2018_A18.tif'
     out_raster = f"{input_raster.split('.')[0]}_EPSG5070.{input_raster.split('.')[1]}"
-    #out_raster = r'D:\projects\DSHub\reampling\1M_5070\GDAL_5070_snap_bilinear_3M_N.tif'
 
     rds = gdal.Open(input_raster)
     rdsInfo = gdal.Info(rds,format="json")
 
+    # ----------------------------------------------  From ONLINE
     # Get input SRS in EPSG -- this is temporary; SRID will be passed in
-    inSpatialRef = rds.GetSpatialRef()
-    sr = osr.SpatialReference(str(inSpatialRef))
-    res = sr.AutoIdentifyEPSG()
-    srid = sr.GetAuthorityCode(None)
-    inSpatialRef.ImportFromEPSG(int(srid))
+##    inSpatialRef = rds.GetSpatialRef()
+##    sr = osr.SpatialReference(str(inSpatialRef))
+##    res = sr.AutoIdentifyEPSG()
+##    srid = sr.GetAuthorityCode(None)
+##    inSpatialRef.ImportFromEPSG(int(srid))
+
+
+    # ----------------------------------------------  From script #4
+    # Set source Coordinate system to EPSG from input record
+    inSpatialRef = osr.SpatialReference()
+    inSpatialRef.ImportFromEPSG(4269)
+    inputSRS = f"EPSG:{inSpatialRef.GetAuthorityCode(None)}"
 
     # Set output Coordinate system to 5070
     outSpatialRef = osr.SpatialReference()
@@ -83,10 +88,6 @@ if __name__ == '__main__':
     # create Transformation
     coordTrans = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
 
-    # This will take the place of the input SRID
-    #srid = elevMetadata[sourceID][SRID]
-    #inSpatialRef = osr.SpatialReference()
-    #inSpatialRef.ImportFromEPSG(int(srid))
 
 ##    # Temp code for bringing in Extent Coordinates
 ##    adfGeoTransform = rds.GetGeoTransform(can_return_null = True)
@@ -104,12 +105,18 @@ if __name__ == '__main__':
     left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
 
     # Create a geometry object of X,Y coordinates for LL, UL, UR, and LR in the source SRS
-    pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
-    pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
-    pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
-    pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
+##    pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
+##    pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
+##    pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
+##    pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
 
-    print(f"\n------- EPSG: {(int(srid))} Exents -------")
+    # Reverse LAT/LONG
+    pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(left)+")")
+    pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(left)+")")
+    pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(right)+")")
+    pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(right)+")")
+
+    #print(f"\n------- EPSG: {(int(srid))} Exents -------")
     print(f"Before LL Coords - {pointLL}")
     print(f"Before UL Coords - {pointUL}")
     print(f"Before UR Coords - {pointUR}")
@@ -221,18 +228,19 @@ if __name__ == '__main__':
                             outputBoundsSRS="EPSG:5070",
                             resampleAlg=gdal.GRA_Bilinear)
 
-    test2 = gdal.Warp(out_raster, input_raster, options=args)
+    gdal.Warp(out_raster, input_raster, options=args)
+    print(f"Successfully created {out_raster}")
 
-    del rds,rdsInfo
-
-    rds = gdal.Open(out_raster)
-    rdsInfo = gdal.Info(rds,format="json")
-
-    gdalRight,gdalTop = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
-    gdalLeft,gdalBottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
-
-    print("\n------- Snapped Exents from projected and resampled raster ------")
-    print(f"New Top Extent: {gdalTop}")
-    print(f"New Bottom Extent: {gdalBottom}")
-    print(f"New Left Extent: {gdalLeft}")
-    print(f"New Right Extent: {gdalRight}")
+##    del rds,rdsInfo
+##
+##    rds = gdal.Open(out_raster)
+##    rdsInfo = gdal.Info(rds,format="json")
+##
+##    gdalRight,gdalTop = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
+##    gdalLeft,gdalBottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
+##
+##    print("\n------- Snapped Exents from projected and resampled raster ------")
+##    print(f"New Top Extent: {gdalTop}")
+##    print(f"New Bottom Extent: {gdalBottom}")
+##    print(f"New Left Extent: {gdalLeft}")
+##    print(f"New Right Extent: {gdalRight}")

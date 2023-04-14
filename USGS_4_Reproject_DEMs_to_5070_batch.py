@@ -51,7 +51,7 @@
 
 """
 
-import os, traceback, sys
+import os, traceback, sys, time
 import threading, multiprocessing
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from datetime import datetime
@@ -66,13 +66,14 @@ def AddMsgAndPrint(msg):
     print(msg)
 
     # Add message to log file
-##    try:
-##        h = open(msgLogFile,'a+')
-##        h.write("\n" + msg)
-##        h.close
-##        del h
-##    except:
-##        pass
+
+    try:
+        h = open(msgLogFile,'a+')
+        h.write("\n" + msg)
+        h.close
+        del h
+    except:
+        pass
 
 ## ===================================================================================
 def errorMsg(errorOption=1):
@@ -96,8 +97,34 @@ def errorMsg(errorOption=1):
         AddMsgAndPrint("Unhandled error in unHandledException method")
         pass
 
+## ================================================================================================================
+def tic():
+    """ Returns the current time """
+
+    return time.time()
+
+## ================================================================================================================
+def toc(_start_time):
+    """ Returns the total time by subtracting the start time - finish time"""
+
+    try:
+
+        t_sec = round(time.time() - _start_time)
+        (t_min, t_sec) = divmod(t_sec,60)
+        (t_hour,t_min) = divmod(t_min,60)
+
+        if t_hour:
+            return ('{} hour(s): {} minute(s): {} second(s)'.format(int(t_hour),int(t_min),int(t_sec)))
+        elif t_min:
+            return ('{} minute(s): {} second(s)'.format(int(t_min),int(t_sec)))
+        else:
+            return ('{} second(s)'.format(int(t_sec)))
+
+    except:
+        errorMsg()
+
 ## ===================================================================================
-def convertMasterDBfileToDict(masterDBfile):
+def convertMasterDBfileToDict(elevMetdataFile):
     """ Opens the Master Elevation Database CSV file containing the metadata for every
         DEM file, including statistical and geographical information.  Parses the content
         into a dictionary with the sourceId being the key and the rest of the information
@@ -138,10 +165,7 @@ def convertMasterDBfileToDict(masterDBfile):
     """
     try:
         AddMsgAndPrint("Converting Master Elevation File into a dictionary")
-
-        # header values in a list format; should be 31 fields
-        headerValues = open(masterDBfile).readline().rstrip().split(',')
-        mDBFnumOfRecs = len(open(masterDBfile).readlines())
+        mDBFnumOfRecs = len(open(elevMetdataFile).readlines())
 
         # Find sourceID in headerValues; return False if not found
         sourceIDidx = headerValues.index('sourceID')
@@ -151,7 +175,7 @@ def convertMasterDBfileToDict(masterDBfile):
         badLines = 0
 
         """ ---------------------------- Open Download File and Parse Information ----------------------------------"""
-        with open(masterDBfile, 'r') as fp:
+        with open(elevMetdataFile, 'r') as fp:
             for line in fp:
                 items = line.split(',')
                 items[-1] = items[-1].strip('\n')  # remove the hard return of the line
@@ -178,7 +202,6 @@ def convertMasterDBfileToDict(masterDBfile):
 
                 # Add info to elevMetadataDict
                 masterDBfileDict[sourceID] = items
-                projectDict[sourceID] = []
                 recCount+=1
         del fp
 
@@ -186,7 +209,7 @@ def convertMasterDBfileToDict(masterDBfile):
             return masterDBfileDict
 
         if len(masterDBfileDict) == 0:
-            AddMsgAndPrint(f"\tMaster Database File: {os.path.basename(masterDBfile)} was empty!")
+            AddMsgAndPrint(f"\tElevation Metadata File: {os.path.basename(masterDBfile)} was empty!")
             return False
 
         if badLines > 0:
@@ -199,21 +222,49 @@ def convertMasterDBfileToDict(masterDBfile):
         return False
 
 ## ===================================================================================
-def createSoil3MDEM(rasterRecord):
+def createSoil3MDEM(item):
+    """ item is passed over as a tuple with the key = 0 and the values = 1"""
 
     try:
+        rasterRecord = item[1]
 
         # Positions of
-        DEMname = rasterRecord[]
-        DEMpath = rasterRecord[]
-        EPSG = rasterRecord[]
-        srsName = rasterRecord[]
-        top = rasterRecord[]
-        left = rasterRecord[]
-        right = rasterRecord[]
-        bottom = rasterRecord[]
+        fileFormat = rasterRecord[headerValues.index("format")]
+        DEMname = rasterRecord[headerValues.index("DEMname")]
+        DEMpath = rasterRecord[headerValues.index("DEMpath")]
+        EPSG = rasterRecord[headerValues.index("EPSG")]
+        srsName = rasterRecord[headerValues.index("srsName")]
+        top = rasterRecord[headerValues.index("top")]
+        left = rasterRecord[headerValues.index("left")]
+        right = rasterRecord[headerValues.index("right")]
+        bottom = rasterRecord[headerValues.index("bottom")]
 
+        messageList = list()
+
+        if bDetails:
+            messageList.append(f"\n\tProcessing DEM: {DEMname}")
+            theTab = "\t\t"
+        else:
+            theTab = "\t"
+
+        # D:\projects\DSHub\reampling\1M\USGS_1M_Madison.tif
         input_raster = os.path.join(DEMpath,DEMname)
+
+        # D:\projects\DSHub\reampling\1M\USGS_1M_Madison_EPSG5070.tif
+        out_raster = f"{input_raster.split('.')[0]}_EPSG5070.{input_raster.split('.')[1]}"
+
+        if os.path.exists(out_raster):
+            try:
+                if bReplace:
+                    os.remove(out_raster)
+                    messageList.append(f"{theTab}Successfully Deleted {os.path.basename(out_raster)}")
+                else:
+                    messageList.append(f"{theTab}{'Projected DEM Exists':<35} {os.path.basename(out_raster):<60}")
+                    return messageList
+            except:
+                messageList.append(f"{theTab}{'Failed to Delete':<35} {fileName:<60}")
+                failedDEMs.append(rasterRecord)
+                return messageList
 
         rds = gdal.Open(input_raster)
         rdsInfo = gdal.Info(rds,format="json")
@@ -221,27 +272,43 @@ def createSoil3MDEM(rasterRecord):
         # Set source Coordinate system to EPSG from input record
         inSpatialRef = osr.SpatialReference()
         inSpatialRef.ImportFromEPSG(int(EPSG))
+        inputSRS = f"EPSG:{inSpatialRef.GetAuthorityCode(None)}"
+
+        # Degrees vs Meters
+        inputUnits = inSpatialRef.GetAttrValue('UNIT')
 
         # Set output Coordinate system to 5070
         outSpatialRef = osr.SpatialReference()
         outSpatialRef.ImportFromEPSG(5070)
+        outputSRS = f"EPSG:{outSpatialRef.GetAuthorityCode(None)}"
 
         # create Transformation
         coordTrans = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+        #messageList.append(f"\n\t Projecting from {inputSRS} to {outputSRS}")
 
+        # ----------------------- Project extent coords to 5070 --------------------------------
         # Create a geometry object of X,Y coordinates for LL, UL, UR, and LR in the source SRS
         # This represents the coords from the raster extent and will be projected to 5070
-        pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
-        pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
-        pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
-        pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
+        # Degree coordinates are passed in lat/long (Y,X) format; all others are passed in as X,Y
+
+        if inputUnits == 'degree':
+            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(left)+")")
+            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(left)+")")
+            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(right)+")")
+            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(right)+")")
+        else:
+            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
+            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
+            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
+            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
 
         # Coordinates in native SRS
-        print(f"\n------- EPSG: {(int(EPSG))} Exents -------")
-        print(f"Before LL Coords - {pointLL}")
-        print(f"Before UL Coords - {pointUL}")
-        print(f"Before UR Coords - {pointUR}")
-        print(f"Before LR Coords - {pointLR}\n")
+        if bDetails:
+            messageList.append(f"\n{theTab}------------ {inputSRS} Exents ------------")
+            messageList.append(f"{theTab}LL Coords - {pointLL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymin)'}")
+            messageList.append(f"{theTab}UL Coords - {pointUL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymax)'}")
+            messageList.append(f"{theTab}UR Coords - {pointUR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymax)'}")
+            messageList.append(f"{theTab}LR Coords - {pointLR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymin)'}")
 
         # Project individual coordinates to 5070
         # 'POINT (800676.587222594 1918952.70626254)'
@@ -251,11 +318,12 @@ def createSoil3MDEM(rasterRecord):
         pointLR.Transform(coordTrans)
 
         # Coordinates in 5070
-        print(f"\n------- EPSG: {outSpatialRef.GetAuthorityCode(None)} Exents -------")
-        print(f"After LL Coords - {pointLL}")
-        print(f"After UL Coords - {pointUL}")
-        print(f"After UR Coords - {pointUR}")
-        print(f"After LR Coords - {pointLR}")
+        if bDetails:
+            messageList.append(f"\n{theTab}------------ {outputSRS} Exents ------------")
+            messageList.append(f"{theTab}LL Coords - {pointLL} (Xmin,Ymin)")
+            messageList.append(f"{theTab}UL Coords - {pointUL} (Xmin,Ymax)")
+            messageList.append(f"{theTab}UR Coords - {pointUR} (Xmax,Ymax)")
+            messageList.append(f"{theTab}LR Coords - {pointLR} (Xmax,Ymin)")
 
         # Convert the Transform object into a List of projected coordinates and extract
         # [(1308220.3216564057, -526949.4675336559)]
@@ -277,13 +345,6 @@ def createSoil3MDEM(rasterRecord):
 
         # Get the highest X-coord to determine the most eastern (right) extent - Xmax
         newRight = int(max(prjUR[0],prjLR[0]))
-
-        # Left (xMin) is the only coordinate with a possible negative value
-        # if topLeft coordinate is west of center longitude (-96) then coord is negative
-        if newLeft < 0:
-            westOf96 = True
-        else:
-            westOf96 = False
 
         # ----------------------- Snapped 5070 Extent --------------------------------
         # update extent values so that they are snapped to a aoi3M cell.
@@ -308,10 +369,7 @@ def createSoil3MDEM(rasterRecord):
                     elif extPos == 2:
                         newBottom = extent - 3
                     elif extPos == 3:
-                        if westOf96:
-                            newLeft = -abs(extent - 3)
-                        else:
-                            newLeft = extent - 3
+                        newLeft = extent - 3
 
                     extPos+=1
                     bDivisibleBy3 = True
@@ -325,74 +383,124 @@ def createSoil3MDEM(rasterRecord):
                     else:
                         extent = extent - 1
 
-        print("\n------- Snapped Exents ------")
-        print(f"New Top Extent: {newTop}")
-        print(f"New Bottom Extent: {newBottom}")
-        print(f"New Left Extent: {newLeft}")
-        print(f"New Right Extent: {newRight}")
+##        messageList.append(f"\n{theTab}------------ {outputSRS} Snapped Exent ------------")
+##        messageList.append(f"{theTab}Top Extent: {newTop}")
+##        messageList.append(f"{theTab}Bottom Extent: {newBottom}")
+##        messageList.append(f"{theTab}Left Extent: {newLeft}")
+##        messageList.append(f"{theTab}Right Extent: {newRight}")
 
-        args = gdal.WarpOptions(format='GTiff',
+        messageList.append(f"\n{theTab}------------ {outputSRS} Snapped Exents ------------")
+        messageList.append(f"{theTab}LL Coords - POINT ({newLeft} {newBottom}) (Left,Bottom)")
+        messageList.append(f"{theTab}UL Coords - POINT ({newLeft} {newTop}) (Left,Top)")
+        messageList.append(f"{theTab}UR Coords - POINT ({newRight} {newTop}) (Right,Top)")
+        messageList.append(f"{theTab}LR Coords - POINT ({newRight} {newBottom}) (Right,Bottom)")
+
+        if fileFormat == 'GeoTIFF':
+            outputFormat = 'GTiff'
+        else:
+            outputFormat = 'HFA' # Erdas Imagine .img
+
+        args = gdal.WarpOptions(format=outputFormat,
                                 xRes=3,
                                 yRes=3,
-                                srcSRS='EPSG:26916',
-                                dstSRS='EPSG:5070',
+                                srcSRS=inputSRS,
+                                dstSRS=outputSRS,
                                 outputBounds=[newLeft, newBottom, newRight, newTop],
-                                outputBoundsSRS="EPSG:5070",
-                                resampleAlg=gdal.GRA_Bilinear)
+                                outputBoundsSRS=outputSRS,
+                                resampleAlg=gdal.GRA_Bilinear,
+                                multithread=True)
 
-        test2 = gdal.Warp(out_raster, input_raster, options=args)
+        gdal.Warp(out_raster, input_raster, options=args)
 
-        del rds,rdsInfo
+        if bDetails:
+            messageList.append(f"\n{theTab}Successfully Created Soil3M DEM: {os.path.basename(out_raster)}")
+        else:
+            messageList.append(f"{theTab}{'Successfully Created Soil3M DEM:':<35} {os.path.basename(out_raster):>60}")
 
-        rds = gdal.Open(out_raster)
-        rdsInfo = gdal.Info(rds,format="json")
-
-        gdalRight,gdalTop = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
-        gdalLeft,gdalBottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
-
-        print("\n------- Snapped Exents from projected and resampled raster ------")
-        print(f"New Top Extent: {gdalTop}")
-        print(f"New Bottom Extent: {gdalBottom}")
-        print(f"New Left Extent: {gdalLeft}")
-        print(f"New Right Extent: {gdalRight}")
+        return messageList
 
     except:
-        errorMsg()
-
-        return False
-
+        failedDEMs.append(rasterRecord)
+        messageList.append(f"\n{theTab}{errorMsg(errorOption=2)}")
+        return messageList
 
 ## ===================================================================================
-
 if __name__ == '__main__':
 
-    masterElevDBfile = r'D:\projects\DSHub\reampling\USGS_3DEP_1M_Metadata_Elevation_03142023_MASTER_DB.txt'
+    try:
 
-    # Convert masterElevDbfile to a dictionary
-    # sourceID = [List of all attributes]
-    masterElevDict = convertMasterDBfileToDict(masterElevDBfile)
+        # Script Parameters
+        elevationMetadataFile = r'D:\projects\DSHub\reampling\USGS_3DEP_1M_Metadata_Elevation_03142023_MASTER_DB.txt'
+        bMultiThreadMode = False
+        bReplace = True
+        bDetails = True
 
+        # Start the clock
+        start = tic()
 
-    # 01010201:[URL,sourceID]
-    for sourceID,items in urlDownloadDict.items():
-        i = 1
-        numOfHUCelevTiles = len(items)
+        # Setup Log file that captures console messages
+        # Pull elevation resolution from file name
+        # USGS_3DEP_1M_Step4_Soil3M_ConsoleMsgs.txt
+        today = datetime.today().strftime('%m%d%Y')
+        resolution = elevationMetadataFile.split(os.sep)[-1].split('_')[2]
+        msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_Soil3M_ConsoleMsgs.txt"
+        h = open(msgLogFile,'a+')
+        h.write(f"Executing: USGS_4_Reproject_DEMs_to_5070 {today}\n\n")
+        h.write(f"User Selected Parameters:\n")
+        h.write(f"\tElevation Metadta File: {elevationMetadataFile}\n")
+        h.write(f"\tMulti-Threading Mode: {bMultiThreadMode}\n")
+        h.write(f"\tOverwrite Data: {bReplace}\n")
+        h.write(f"\tVerbose Mode: {bDetails}\n")
+        h.close()
 
-        #AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles} elevation tiles for HUC: {huc} ---> {downloadFolder}")
+        # List of header values
+        headerValues = open(elevationMetadataFile).readline().rstrip().split(',')
 
-        with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        # Convert masterElevDbfile to a dictionary
+        # sourceID = [List of all attributes]
+        elevMetadataDict = convertMasterDBfileToDict(elevationMetadataFile)
+        recCount = len(elevMetadataDict)
 
-            # use a set comprehension to start all tasks.  This creates a future object
-            future_to_url = {executor.submit(createSoil3MDEM, item, downloadFolder): item for item in items}
+        # progress tracker
+        i = 0
+        failedDEMs = list()
 
-            # yield future objects as they are done.
-            for future in as_completed(future_to_url):
-                dlTracker+=1
+        if bMultiThreadMode:
+            """------------------  Execute in Multi-Thread Mode --------------- """
+            AddMsgAndPrint(f"\nProcessing {recCount:,} DEM files to create Best Available 3M")
+            with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+
+                # use a set comprehension to start all tasks.  This creates a future object
+                future3mDEM = {executor.submit(createSoil3MDEM, DEMrecord): DEMrecord for DEMrecord in elevMetadataDict.items()}
+
+                # yield future objects as they are done.
+                for new3mDEM in as_completed(future3mDEM):
+                    i+=1
+                    j=1
+                    for printMessage in new3mDEM.result():
+                        if j==1:
+                            AddMsgAndPrint(f"{printMessage} -- ({i:,} of {recCount:,})")
+                        else:
+                            AddMsgAndPrint(printMessage)
+                        j+=1
+
+        else:
+            """------------------  Execute in Single Mode --------------- """
+            for sourceID,items in elevMetadataDict.items():
+                result = createSoil3MDEM((sourceID,items))
+                i+=1
                 j=1
-                for printMessage in future.result():
+                for printMessage in result:
                     if j==1:
-                        AddMsgAndPrint(f"{printMessage} -- ({dlTracker:,} of {recCount:,})")
+                        AddMsgAndPrint(f"{printMessage} -- ({i:,} of {recCount:,})")
                     else:
                         AddMsgAndPrint(printMessage)
                     j+=1
 
+        print(toc(start))
+
+
+        # ADD SUMMARY
+
+    except:
+        AddMsgAndPrint(errorMsg())
