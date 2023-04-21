@@ -20,6 +20,11 @@ This is script #3 in the USGS Elevation acquisition workflow developed for the D
     -update to print and log invalid raster2pgsql commands to a seperate log file so
      it is easy to reference, fix and rerun seperate raster2pgsql commands.
 
+4/15/2023
+    - Updated the names of the output files to be more intuitive.
+        - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL_ConsoleMsgs.txt -- > USGS_3DEP_1M_Step3_Exec_RASTER2PGSQL_ConsoleMsgs.txt
+        - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL_FAILED.txt --> USGS_3DEP_1M_Step3_Exec_RASTER2PGSQL_FAILED.txt
+
 """
 
 #-------------------------------------------------------------------------------
@@ -145,17 +150,14 @@ if __name__ == '__main__':
             print(f"{raster2pgsqlFile} does NOT exist. Try Again")
             raster2pgsqlFile = input("Enter full path to Raster2pgsql File: ")
 
-        #raster2pgsqlFile = r'E:\python_scripts\DSHub\LinuxWorkflow\raster2pgsql.txt'
-        raster2pgsqlLogFileName = os.path.basename(raster2pgsqlFile).split('.')[0] + "_ConsoleMsgs.txt"
-        raster2pgsqlLogFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}{raster2pgsqlLogFileName}"
-
-        raster2pgsqlErrorFileName = os.path.basename(raster2pgsqlFile).split('.')[0] + "_FAILED.txt"
-        raster2pgsqlErrorFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}{raster2pgsqlErrorFileName}"
+        resolution = raster2pgsqlFile.split(os.sep)[-1].split('_')[2]
+        raster2pgsqlLogFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}USGS_3DEP_{resolution}_Step3_Exec_RASTER2PGSQL_ConsoleMsgs.txt"
+        raster2pgsqlErrorFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}USGS_3DEP_{resolution}_Step3_Exec_RASTER2PGSQL_FAILED.txt"
 
         recCount = sum(1 for line in open(raster2pgsqlFile))
         today = datetime.today().strftime('%m%d%Y')
 
-        AddMsgAndPrint(f"Executing: Run_Raster2pgsql.py {today}\n")
+        AddMsgAndPrint(f"Executing: USGS_3_Execute_raster2pgsql_fromFile.py {today}\n")
         AddMsgAndPrint(f"Raster2pgsql File: {raster2pgsqlFile})")
         AddMsgAndPrint(f"Number of Raster2pgsql records: {recCount:,}")
         AddMsgAndPrint(f"\n{'='*125}")

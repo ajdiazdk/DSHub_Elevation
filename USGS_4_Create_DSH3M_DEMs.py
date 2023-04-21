@@ -49,6 +49,13 @@
         Left (xmin): 799722.0
         Right (xmax): 810559.0
 
+---------------- UPDATES
+4/20/2023
+Added source and destination nodata arguments to the warp function to harmonize the nodata values from
+the warped outputs.  1M and 10M nodata values are set to -999999.0.  3M nodata values are set to
+3.4028234663852886e+38.  The destination nodata values for all warped outputs will be set to -999999.0.
+
+
 """
 
 import os, traceback, sys, time
@@ -164,7 +171,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
                               '512\n']}
     """
     try:
-        AddMsgAndPrint("Converting Master Elevation File into a dictionary")
+        AddMsgAndPrint("Converting input Metadata Elevation File into a dictionary")
         mDBFnumOfRecs = len(open(elevMetdataFile).readlines())
 
         # Find sourceID in headerValues; return False if not found
@@ -196,7 +203,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
                     errorPos = items.index('#')
                     AddMsgAndPrint(f"\tLine # {recCount} has an error value for '{headerValues[errorPos]}'")
                     badLines+=1
-                    continue
+                    # continue
 
                 sourceID = items[sourceIDidx]
 
@@ -229,10 +236,12 @@ def createSoil3MDEM(item):
         rasterRecord = item[1]
 
         # Positions of
+        sourceID = rasterRecord[headerValues.index("sourceID")]
         fileFormat = rasterRecord[headerValues.index("format")]
         DEMname = rasterRecord[headerValues.index("DEMname")]
         DEMpath = rasterRecord[headerValues.index("DEMpath")]
         EPSG = rasterRecord[headerValues.index("EPSG")]
+        noData = rasterRecord[headerValues.index("noDataVal")]
         srsName = rasterRecord[headerValues.index("srsName")]
         top = rasterRecord[headerValues.index("top")]
         left = rasterRecord[headerValues.index("left")]
@@ -251,7 +260,7 @@ def createSoil3MDEM(item):
         input_raster = os.path.join(DEMpath,DEMname)
 
         # D:\projects\DSHub\reampling\1M\USGS_1M_Madison_EPSG5070.tif
-        out_raster = f"{input_raster.split('.')[0]}_EPSG5070.{input_raster.split('.')[1]}"
+        out_raster = f"{input_raster.split('.')[0]}_dsh3m.{input_raster.split('.')[1]}"
 
         if os.path.exists(out_raster):
             try:
@@ -259,11 +268,12 @@ def createSoil3MDEM(item):
                     os.remove(out_raster)
                     messageList.append(f"{theTab}Successfully Deleted {os.path.basename(out_raster)}")
                 else:
-                    messageList.append(f"{theTab}{'Projected DEM Exists':<35} {os.path.basename(out_raster):<60}")
+                    messageList.append(f"{theTab}{'Projected DEM Exists':<25} {os.path.basename(out_raster):<60}")
+                    soil3MDict[sourceID] = out_raster
                     return messageList
             except:
                 messageList.append(f"{theTab}{'Failed to Delete':<35} {fileName:<60}")
-                failedDEMs.append(rasterRecord)
+                failedDEMs.append(sourceID)
                 return messageList
 
         rds = gdal.Open(input_raster)
@@ -383,12 +393,6 @@ def createSoil3MDEM(item):
                     else:
                         extent = extent - 1
 
-##        messageList.append(f"\n{theTab}------------ {outputSRS} Snapped Exent ------------")
-##        messageList.append(f"{theTab}Top Extent: {newTop}")
-##        messageList.append(f"{theTab}Bottom Extent: {newBottom}")
-##        messageList.append(f"{theTab}Left Extent: {newLeft}")
-##        messageList.append(f"{theTab}Right Extent: {newRight}")
-
         messageList.append(f"\n{theTab}------------ {outputSRS} Snapped Exents ------------")
         messageList.append(f"{theTab}LL Coords - POINT ({newLeft} {newBottom}) (Left,Bottom)")
         messageList.append(f"{theTab}UL Coords - POINT ({newLeft} {newTop}) (Left,Top)")
@@ -400,9 +404,12 @@ def createSoil3MDEM(item):
         else:
             outputFormat = 'HFA' # Erdas Imagine .img
 
+        # Add srcNodata and dstNodata
         args = gdal.WarpOptions(format=outputFormat,
                                 xRes=3,
                                 yRes=3,
+                                srcNodata=noData,
+                                dstNodata=-999999.0,
                                 srcSRS=inputSRS,
                                 dstSRS=outputSRS,
                                 outputBounds=[newLeft, newBottom, newRight, newTop],
@@ -417,12 +424,343 @@ def createSoil3MDEM(item):
         else:
             messageList.append(f"{theTab}{'Successfully Created Soil3M DEM:':<35} {os.path.basename(out_raster):>60}")
 
+        soil3MDict[sourceID] = out_raster
         return messageList
 
     except:
-        failedDEMs.append(rasterRecord)
+        failedDEMs.append(sourceID)
         messageList.append(f"\n{theTab}{errorMsg(errorOption=2)}")
         return messageList
+
+## ===================================================================================
+def createElevMetadataFile_MT(soil3Mdict,elevMetadataDict):
+
+    # updates metadata file for soil3m DEMS
+    # soil3Mdict: sourceID = rasterPath
+
+    try:
+        demStatDict = dict()
+        goodStats = 0
+        badStats = 0
+        recCount = len(soil3Mdict)
+        i = 1 # progress tracker
+
+        # Step #1 Gather Statistic Information for all rasters
+        AddMsgAndPrint(f"\n\tGathering Individual DEM Statistical Information")
+        with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+
+            # use a set comprehension to start all tasks.  This creates a future object
+            rasterStatInfo = {executor.submit(getRasterInformation_MT, rastItem): rastItem for rastItem in soil3Mdict.items()}
+
+            # yield future objects as they are done.
+            for stats in as_completed(rasterStatInfo):
+                resultDict = stats.result()
+                for results in resultDict.items():
+                    ID = results[0]
+                    rastInfo = results[1]
+
+                    if rastInfo.find('#')>-1:
+                        badStats+=1
+                        AddMsgAndPrint(f"\t\tError in retrieving raster info -- ({i:,} of {recCount:,})")
+                    else:
+                        goodStats+=1
+
+                        # No need to log this
+                        print(f"\t\tSuccessfully retrieved raster info -- ({i:,} of {recCount:,})")
+                    i+=1
+                    demStatDict[ID] = rastInfo
+
+        AddMsgAndPrint(f"\n\tSuccessfully Gathered stats for {goodStats:,} DEMs")
+
+        if badStats > 0:
+            AddMsgAndPrint(f"\tProblems with Gathering stats for {badStats:,} DEMs")
+
+        # Create Master Elevation File
+        soil3MmetadataFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_Elevation_Metadata.txt"
+
+        g = open(soil3MmetadataFile,'a+')
+        header = ','.join(str(e) for e in headerValues)
+        g.write(header)
+
+        total = len(elevMetadataDict)
+        index = 1
+
+        # Iterate through all of the sourceID files in the download file (elevMetadatDict)
+        for srcID,demInfo in elevMetadataDict.items():
+
+            # 9 item INFO: huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            firstPart = ','.join(str(e) for e in demInfo[0:9])
+
+            # srcID must exist in soil3Mdict (successully populated during download)
+            if srcID in soil3Mdict:
+                demFilePath = soil3Mdict[srcID]
+                demFileName = os.path.basename(demFilePath)
+                secondPart = demStatDict[srcID]
+
+                g.write(f"\n{firstPart},{demFileName},{os.path.dirname(demFilePath)},{secondPart}")
+
+            # srcID failed during the download process.  Pass since it will be accounted for in error file
+            elif srcID in failedDEMs:
+                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in soil3MDict; accounted for in failedDEMs")
+                continue
+
+            else:
+                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in soil3MDict; NOT accounted for in failedDEMs -- Inspect")
+                continue
+
+        g.close()
+        return soil3MmetadataFile
+
+    except:
+        errorMsg()
+        try:
+            g.close()
+        except:
+            pass
+        return False
+
+
+#### ===================================================================================
+def getRasterInformation_MT(rasterItem):
+
+    # Raster information will be added to dlStatusList
+    # sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus --
+    # add additional data:
+    # columns,rows,cellsize,bandcount,bitDepth,nodatavalue,
+
+    # query srid
+    # describe num of bands; what if it is more than 1
+
+    # Input example
+    # rasterItem = (sourceID, raster path)
+    # ('60d2c0ddd34e840986528ae4', 'E:\\DSHub\\Elevation\\1M\\USGS_1M_19_x44y517_ME_CrownofMaine_2018_A18.tif')
+
+    # Return example
+    # rasterStatDict
+    # '5eacfc1d82cefae35a250bec' = '10012,10012,1,1.0,GeoTIFF,Float32,-999999.0,PROJECTED,26919,NAD83 / UTM zone 19N,5150006.0,439994.0,450006.0,5139994.0,366.988,444.228,577.808,34.396,256,256'
+
+    try:
+        srcID = rasterItem[0]
+        raster = rasterItem[1]
+        rasterStatDict = dict()  # temp dict that will return raster information
+
+        # Raster doesn't exist; download error
+        if not os.path.exists(raster):
+            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} DOES NOT EXIST. Could not get Raster Information")
+            rasterStatDict[srcID] = ','.join('#'*20)
+            return rasterStatDict
+
+        # Raster size is 0 bytes; download error
+        if not os.stat(raster).st_size > 0:
+            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} Is EMPTY. Could not get Raster Information")
+            rasterStatDict[srcID] = ','.join('#'*20)
+            return rasterStatDict
+
+        gdal.UseExceptions()    # Enable exceptions
+
+        rds = gdal.Open(raster)
+        rdsInfo = gdal.Info(rds,format="json")
+
+        # Raster Properties
+        columns = rdsInfo['size'][0]
+        rows = rdsInfo['size'][1]
+        bandCount = rds.RasterCount
+        bitDepth = rdsInfo['bands'][0]['type']
+        cellSize = rds.GetGeoTransform()[1]
+        rdsFormat = rdsInfo['driverLongName']
+
+        try:
+            noDataVal = rdsInfo['bands'][0]['noDataValue']
+        except:
+            noDataVal = '#'
+
+        # Raster Statistics
+        # ComputeStatistics vs. GetStatistics(0,1) vs. ComputeBandStats
+        # bandInfo = rds.GetRasterBand(1).ComputeStatistics(0) VS.
+        # bandInfo = rds.GetRasterBand(1).GetStatistics(0,1)
+        # bandInfo = rds.GetRasterBand(1).ComputeBandStats
+        # (Min, Max, Mean, StdDev)
+
+        # Take stat info from JSON info above; This should work for 1M
+        # May not work for 3M or 10M
+        try:
+            minStat = rdsInfo['bands'][0]['min']
+            meanStat = rdsInfo['bands'][0]['mean']
+            maxStat = rdsInfo['bands'][0]['max']
+            stDevStat = rdsInfo['bands'][0]['stdDev']
+            blockXsize = rdsInfo['bands'][0]['block'][0]
+            blockYsize = rdsInfo['bands'][0]['block'][1]
+
+            # stat info is included in JSON info but stats are not calculated;
+            # calc statistics if min,max or mean are not greater than 0.0
+            # this can add significant overhead to the process
+            if not minStat > 0 or not meanStat > 0 or not maxStat > 0:
+                #print(f"\t\t{os.path.basename(raster)} - Stats are set to 0 -- Calculating")
+                bandInfo = rds.GetRasterBand(1)
+                bandStats = bandInfo.ComputeStatistics(0)
+                minStat = bandStats[0]
+                maxStat = bandStats[1]
+                meanStat = bandStats[2]
+                stDevStat = bandStats[3]
+                blockXsize = bandInfo.GetBlockSize()[0]
+                blockYsize = bandInfo.GetBlockSize()[1]
+
+        # Stat info is not included in JSON info above.
+        # Force calculation of Raster Statistics
+        # this can add significant overhead to the process
+        except:
+            #print(f"\t\t{os.path.basename(raster)} Stats not present in info -- Forcing Calc'ing of raster info")
+            bandInfo = rds.GetRasterBand(1)
+            bandStats = bandInfo.ComputeStatistics(0)
+            minStat = bandStats[0]
+            maxStat = bandStats[1]
+            meanStat = bandStats[2]
+            stDevStat = bandStats[3]
+            blockXsize = bandInfo.GetBlockSize()[0]
+            blockYsize = bandInfo.GetBlockSize()[1]
+
+        # Raster CRS Information
+        # What is returned when a raster is undefined??
+        prj = rds.GetProjection()  # GDAL returns projection in WKT
+        srs = osr.SpatialReference(prj)
+        srs.AutoIdentifyEPSG()
+        epsg = srs.GetAttrValue('AUTHORITY',1)
+
+        if not srs.GetAttrValue('projcs') is None:
+            srsType = 'PROJECTED'
+            srsName = srs.GetAttrValue('projcs')
+        else:
+            srsType = 'GEOGRAPHIC'
+            srsName = srs.GetAttrValue('geogcs')
+
+        if srs.IsProjected:
+            srsName = srs.GetAttrValue('projcs')
+        else:
+            srsName = srs.GetAttrValue('geogcs')
+
+        # 'lowerLeft': [439994.0, 5139994.0]
+        #lowerLeft = rdsInfo['cornerCoordinates']['lowerLeft']
+        #lowerRight = rdsInfo['cornerCoordinates']['lowerRight']
+        #upperRight = rdsInfo['cornerCoordinates']['upperRight']
+        #upperLeft = rdsInfo['cornerCoordinates']['upperLeft']
+
+        right,top = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
+        left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
+
+        rasterInfoList = [columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
+                          top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
+
+        rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
+        return rasterStatDict
+
+    except:
+        errorMsg()
+        rasterStatDict[srcID] = ','.join('#'*20)
+        return rasterStatDict
+
+## ===================================================================================
+def createRaster2pgSQLFile(masterElevFile):
+
+    # Mutually exclusive options
+    # -a Append raster(s) to an existing table.
+
+    # Raster processing: Optional parameters used to manipulate input raster dataset
+    # -s - <SRID> Assign output raster with specified SRID.
+    # -b - Index (1-based) of band to extract from raster.
+    # -t - Tile Size; Cut raster into tiles to be inserted one per table row.
+    # -R - Register; Register the raster as a filesystem (out-db) raster.
+
+    # Optional parameters used to manipulate database objects
+    # -F - Add a column with the name of the file (necessary for elevation but not others)
+    #     This will be handy when you merge tilesets together
+    # -I - Create a GiST index on the raster column.
+    # -R  Register the raster as a filesystem (out-db) raster.
+    #     Only the metadata of the raster and path location to the raster is
+    #     stored in the database (not the pixels).
+
+    # STDOUT parameters
+    # | - A pipe is a form of redirection in Linux used to connect the STDOUT
+    #     of one command into the STDIN of a second command.
+    # PGPASSWORD = itsnotflat
+    # -U elevation - user in the schemas
+    # -d elevation - database name
+    # -h 10.11.11.10 host - localhost
+    # -p port
+
+    # raster2pgsql -s 4269 -b 1 -t 507x507 -F -R -I /data03/gisdata/dsmgroup/aspct_16.tif elevation.$name | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432
+
+    # raster2pgsql -s 5070 -b 1 -I -t 560x560 -F -R /data03/gisdata/dsmgroup/aspct_16.tif
+    # covariate.conus_aspect_16 | PGPASSWORD=itsnotflat psql -U covariate -d elevation -h 10.11.11.10 -p 5432
+
+    # Before
+
+    try:
+        masterElevRecCount = len(open(masterElevFile).readlines()) - 1  # subtract header
+
+        recCount = 0
+        r2pgsqlFilePath = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_RASTER2PGSQL.txt"
+
+        g = open(r2pgsqlFilePath,'a+')
+
+        total = sum(1 for line in open(masterElevFile)) -1
+        #label = "Generating Raster2PGSQL Statements"
+
+        invalidCommands = list()
+
+        """ ------------------- Open Master Elevation File and write raster2pgsql statements ---------------------"""
+        with open(masterElevFile, 'r') as fp:
+            for line in fp:
+
+                # Skip header line and empty lines
+                if recCount == 0 or line == "\n":
+                    recCount+=1
+                    continue
+
+                items = line.split(',')
+
+                # Raster2pgsql parameters
+                srid = items[19]
+                tileSize = '507x507'
+                demPath = f"{items[10]}{os.sep}{items[9]}"
+                dbName = 'elevation'
+                dbTable = f"elevation_DSH3M"  # elevation_3m
+                demName = items[9]
+                password = 'itsnotflat'
+                localHost = '10.11.11.10'
+                port = '6432'
+
+                r2pgsqlCommand = f"raster2pgsql -s {srid} -b 1 -t {tileSize} -F -a -R {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
+
+                # Add check to look for # in r2pgsqlCommand
+                if r2pgsqlCommand.find('#') > -1:
+                    invalidCommands.append(r2pgsqlCommand)
+
+                if recCount == masterElevRecCount:
+                    g.write(r2pgsqlCommand)
+                else:
+                    g.write(r2pgsqlCommand + "\n")
+
+                # No need to log status to file
+                print(f"\t\tSuccessfully wrote raster2pgsql command -- ({recCount:,} of {total:,})")
+                recCount+=1
+
+        g.close()
+        del masterElevRecCount
+
+        # Inform user about invalid raster2pgsql commands so that they can be fixed.
+        numOfInvalidCommands = len(invalidCommands)
+        if numOfInvalidCommands:
+            AddMsgAndPrint(f"\tThere are {numOfInvalidCommands:,} invalid raster2pgsql commands or that contain invalid parameters:")
+            for invalidCmd in invalidCommands:
+                AddMsgAndPrint(f"\t\t{invalidCmd}")
+        else:
+            AddMsgAndPrint(f"\tSuccessfully created RASTER2PGSQL commands for {total:,} DEM files")
+
+        return r2pgsqlFilePath
+
+    except:
+        errorMsg()
+
 
 ## ===================================================================================
 if __name__ == '__main__':
@@ -430,22 +768,52 @@ if __name__ == '__main__':
     try:
 
         # Script Parameters
-        elevationMetadataFile = r'D:\projects\DSHub\reampling\USGS_3DEP_1M_Metadata_Elevation_03142023_MASTER_DB.txt'
-        bMultiThreadMode = False
-        bReplace = True
-        bDetails = True
+        # File from Step#2
+        #elevationMetadataFile = r'D:\projects\DSHub\reampling\test\USGS_3DEP_1M_Step2_Elevation_Metadata.txt'
+        #bReplace = False
+        #bDetails = False
+
+        # Path to the Elevation Metadata Text file for the original elevation data
+        elevationMetadataFile = input("\nEnter full path of Elevation Metadata Text File: ")
+        while not os.path.exists(elevationMetadataFile):
+            print(f"{elevationMetadataFile} does NOT exist. Try Again")
+            elevationMetadataFile = input("\nEnter full path of Elevation Metadata Text File: ")
+
+        # REPLACE DATA
+        bReplace = input("\nDo you want to replace existing DSH3M data? (Yes/No): ")
+        while not bReplace.lower() in ("yes","no","y","n"):
+            print(f"Please Enter Yes or No")
+            bReplace = input("Do you want to replace existing DSH3M data? (Yes/No): ")
+
+        if bReplace.lower() in ("yes","y"):
+            bReplace = True
+        else:
+            bReplace = False
+
+        # REPLACE DATA
+        bDetails = input("\nDo you want to log specific DSH3M details? (Yes/No): ")
+        while not bDetails.lower() in ("yes","no","y","n"):
+            print(f"Please Enter Yes or No")
+            bDetails = input("Do you want to log specific DSH3M details? (Yes/No): ")
+
+        if bDetails.lower() in ("yes","y"):
+            bDetails = True
+        else:
+            bDetails = False
+
+        bMultiThreadMode = True
 
         # Start the clock
-        start = tic()
+        startTime = tic()
 
         # Setup Log file that captures console messages
         # Pull elevation resolution from file name
         # USGS_3DEP_1M_Step4_Soil3M_ConsoleMsgs.txt
         today = datetime.today().strftime('%m%d%Y')
         resolution = elevationMetadataFile.split(os.sep)[-1].split('_')[2]
-        msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_Soil3M_ConsoleMsgs.txt"
+        msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_ConsoleMsgs.txt"
         h = open(msgLogFile,'a+')
-        h.write(f"Executing: USGS_4_Reproject_DEMs_to_5070 {today}\n\n")
+        h.write(f"Executing: USGS_4_Create_DSH3M_DEMs {today}\n\n")
         h.write(f"User Selected Parameters:\n")
         h.write(f"\tElevation Metadta File: {elevationMetadataFile}\n")
         h.write(f"\tMulti-Threading Mode: {bMultiThreadMode}\n")
@@ -455,19 +823,25 @@ if __name__ == '__main__':
 
         # List of header values
         headerValues = open(elevationMetadataFile).readline().rstrip().split(',')
+        recCount = len(open(elevationMetadataFile).readlines()) - 1
 
-        # Convert masterElevDbfile to a dictionary
+        # Convert input metadata elevation file to a dictionary
         # sourceID = [List of all attributes]
         elevMetadataDict = convertMasterDBfileToDict(elevationMetadataFile)
+
+        # Dicitonarary of successfully projected DEMS
+        # sourceID = out_raster path
+        soil3MDict = dict()
         recCount = len(elevMetadataDict)
 
         # progress tracker
         i = 0
         failedDEMs = list()
 
+        soil3MstartTime = tic()
         if bMultiThreadMode:
             """------------------  Execute in Multi-Thread Mode --------------- """
-            AddMsgAndPrint(f"\nProcessing {recCount:,} DEM files to create Best Available 3M")
+            AddMsgAndPrint(f"\nProcessing {recCount:,} original DEM files to create Soil3M DEMs")
             with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
                 # use a set comprehension to start all tasks.  This creates a future object
@@ -496,11 +870,52 @@ if __name__ == '__main__':
                     else:
                         AddMsgAndPrint(printMessage)
                     j+=1
+                break
 
-        print(toc(start))
+        soil3MstopTime = toc(soil3MstartTime)
 
+        """ ----------------------------- Create Elevation Metadata File ----------------------------- """
+        if len(soil3MDict):
+            AddMsgAndPrint(f"\nCreating Elevation Metadata File for Soil3M DEMs")
+            metadataFileStart = tic()
+            metadataFile = createElevMetadataFile_MT(soil3MDict,elevMetadataDict)
+            AddMsgAndPrint(f"\n\tSoil3M Elevation Metadata File Path: {metadataFile}")
+            metadataFileStop = toc(metadataFileStart)
 
-        # ADD SUMMARY
+            """ ----------------------------- Create Raster2pgsql File ---------------------------------- """
+            if os.path.exists(metadataFile):
+                AddMsgAndPrint(f"\nCreating Raster2pgsql File\n")
+                r2pgsqlStart = tic()
+                r2pgsqlFile = createRaster2pgSQLFile(metadataFile)
+                AddMsgAndPrint(f"\t\nDSH3M Raster2pgsql File Path: {r2pgsqlFile}")
+                AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
+                r2pgsqlStop = toc(r2pgsqlStart)
+            else:
+                AddMsgAndPrint(f"\nDSH3M Raster2pgsql File will NOT be created")
+        else:
+            AddMsgAndPrint(f"\nNo information available to produce DSH3M Metadata Database Elevation File")
+            AddMsgAndPrint(f"\nNo information available to produce DSH3M Raster2pgsql File")
+
+        """ ------------------------------------ SUMMARY -------------------------------------------- """
+        AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
+
+        AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
+        AddMsgAndPrint(f"\tCreate DSH3M DEMs Time: {soil3MstopTime}")
+        AddMsgAndPrint(f"\tCreate DSH3M Metadata Elevation File Time: {metadataFileStop}")
+        AddMsgAndPrint(f"\tCreate DSH3M Raster2pgsql File Time: {r2pgsqlStop}")
+
+        # Report number of original DEMs processed for Soil3M
+        if len(soil3MDict) == recCount:
+            AddMsgAndPrint(f"\nSuccessfully Processed ALL {len(soil3MDict):,} original DEM files")
+        elif len(soil3MDict) == 0:
+            AddMsgAndPrint(f"\nNo original DEMs files were processed")
+        else:
+            AddMsgAndPrint(f"\nProcessed {len(soil3MDict):,} out of {recCount:,} original DEM files")
+
+        if len(failedDEMs):
+            AddMsgAndPrint(f"\nFailed to create Soil3M files for {len(failedDEMs):,} original DEM files:")
+            AddMsgAndPrint(f"{failedDEMs}")
+
 
     except:
         AddMsgAndPrint(errorMsg())

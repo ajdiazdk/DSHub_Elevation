@@ -676,7 +676,6 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
     except:
         errorMsg()
 
-
 #### ===================================================================================
 def getRasterInformation_MT(rasterItem):
 
@@ -1009,7 +1008,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 else:
                     g.write(r2pgsqlCommand + "\n")
 
-                #print_progress_bar(recCount, total, label)
+                print(f"\t\tSuccessfully wrote raster2pgsql command -- ({recCount:,} of {total:,})")
                 recCount+=1
 
         g.close()
@@ -1202,19 +1201,13 @@ def main(dlFile,dlDir,bReplace):
                 # if OS is Linux then downloadfolder will have to be set
                 # if OS is Windows then downloadfolder was passed in.
                 if not dlFolder:
-                    downloadFolder = getDownloadFolder(huc,resolution)
+                    #downloadFolder = getDownloadFolder(huc,resolution)
+                    downloadFolder = r'/data03/gisdata/dsh3m_test/DEMs'
                     if not downloadFolder:
                         AddMsgAndPrint(f"\n\tFailed to set download folder for {huc}. {numOfHUCelevTiles:,} will NOT be downloaded")
                         continue
                 else:
                     downloadFolder = dlFolder
-
-##                # Windows vs Linux
-##                if os.name == 'posix':
-##                    downloadFolder = getDownloadFolder(huc,resolution)
-##                    if not downloadFolder: continue
-##                else:
-##                    downloadFolder = r'D:\projects\DSHub\reampling\10M'
 
                 AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles:,} elevation tiles for HUC: {huc} ---> {downloadFolder}")
 
@@ -1291,7 +1284,7 @@ def main(dlFile,dlDir,bReplace):
                 AddMsgAndPrint(f"\nCreating Raster2pgsql File")
                 r2pgsqlStart = tic()
                 r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
-                AddMsgAndPrint(f"\tRaster2pgsql File Path: {dlMasterFile}")
+                AddMsgAndPrint(f"\tRaster2pgsql File Path: {r2pgsqlFile}")
                 AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
                 r2pgsqlStop = toc(r2pgsqlStart)
             else:
