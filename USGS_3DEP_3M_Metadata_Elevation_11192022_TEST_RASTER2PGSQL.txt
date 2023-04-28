@@ -1,5 +1,0 @@
-raster2pgsql -s 4269 -b 1 -t 507x507 -F -a -R /data03/gisdata/test/junk1.img elevation.elevation_3m | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432
-raster2pgsql -s 4269 -b 1 -t 507x507 -F -a -R /data03/gisdata/test/junk2.img elevation.elevation_3m | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432
-raster2pgsql -s 4269 -b 1 -t 507x507 -F -a -R /data03/gisdata/test/junk3.img elevation.elevation_3m | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432
-raster2pgsql -s 4269 -b 1 -t 507x507 -F -a -R /data03/gisdata/test/junk4.img elevation.elevation_3m | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432
-raster2pgsql -s 4269 -b 1 -t 507x507 -F -a -R /data03/gisdata/test/junk1.img elevation.elevation_3m | PGPASSWORD=itsnotflat psql -U elevation -d elevation -h 10.11.11.10 -p 5432

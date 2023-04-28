@@ -10,7 +10,7 @@
 #-------------------------------------------------------------------------------
 
 # Import modules
-import sys, string, os, traceback, time
+import sys, string, os, traceback, time, glob
 from datetime import datetime
 
 ## ===================================================================================
@@ -129,14 +129,24 @@ if __name__ == '__main__':
                 DEMname = items[dlFileHeaderItems["DEMname"]]
                 DEMpath = items[dlFileHeaderItems["DEMpath"]]
 
-                fullPath = os.path.join(DEMpath,DEMname)
-                if os.path.isfile(fullPath):
-                    os.remove(fullPath)
-                    AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {fullPath}")
-                    deletedFile+=1
-                else:
-                    AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
-                    invalidFiles+=1
+                # Delete all files associated with the DEMname (.xml, aux...etc)
+                for file in glob.glob(f"{DEMpath}os.sep{DEMname.split('.')[0]}*"):
+                    if os.path.isfile(file):
+                        os.remove(file)
+                        AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)}")
+                        deletedFile+=1
+                    else:
+                        AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
+                        invalidFiles+=1
+
+##                fullPath = os.path.join(DEMpath,DEMname)
+##                if os.path.isfile(fullPath):
+##                    os.remove(fullPath)
+##                    AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {fullPath}")
+##                    deletedFile+=1
+##                else:
+##                    AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
+##                    invalidFiles+=1
 
                 dlFile_recCount+=1
 

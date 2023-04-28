@@ -724,7 +724,11 @@ def getRasterInformation_MT(rasterItem):
         bitDepth = rdsInfo['bands'][0]['type']
         cellSize = rds.GetGeoTransform()[1]
         rdsFormat = rdsInfo['driverLongName']
-        noDataVal = rdsInfo['bands'][0]['noDataValue']
+
+        try:
+            noDataVal = rdsInfo['bands'][0]['noDataValue']
+        except:
+            noDataVal = '#'
 
         # Raster Statistics
         # ComputeStatistics vs. GetStatistics(0,1) vs. ComputeBandStats
