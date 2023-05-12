@@ -55,6 +55,8 @@ Added source and destination nodata arguments to the warp function to harmonize 
 the warped outputs.  1M and 10M nodata values are set to -999999.0.  3M nodata values are set to
 3.4028234663852886e+38.  The destination nodata values for all warped outputs will be set to -999999.0.
 
+THINGS TO ADD:
+    - Read Shapefile headers in a list to look up field position index instead of hard coding position
 
 """
 
@@ -65,6 +67,8 @@ from datetime import datetime
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
+import geopandas as gp
+from operator import itemgetter
 
 ## ===================================================================================
 def AddMsgAndPrint(msg):
@@ -73,7 +77,6 @@ def AddMsgAndPrint(msg):
     print(msg)
 
     # Add message to log file
-
     try:
         h = open(msgLogFile,'a+')
         h.write("\n" + msg)
@@ -129,6 +132,29 @@ def toc(_start_time):
 
     except:
         errorMsg()
+
+## ===================================================================================
+def createDriverIndex(dsh3m,grid):
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    dsh3m_ds = driver.Open(dsh3mIdxShp, 0) # 0 means read-only. 1 means writeable.
+    gridShp_ds = driver.Open(gridShp, 0)
+
+    # Validate DSH3M Elevation Index
+    if dsh3m_ds is None:
+        AddMsgAndPrint(f"Could not open DSH3M Index Layer: {dsh3mIdxShp} -- EXITING!")
+    else:
+        dsh3mLyr = dsh3m_ds.GetLayer()
+        dsh3mFeatCount = dsh3mLyr.GetFeatureCount()
+        AddMsgAndPrint(f"Number of features in {os.path.basename(dsh3mIdxShp)}: {dsh3mFeatCount}")
+
+    # Validate grid layer
+    if gridShp_ds is None:
+        AddMsgAndPrint(f"Could not open Grid Layer: {gridShp} -- EXITING!")
+    else:
+        gridLyr = gridShp_ds.GetLayer()
+        gridFeatCount = gridLyr.GetFeatureCount()
+        AddMsgAndPrint(f"Number of features in {os.path.basename(gridShp)}: {gridFeatCount}")
 
 ## ===================================================================================
 def convertMasterDBfileToDict(elevMetdataFile):
@@ -233,34 +259,55 @@ def createSoil3MDEM(item):
     """ item is passed over as a tuple with the key = 0 and the values = 1"""
 
     try:
-        rasterRecord = item[1]
-
-        # Positions of
-        sourceID = rasterRecord[headerValues.index("sourceID")]
-        fileFormat = rasterRecord[headerValues.index("format")]
-        DEMname = rasterRecord[headerValues.index("DEMname")]
-        DEMpath = rasterRecord[headerValues.index("DEMpath")]
-        EPSG = rasterRecord[headerValues.index("EPSG")]
-        noData = float(rasterRecord[headerValues.index("noDataVal")]) # returned as string
-        srsName = rasterRecord[headerValues.index("srsName")]
-        top = rasterRecord[headerValues.index("top")]
-        left = rasterRecord[headerValues.index("left")]
-        right = rasterRecord[headerValues.index("right")]
-        bottom = rasterRecord[headerValues.index("bottom")]
-
         messageList = list()
 
+        # Positions of
+##        last_update = item[headerValues.index("last_updat")]
+##        fileFormat = item[headerValues.index("format")]
+##        sourceID = item[headerValues.index("sourceid")]
+##        DEMname = item[headerValues.index("demname")]
+##        DEMpath = item[headerValues.index("dempath")]
+##        EPSG = item[headerValues.index("epsg")]
+##        noData = float(item[headerValues.index("nodataval")]) # returned as string
+##        srsName = item[headerValues.index("srsname")]
+##        top = item[headerValues.index("rast_top")]
+##        left = item[headerValues.index("rast_left")]
+##        right = item[headerValues.index("rast_right")]
+##        bottom = item[headerValues.index("rast_botto")]
+##        source = item[headerValues.index("source")]
+
+        last_update = item[headerValues.index("last_updat")]
+        fileFormat = item[headerValues.index("format")]
+        sourceID = item[headerValues.index("sourceID")]
+        DEMname = item[headerValues.index("DEMname")]
+        DEMpath = item[headerValues.index("DEMpath")]
+        EPSG = item[headerValues.index("EPSG")]
+        noData = float(item[headerValues.index("noDataVal")]) # returned as string
+        srsName = item[headerValues.index("srsName")]
+        top = item[headerValues.index("top")]
+        left = item[headerValues.index("left")]
+        right = item[headerValues.index("right")]
+        bottom = item[headerValues.index("bottom")]
+        source = item[headerValues.index("source")]
+
         if bDetails:
-            messageList.append(f"\n\tProcessing DEM: {DEMname}")
-            theTab = "\t\t"
+            messageList.append(f"\n\t\t\tProcessing DEM: {DEMname} -- {source}M")
+            theTab = "\t\t\t\t"
         else:
-            theTab = "\t"
+            theTab = "\t\t\t"
 
         # D:\projects\DSHub\reampling\1M\USGS_1M_Madison.tif
         input_raster = os.path.join(DEMpath,DEMname)
 
+        if not os.path.exists(input_raster):
+            messageList.append(f"{theTab}{DEMname} does NOT exist! Skipping!")
+            failedDEMs.append(sourceID)
+
         # D:\projects\DSHub\reampling\1M\USGS_1M_Madison_EPSG5070.tif
         out_raster = f"{input_raster.split('.')[0]}_dsh3m.{input_raster.split('.')[1]}"
+        messageList.append(f"\n{theTab}Output DEM: {out_raster}")
+
+        dsh3mList = [sourceID,last_update,out_raster,source]
 
         if os.path.exists(out_raster):
             try:
@@ -269,12 +316,11 @@ def createSoil3MDEM(item):
                     messageList.append(f"{theTab}Successfully Deleted {os.path.basename(out_raster)}")
                 else:
                     messageList.append(f"{theTab}{'Projected DEM Exists':<25} {os.path.basename(out_raster):<60}")
-                    soil3MDict[sourceID] = out_raster
-                    return messageList
+                    return (messageList,dsh3mList)
             except:
                 messageList.append(f"{theTab}{'Failed to Delete':<35} {fileName:<60}")
                 failedDEMs.append(sourceID)
-                return messageList
+                return (messageList,[])
 
         rds = gdal.Open(input_raster)
         rdsInfo = gdal.Info(rds,format="json")
@@ -424,13 +470,12 @@ def createSoil3MDEM(item):
         else:
             messageList.append(f"{theTab}{'Successfully Created Soil3M DEM:':<35} {os.path.basename(out_raster):>60}")
 
-        soil3MDict[sourceID] = out_raster
-        return messageList
+        return (messageList,dsh3mList)
 
     except:
         failedDEMs.append(sourceID)
         messageList.append(f"\n{theTab}{errorMsg(errorOption=2)}")
-        return messageList
+        return (messageList,[])
 
 ## ===================================================================================
 def createElevMetadataFile_MT(soil3Mdict,elevMetadataDict):
@@ -501,11 +546,11 @@ def createElevMetadataFile_MT(soil3Mdict,elevMetadataDict):
 
             # srcID failed during the download process.  Pass since it will be accounted for in error file
             elif srcID in failedDEMs:
-                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in soil3MDict; accounted for in failedDEMs")
+                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in dsh3mDict; accounted for in failedDEMs")
                 continue
 
             else:
-                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in soil3MDict; NOT accounted for in failedDEMs -- Inspect")
+                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in dsh3mDict; NOT accounted for in failedDEMs -- Inspect")
                 continue
 
         g.close()
@@ -762,117 +807,339 @@ def createRaster2pgSQLFile(masterElevFile):
         errorMsg()
 
 ## ===================================================================================
+def createSampleDict(indexLayer, gridLayer):
+
+    import arcpy
+
+    idxLyr = arcpy.management.MakeFeatureLayer(indexLayer)
+    gridLyr = arcpy.management.MakeFeatureLayer(gridLayer)
+
+    idxFields = [f.name for f in arcpy.ListFields(indexLayer)]
+    idxFields.remove('FID')
+    idxFields.remove('Shape')
+
+    lastUpdate = idxFields.index('last_updat')
+    gridFields = [f.name for f in arcpy.ListFields(gridLayer)]
+
+    demDict = dict()
+
+    for row in arcpy.da.SearchCursor(gridLyr, ["rid"]):
+        select = f"rid = {row[0]}"
+        arcpy.management.SelectLayerByAttribute(gridLyr, 'NEW_SELECTION', select)
+        arcpy.management.SelectLayerByLocation(idxLyr, 'INTERSECT',gridLyr,'', 'NEW_SELECTION')
+        #print(f"Grid: {row[0]} has {arcpy.management.GetCount(idxLyr)[0]}")
+
+        gridListofRecs = list()
+
+        for row2 in arcpy.da.SearchCursor(idxLyr,idxFields):
+            recordList = list()
+            for i in range(0,len(idxFields)):
+                recordList.append(row2[i])
+            gridListofRecs.append(recordList)
+
+        if not row[0] in demDict:
+            demDict[row[0]] = gridListofRecs
+        else:
+            demDict[row[0]].append([gridListofRecs])
+
+    return demDict
+
+## ===================================================================================
+def createMultiResolutionOverlay(indexLayer, gridLayer):
+
+    try:
+        # Read the best available 3M index
+        index = gp.read_file(indexLayer)
+
+        # Read the AOI grid
+        grid = gp.read_file(gridLayer)
+
+    except:
+        AddMsgAndPrint("\nFailed to open input layers")
+        AddMsgAndPrint(errorMsg())
+
+    demDict = dict()
+
+    oneMcnt = 0
+    threeMcnt = 0
+    tenMcnt = 0
+    gridCnt = 0
+    recCnt = 0
+
+    for g in grid.index:
+
+        # isolate grid as an aoi to use as a mask
+        mask = grid.iloc[[g]].copy()
+
+        # RID value of grid i.e. 332
+        rid = mask.rid[g]
+
+        # clip index using current aoi
+        idxClip = gp.clip(index, mask)
+        idxClip.reset_index(inplace=True)
+
+        # Lists of DEM records that are within current aoi
+        listOfDEMlists = list()
+
+        # iterate through each DEM record and capture all attributes
+        for dems in idxClip.index:
+
+            vals = idxClip.iloc[dems].copy()
+            vals.drop(labels = 'geometry', inplace=True)
+            vals = vals.tolist()
+            del vals[0]
+            source = vals[-1]
+
+            if source == 1:
+                oneMcnt+=1
+            elif source == 3:
+                threeMcnt+=1
+            else:
+                tenMcnt+=1
+
+            recCnt+=1
+            listOfDEMlists.append(vals)
+
+        # Sort all lists by resolution and last_update date
+        dateSorted = sorted(listOfDEMlists, key=itemgetter(31,3), reverse=True)
+        demDict[rid] = dateSorted
+
+        gridCnt+=1
+
+    AddMsgAndPrint(f"\tThere are {gridCnt} grid tiles that overlayed with {recCnt} DEMs:")
+    AddMsgAndPrint(f"\t\t1M DEMs:  {oneMcnt:,}")
+    AddMsgAndPrint(f"\t\t3M DEMs:  {threeMcnt:,}")
+    AddMsgAndPrint(f"\t\t10M DEMs: {tenMcnt:,}")
+
+    return demDict
+
+## ===================================================================================
+def getEBSfolder(gridID):
+    # Create 8-digit huc Directory structure in the designated EBS mount volume
+    # '07060002' --> ['07', '06', '00', '02'] --> '07\\06\\00\\02'
+    # /data03/gisdata/elev/09/0904/090400/09040004/
+
+    try:
+
+
+        # last digit
+        ld = str(gridID)[-1]
+
+        if ld in ["1","9","0"]:
+            root = "/data02/gisdata/elev"
+        elif ld in ["2","7","8"]:
+            root = "/data03/gisdata/elev"
+        elif ld in ["3","6"]:
+            root = "/data04/gisdata/elev"
+        elif ld in ["4","5"]:
+            root = "/data05/gisdata/elev"
+
+        if hucLength == 2:
+            downloadFolder = root + os.sep + huc + os.sep + res.lower()
+        elif hucLength == 4:
+            downloadFolder = root + os.sep + region + os.sep + huc + os.sep + res.lower()
+        else:
+            downloadFolder = root + os.sep + region + os.sep + subregion + os.sep + basin + os.sep + huc + os.sep + res.lower()
+
+        if not os.path.exists(downloadFolder):
+            os.makedirs(downloadFolder)
+
+        return downloadFolder
+
+    except:
+        errorMsg()
+        return False
+
+
+
+## ===================================================================================
 if __name__ == '__main__':
 
     try:
 
+        """---------------------------------  Setup ---------------------------------- """
         # Script Parameters
         # File from Step#2
-        #elevationMetadataFile = r'D:\projects\DSHub\reampling\test\USGS_3DEP_1M_Step2_Elevation_Metadata.txt'
-        #bReplace = False
-        #bDetails = False
-
-        # Path to the Elevation Metadata Text file for the original elevation data
-        elevationMetadataFile = input("\nEnter full path of Elevation Metadata Text File: ")
-        while not os.path.exists(elevationMetadataFile):
-            print(f"{elevationMetadataFile} does NOT exist. Try Again")
-            elevationMetadataFile = input("\nEnter full path of Elevation Metadata Text File: ")
-
-        # REPLACE DATA
-        bReplace = input("\nDo you want to replace existing DSH3M data? (Yes/No): ")
-        while not bReplace.lower() in ("yes","no","y","n"):
-            print(f"Please Enter Yes or No")
-            bReplace = input("Do you want to replace existing DSH3M data? (Yes/No): ")
-
-        if bReplace.lower() in ("yes","y"):
-            bReplace = True
-        else:
-            bReplace = False
-
-        # REPLACE DATA
-        bDetails = input("\nDo you want to log specific DSH3M details? (Yes/No): ")
-        while not bDetails.lower() in ("yes","no","y","n"):
-            print(f"Please Enter Yes or No")
-            bDetails = input("Do you want to log specific DSH3M details? (Yes/No): ")
-
-        if bDetails.lower() in ("yes","y"):
-            bDetails = True
-        else:
-            bDetails = False
-
+        #dsh3mIdxShp = r'D:\projects\DSHub\reampling\snapGrid\USGS_DSH3M_Sample.shp'
+        dsh3mIdxShp = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro.shp'
+        gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_test.shp'
         bMultiThreadMode = True
+        bReplace = False
+        bDetails = True
+
+##        # Path to the DSH3M Elevation Index from the original elevation data
+##        dsh3mIdxShp = input("\nEnter full path to the DSH3M Elevation Index Layer: ")
+##        while not os.path.exists(dsh3mIdxShp):
+##            print(f"{dsh3mIdxShp} does NOT exist. Try Again")
+##            dsh3mIndex = input("\nEnter full path to the DSH3M Elevation Index Layer: ")
+##
+##        # Path to CONUS GRID - serves as the driver
+##        gridShp = input("\nEnter full path to the CONUS GRID: ")
+##        while not os.path.exists(gridShp):
+##            print(f"{gridShp} does NOT exist. Try Again")
+##            dsh3mIndex = input("\nEnter full path to the CONUS GRID: ")
+##
+##        # Replace Data
+##        bReplace = input("\nDo you want to replace existing DSH3M data? (Yes/No): ")
+##        while not bReplace.lower() in ("yes","no","y","n"):
+##            print(f"Please Enter Yes or No")
+##            bReplace = input("Do you want to replace existing DSH3M data? (Yes/No): ")
+##
+##        if bReplace.lower() in ("yes","y"):
+##            bReplace = True
+##        else:
+##            bReplace = False
+##
+##        # Log Details
+##        bDetails = input("\nDo you want to log specific DSH3M details? (Yes/No): ")
+##        while not bDetails.lower() in ("yes","no","y","n"):
+##            print(f"Please Enter Yes or No")
+##            bDetails = input("Do you want to log specific DSH3M details? (Yes/No): ")
+##
+##        if bDetails.lower() in ("yes","y"):
+##            bDetails = True
+##        else:
+##            bDetails = False
+##
+##        bMultiThreadMode = True
 
         # Start the clock
         startTime = tic()
 
+        """ -------------------------- Establish Console LOG FILE ------------------------------------------"""
         # Setup Log file that captures console messages
-        # Pull elevation resolution from file name
-        # USGS_3DEP_1M_Step4_Soil3M_ConsoleMsgs.txt
+        # USGS_3DEP_DSH3M_Step5_ConsoleMsgs.txt
+        msgLogFile = f"{os.path.dirname(dsh3mIdxShp)}{os.sep}USGS_3DEP_DSH3M_Step5_ConsoleMsgs.txt"
         today = datetime.today().strftime('%m%d%Y')
-        resolution = elevationMetadataFile.split(os.sep)[-1].split('_')[2]
-        msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_ConsoleMsgs.txt"
         h = open(msgLogFile,'a+')
-        h.write(f"Executing: USGS_4_Create_DSH3M_DEMs {today}\n\n")
+        h.write(f"Executing: USGS_5_Create_DSH3M_DEMs {today}\n\n")
         h.write(f"User Selected Parameters:\n")
-        h.write(f"\tElevation Metadta File: {elevationMetadataFile}\n")
-        h.write(f"\tMulti-Threading Mode: {bMultiThreadMode}\n")
+        h.write(f"\tDSH3M Elevation Index Layer: {dsh3mIdxShp}\n")
+        h.write(f"\tCONUS Grid Layer: {gridShp}\n")
         h.write(f"\tOverwrite Data: {bReplace}\n")
         h.write(f"\tVerbose Mode: {bDetails}\n")
         h.close()
 
-        # List of header values
-        headerValues = open(elevationMetadataFile).readline().rstrip().split(',')
-        recCount = len(open(elevationMetadataFile).readlines()) - 1
+        # Get Headers from dsh3m index layer
+        # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
+        try:
+            index = gp.read_file(dsh3mIdxShp)
+            headerValues = index.columns.tolist()
+            del index
+        except:
+            AddMsgAndPrint("\nFailed to open {dsh3mIdxShp}")
+            AddMsgAndPrint(errorMsg())
 
-        # Convert input metadata elevation file to a dictionary
-        # sourceID = [List of all attributes]
-        elevMetadataDict = convertMasterDBfileToDict(elevationMetadataFile)
-
-        # Dicitonarary of successfully projected DEMS
-        # sourceID = out_raster path
-        soil3MDict = dict()
-        recCount = len(elevMetadataDict)
-
-        # progress tracker
-        i = 0
-        failedDEMs = list()
+        # key:grid ID -- value: list of lists of the DEMs that intersect the grid ID
+        AddMsgAndPrint("\nSTEP 1: Creating DSH3M Multi-resolution Overlay")
+        gridIndexOverlayDict = createMultiResolutionOverlay(dsh3mIdxShp,gridShp)
 
         soil3MstartTime = tic()
-        if bMultiThreadMode:
-            """------------------  Execute in Multi-Thread Mode --------------- """
-            AddMsgAndPrint(f"\nProcessing {recCount:,} original DEM files to create Soil3M DEMs")
-            with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
-                # use a set comprehension to start all tasks.  This creates a future object
-                future3mDEM = {executor.submit(createSoil3MDEM, DEMrecord): DEMrecord for DEMrecord in elevMetadataDict.items()}
+        # key: gridID -- value: [sourceID,last_update,out_raster,source]
+        dsh3mDict = dict()
+        failedDEMs = list()
+        totalNumOfGrids = len(gridIndexOverlayDict)
+        gridCounter = 1
 
-                # yield future objects as they are done.
-                for new3mDEM in as_completed(future3mDEM):
+        """ -------------------------- Create DSH3M DEMs ------------------------------------------"""
+        AddMsgAndPrint("\nSTEP 2: Creating DSH3M DEMs")
+        for gridID,items in gridIndexOverlayDict.items():
+
+            # counter grid DEMs to convert to DSH3M
+            i = 0
+
+            # Summarize to get DEM breakdown by resolution
+            resList = [item[-1] for item in items]
+            resCounts = {i:resList.count(i) for i in resList}
+
+            numOfSoil3MtoProcess = len(items)
+            AddMsgAndPrint(f"\n\tGrid ID: {gridID} (Grid {gridCounter} of {totalNumOfGrids}) has {numOfSoil3MtoProcess:,} DEMs that need a DSH3M DEM created")
+            for k,v in resCounts.items():
+                AddMsgAndPrint(f"\t\t{k}M DEMs: {v}")
+
+            if bMultiThreadMode:
+                """------------------  Execute in Multi-Thread Mode --------------- """
+                with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+
+                    # use a set comprehension to start all tasks.  This creates a future object
+                    future3mDEM = {executor.submit(createSoil3MDEM, item): item for item in items}
+
+                    # yield future objects as they are done.
+                    for new3mDEM in as_completed(future3mDEM):
+
+                        msgs = new3mDEM.result()[0]
+                        soil3MList = new3mDEM.result()[1]
+
+                        if len(soil3MList) > 0:
+                            if not gridID in dsh3mDict:
+                                dsh3mDict[gridID] = [soil3MList]
+                            else:
+                                dsh3mDict[gridID].append(soil3MList)
+
+                        i+=1
+                        j=1
+                        for printMessage in msgs:
+                            if j==1:
+                                AddMsgAndPrint(f"{printMessage} -- ({i:,} of {numOfSoil3MtoProcess:,}) -- (Grid {gridCounter} of {totalNumOfGrids})")
+                            else:
+                                AddMsgAndPrint(printMessage)
+                            j+=1
+
+            else:
+                """------------------  Execute in Single Mode --------------- """
+                for item in items:
+
+                    new3mDEMresult = createSoil3MDEM(item)
+
+                    msgs = new3mDEMresult [0]
+                    soil3MList = new3mDEMresult [1]
+
+                    if len(soil3MList) > 0:
+                        if not gridID in dsh3mDict:
+                            dsh3mDict[gridID] = [soil3MList]
+                        else:
+                            dsh3mDict[gridID].append(soil3MList)
+
                     i+=1
                     j=1
-                    for printMessage in new3mDEM.result():
+                    for printMessage in msgs:
                         if j==1:
-                            AddMsgAndPrint(f"{printMessage} -- ({i:,} of {recCount:,})")
+                            AddMsgAndPrint(f"{printMessage} -- ({i:,} of {numOfSoil3MtoProcess:,}) -- (Grid {gridCounter} of {totalNumOfGrids})")
                         else:
                             AddMsgAndPrint(printMessage)
                         j+=1
 
-        else:
-            """------------------  Execute in Single Mode --------------- """
-            for sourceID,items in elevMetadataDict.items():
-                result = createSoil3MDEM((sourceID,items))
-                i+=1
-                j=1
-                for printMessage in result:
-                    if j==1:
-                        AddMsgAndPrint(f"{printMessage} -- ({i:,} of {recCount:,})")
-                    else:
-                        AddMsgAndPrint(printMessage)
-                    j+=1
-                break
+            gridCounter+=1
 
         soil3MstopTime = toc(soil3MstartTime)
 
+        """ -------------------------- Establish Console LOG FILE ------------------------------------------"""
+        AddMsgAndPrint("\nSTEP 3: Merging DSH3M DEMs")
+        gridCounter = 1
+
+         # key: gridID -- value: [sourceID,last_update,out_raster,source]
+        for gridID,dsh3mRasters in dsh3mDict.items():
+
+            mergeStart = tic()
+            AddMsgAndPrint(f"\n\t Grid ID: {gridID} (Grid {gridCounter} of {totalNumOfGrids}) has {len(dsh3mRasters):,} DSH3M DEMs that will be merged")
+            dateSorted = sorted(dsh3mRasters, key=itemgetter(3,1), reverse=True)
+
+            mosaicList = list()
+            for raster in dateSorted:
+                mosaicList.append(raster[2])
+
+            gridFolder = r'D:\projects\DSHub\reampling\TEST'
+            gridRaster = os.path.join(gridFolder,f"dsh3m_grid{gridID}.tif")
+            g = gdal.Warp(gridRaster,mosaicList,format="GTiff",options=["COMPRESS=LZW", "TILED=YES"])
+            g = None
+
+            gridCounter+=1
+            mergeStop = toc(mergeStart)
+            AddMsgAndPrint(f"\tMerge time: {mergeStop}")
+
+
+        exit()
         """ ----------------------------- Create Elevation Metadata File ----------------------------- """
         if len(soil3MDict):
             AddMsgAndPrint(f"\nCreating Elevation Metadata File for Soil3M DEMs")

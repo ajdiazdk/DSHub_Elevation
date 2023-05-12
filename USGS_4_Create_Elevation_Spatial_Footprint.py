@@ -262,7 +262,7 @@ def createFootPrint(file):
 
         if words_re.search(errors.lower()) or not execCmd.returncode == 0:
             #msgDict['Error'] = f"{gdal_calc}\n\t{errors}"
-            messageList.append(f"\tErrors creating 'data' mask: {errors}")
+            messageList.append(f"\t\tErrors creating 'data' mask: {errors}")
         else:
             #msgDict['Success'] = f"Successfully created 'data' mask"
             messageList.append(f"\t\tSuccessfully created 'data' mask")
@@ -352,7 +352,7 @@ def createFootPrint(file):
 
 if __name__ == '__main__':
 
-    elevationMetadataFile = r'D:\projects\DSHub\reampling\USGS_3DEP_1M_Step2_Elevation_Metadata.txt'
+    elevationMetadataFile = r'D:\projects\DSHub\reampling\USGS_3DEP_10M_Step2_Elevation_Metadata.txt'
 
     # List of header values
     headerValues = open(elevationMetadataFile).readline().rstrip().split(',')

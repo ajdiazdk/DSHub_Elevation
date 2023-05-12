@@ -185,7 +185,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
         with open(elevMetdataFile, 'r') as fp:
             for line in fp:
                 items = line.split(',')
-                items[-1] = items[-1].strip('\n')  # remove the hard return of the line
+                items[-1] = items[-1].strip('\n')  # remove the hard return from the last item
 
                 # Skip header line and empty lines
                 if recCount == 0 or line == "\n":
@@ -205,6 +205,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
                     badLines+=1
                     # continue
 
+                # extract the sourceID from the items
                 sourceID = items[sourceIDidx]
 
                 # Add info to elevMetadataDict
@@ -801,7 +802,7 @@ if __name__ == '__main__':
         else:
             bDetails = False
 
-        bMultiThreadMode = True
+        bMultiThreadMode = False
 
         # Start the clock
         startTime = tic()

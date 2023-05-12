@@ -572,9 +572,15 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
-        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
-                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
-                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+##        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
+##                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
+##                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+
+        # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
+        header = ('huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,'
+                  'download_url,DEMname,DEMpath,rast_columns,rast_rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
+                  'EPSG,srsName,rast_top,rast_left,rast_right,rast_bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+
         g.write(header)
 
         total = len(elevMetadataDict)
@@ -629,9 +635,15 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
-        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
-                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
-                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+##        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
+##                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
+##                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+
+        # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
+        header = ('huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,'
+                  'download_url,DEMname,DEMpath,rast_columns,rast_rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
+                  'EPSG,srsName,rast_top,rast_left,rast_right,rast_bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+
         g.write(header)
 
         total = len(elevMetadataDict)
@@ -641,7 +653,7 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         # Iterate through all of the sourceID files in the download file (elevMetadatDict)
         for srcID,demInfo in elevMetadataDict.items():
 
-            # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            # huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,download_url
             firstPart = ','.join(str(e) for e in demInfo)
 
             # srcID must exist in dlImgFileDict (successully populated during download)
@@ -789,7 +801,8 @@ def getRasterInformation_MT(rasterItem):
             srsType = 'GEOGRAPHIC'
             srsName = srs.GetAttrValue('geogcs')
 
-        if srs.IsProjected:
+        # Returns 0 or 1; opposite would be IsGeographic
+        if srs.IsProjected():
             srsName = srs.GetAttrValue('projcs')
         else:
             srsName = srs.GetAttrValue('geogcs')
@@ -1098,17 +1111,6 @@ def main(dlFile,dlDir,bReplace):
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
         headerValues = open(downloadFile).readline().rstrip().split(',')
 
-##        headerItems = {
-##            "huc_digit":0,
-##            "prod_title":1,
-##            "pub_date":2,
-##            "last_updated":3,
-##            "size":4,
-##            "format":5,
-##            "sourceID":6,
-##            "metadata_url":7,
-##            "download_url":8}
-
         urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by HUC; 07040006:[[ur1],[url2]]
         elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
         recCount = 0
@@ -1135,7 +1137,7 @@ def main(dlFile,dlDir,bReplace):
                 prod_title = items[headerValues.index("prod_title")]
                 pub_date = items[headerValues.index("pub_date")]
                 last_updated = items[headerValues.index("last_updated")]
-                size = items[headerValues.index("size")]
+                size = items[headerValues.index("rast_size")]
                 fileFormat = items[headerValues.index("format")]
                 sourceID = items[headerValues.index("sourceID")]
                 metadata_url = items[headerValues.index("metadata_url")]
@@ -1205,8 +1207,7 @@ def main(dlFile,dlDir,bReplace):
                 # if OS is Linux then downloadfolder will have to be set
                 # if OS is Windows then downloadfolder was passed in.
                 if not dlFolder:
-                    #downloadFolder = getDownloadFolder(huc,resolution)
-                    downloadFolder = r'/data03/gisdata/dsh3m_test/DEMs'
+                    downloadFolder = getDownloadFolder(huc,resolution)
                     if not downloadFolder:
                         AddMsgAndPrint(f"\n\tFailed to set download folder for {huc}. {numOfHUCelevTiles:,} will NOT be downloaded")
                         continue

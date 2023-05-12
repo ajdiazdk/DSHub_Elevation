@@ -83,7 +83,7 @@ if __name__ == '__main__':
             print(f"{masterElevFile} does NOT exist. Try Again")
             masterElevFile = input("\nEnter full path to the Original Metadata_Elevation Text File: ")
 
-        #masterElevFile = r'D:\python_scripts\DSHub\LinuxWorkflow\TEMP_Update_DL_StatusFile\TEMP_testingFiles\USGS_3DEP_3M_Metadata_Elevation_11192022_TEST_MASTER_DB.txt'
+#        masterElevFile = r'D:\projects\DSHub\reampling\Junk\USGS_3DEP_3M_Step2_Elevation_Metadata.txt'
 
         deleteLogFileName = os.path.basename(masterElevFile).split('.')[0] + "_DELETE_LOG.txt"
         deleteLogFile = f"{os.path.dirname(masterElevFile)}{os.sep}{deleteLogFileName}"
@@ -130,7 +130,7 @@ if __name__ == '__main__':
                 DEMpath = items[dlFileHeaderItems["DEMpath"]]
 
                 # Delete all files associated with the DEMname (.xml, aux...etc)
-                for file in glob.glob(f"{DEMpath}os.sep{DEMname.split('.')[0]}*"):
+                for file in glob.glob(f"{DEMpath}{os.sep}{DEMname.split('.')[0]}*"):
                     if os.path.isfile(file):
                         os.remove(file)
                         AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)}")
@@ -150,11 +150,12 @@ if __name__ == '__main__':
 
                 dlFile_recCount+=1
 
+        del fp, deleteLogFileName
 
         """ ------------------------------------ SUMMARY -------------------------------------- """
         end = toc(start)
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
-        AddMsgAndPrint(f"\nNumber of files deleted: {deletedFile:,}")
+        AddMsgAndPrint(f"\nNumber of associated files deleted: {deletedFile:,}")
         AddMsgAndPrint(f"\nNumber of invalid files: {invalidFiles:,}")
 
     except:

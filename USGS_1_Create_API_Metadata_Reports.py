@@ -86,6 +86,10 @@ Things to consider/do:
     8) Embed option to write to a FGDB or SQLite database
     9) instead of writing to g.write, write the outputs to a list and then write results to the file.
        This is safer in case the script crashes.
+    10) Expand warning messages for duplicate product titles; run on 10M for 8-digit HUC 17010205; Warning will '
+        print but no other indication of what is going on.
+    11) Several 10M DEMs have the same date on the file name.  Add functionality to compare the times when dates
+        the same.
 
 ---------------- UPDATES
 2/8/2023
@@ -140,6 +144,9 @@ Example:
         Drop: USGS_13_n38w103_20210624
         Drop: USGS_13_n38w103_20170927
 
+5/1/2023
+Bug: Too many 10M DEMs were being removed.  Problem occurred in checkForDuplicates function.  Updated function
+to check for positions already accounted for by duplicate URLs.
 
 """
 ## ===================================================================================
@@ -247,6 +254,9 @@ def checkForDuplicateElements():
     try:
         idxPositionsToRemove = list()
 
+        """ ----------------------- Duplicate 1M and 3M Files  ----------------------------"""
+        #if tnmResolution in ('1M','3M'):
+
         # Create counter object to summarize unique element in a list and provide a count summary
         # {'USGS 1 Meter 13 x61y385 NM_NRCS_FEMA_Northeast_2017': 1}
         sourceIDsummary = dict(Counter(sourceIDList))
@@ -296,15 +306,16 @@ def checkForDuplicateElements():
 
                     # shorten the URL for formatting purposes; assumes 'Elevation' is part of the URL
                     urlShortened = '/'.join(e for e in url.split('/')[url.split('/').index('Elevation'):])
-                    AddMsgAndPrint(f"\t\tURL: {urlShortened} is duplicated {count}x for sourceIDs {srcID}")
-                    AddMsgAndPrint(f"\t\t\tDates: {dates} -- Date Dropped: {oldestDate}")
+                    AddMsgAndPrint(f"\n\t\tURL: {urlShortened} is duplicated {count}x for sourceIDs {srcID}")
+                    AddMsgAndPrint(f"\t\t\tLast Updated Dates: {dates} -- Date Dropped: {oldestDate} -- sourceID: {sourceIDList[oldestDatePos]}")
+                    #AddMsgAndPrint(f"\t\t\tIndex Position: {oldestDatePos}")
 
             """ ----------------------- Find Duplicate product titles --------------------"""
             # If duplicate titles are not handled by the duplicate url method
             # above then simply inform the user of how the DEM will be loaded.
             if numOfDEMdupTitles:
 
-                AddMsgAndPrint(f"\n\t{numOfDEMdupTitles:,} DEM files have duplicate Titles:")
+                AddMsgAndPrint(f"\n\tWARNING: {numOfDEMdupTitles:,} DEM files have duplicate Titles")
                 accountedFor = 0
                 for title,count in duplicateTitles.items():
 
@@ -332,6 +343,9 @@ def checkForDuplicateElements():
                 if accountedFor == numOfDEMdupTitles:
                     AddMsgAndPrint(f"\t\tAll duplicated titles have been resolved")
 
+        # USGS 10M duplicate DEMs can only be checked using the URL.  The naming convention for a 10M file is
+        # USGS_13_n47w115_20230119.tif where a date is appended at the end.  However, the date doesn't correspond
+        # the last_updated date or the pub_date.  Terrible QA
         """ ----------------------- Duplicate 10M Files  ----------------------------"""
         if tnmResolution == '10M':
 
@@ -356,18 +370,83 @@ def checkForDuplicateElements():
                     # list of index values from the files that are duplicated
                     indexVal = [i for i, x in enumerate(dlURLParsedfileName10MList) if x == file]
 
-                    dates = list()
+                    # Remove index positions that have already been accounted for above
+                    alreadyAccounted = list()
                     for idx in indexVal:
-                        dates.append(dlURLfileName10MList[idx].split('_')[-1])
+                        if idx in idxPositionsToRemove:
+                            alreadyAccounted.append(idx)
+                            AddMsgAndPrint(f"\t\t\tDrop: {dlURLfileName10MList[idx]} -- sourceID: {sourceIDList[idx]} -- (Already Accounted for)")
+                    for idx in alreadyAccounted:
+                        indexVal.remove(idx)
 
-                    demToKeep = max(dates)                # Most current DEM; keep this one
+                    # Duplicate dates should already be accounted for by finding duplicate URLs
+                    # Find most current date
+                    if indexVal:
+                        # list of dates from filename ['20230119', '20160610']
+                        datesList = list()
+                        for idx in indexVal:
+                            datesList.append(dlURLfileName10MList[idx].split('_')[-1])
 
-                    AddMsgAndPrint(f"\t\t\tKeep: {dlURLfileName10MList[indexVal[dates.index(demToKeep)]]}")
-                    indexVal.pop(dates.index(demToKeep))  # Remove most current DEM from indexVal list
+                        demToKeep = max(datesList)
 
+                        AddMsgAndPrint(f"\t\t\tKeep: {dlURLfileName10MList[indexVal[datesList.index(demToKeep)]]} -- sourceID: {sourceIDList[indexVal[datesList.index(demToKeep)]]}")
+                        indexVal.pop(datesList.index(demToKeep))  # Remove most current DEM from indexVal list
+
+                        #
+                        for idx in indexVal:
+                            idxPositionsToRemove.append(idx)
+                            AddMsgAndPrint(f"\t\t\tDrop: {dlURLfileName10MList[idx]} -- sourceID: {sourceIDList[idx]}")
+
+        """ ----------------------- Duplicate 10M Files  ----------------------------"""
+        if tnmResolution == '5M':
+
+            # take the downloadURL and isolate the root file name
+            # 'https://prd-tnm.s3.amazonaws.com/S....101/USGS_13_n37w101_20210623.tif' --> USGS_13_n37w101
+
+            dlURLfileName3MList = [((f.split('/')[-1]).split('.')[0]) for f in downloadURLList] # 'USGS_13_n37w101_20210623'
+            dlURLParsedfileName3MList = ['_'.join(f.split('_')[0:3]) for f in dlURLfileName3MList] # 'ned19_n46x75_w068x50'
+            #dlURLParsedfileName3MList = ['_'.join(((f.split('/')[-1]).split('.')[0]).split('_')[0:-1]) for f in downloadURLList]
+            dlURLfileName3MSummary = dict(Counter(dlURLParsedfileName3MList))
+            duplicate3Mfiles = {key:value for key, value in dlURLfileName3MSummary.items() if value > 1}
+
+            if len(duplicate3Mfiles):
+
+                numOf3MDEMdupURLs = len(duplicate3Mfiles)
+                AddMsgAndPrint(f"\n\tThere are {numOf3MDEMdupURLs:,} USGS 1-degree block DEMs that have duplicate DEMs associated with them:")
+
+                for file,count in duplicate3Mfiles.items():
+
+                    AddMsgAndPrint(f"\n\t\tUSGS degree block file '{file}' has {count} duplicate files:")
+
+                    # list of index values from the files that are duplicated
+                    indexVal = [i for i, x in enumerate(dlURLParsedfileName3MList) if x == file]
+
+                    # Remove index positions that have already been accounted for above
+                    alreadyAccounted = list()
                     for idx in indexVal:
-                        idxPositionsToRemove.append(idx)
-                        AddMsgAndPrint(f"\t\t\tDrop: {dlURLfileName10MList[idx]}")
+                        if idx in idxPositionsToRemove:
+                            alreadyAccounted.append(idx)
+                            AddMsgAndPrint(f"\t\t\tDrop: {dlURLfileName3MList[idx]} -- sourceID: {sourceIDList[idx]} -- (Already Accounted for)")
+                    for idx in alreadyAccounted:
+                        indexVal.remove(idx)
+
+                    # Duplicate dates should already be accounted for by finding duplicate URLs
+                    # Find most current date
+                    if indexVal:
+                        # list of dates from filename ['20230119', '20160610']
+                        datesList = list()
+                        for idx in indexVal:
+                            datesList.append(dlURLfileName3MList[idx].split('_')[-1])
+
+                        demToKeep = max(datesList)
+
+                        AddMsgAndPrint(f"\t\t\tKeep: {dlURLfileName3MList[indexVal[datesList.index(demToKeep)]]} -- sourceID: {sourceIDList[indexVal[datesList.index(demToKeep)]]}")
+                        indexVal.pop(datesList.index(demToKeep))  # Remove most current DEM from indexVal list
+
+                        #
+                        for idx in indexVal:
+                            idxPositionsToRemove.append(idx)
+                            AddMsgAndPrint(f"\t\t\tDrop: {dlURLfileName3MList[idx]} -- sourceID: {sourceIDList[idx]}")
 
         return idxPositionsToRemove
 
@@ -398,11 +477,12 @@ if __name__ == '__main__':
         startTime = tic()
 
         # 9 Tool Parameters
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU8'
+        #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU8'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_10300101'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\10M\20230428'
-        tnmResolution = '10M'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\dupTest'
+        tnmResolution = '3M'
         bAlaska = False
 
         if not arcpy.Exists(hucBoundaries):
@@ -631,6 +711,7 @@ if __name__ == '__main__':
 
         if len(idxValuesToRemove):
 
+            # index values must be in descending order so correct value is removed
             idxValuesToRemove.sort(reverse=True)
             AddMsgAndPrint(f"\n\tThere are {len(idxValuesToRemove):,} records that will be removed due to duplicate elements")
 
@@ -639,6 +720,7 @@ if __name__ == '__main__':
             for mList in masterLists:
                 for idx in idxValuesToRemove:
                     mList.pop(idx)
+
         else:
             AddMsgAndPrint(f"\tNo duplicate DEM elements found were found")
 
@@ -647,7 +729,7 @@ if __name__ == '__main__':
 
         #-------------------------------------------------- Write Elevation download file
         g = open(metadataFile2path,'a+')
-        g.write(f"huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url") # log headers
+        g.write(f"huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,download_url") # log headers
 
         for i in range(0,len(hucDigitList)):
             g.write(f"\n{hucDigitList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")

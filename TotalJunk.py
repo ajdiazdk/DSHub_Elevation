@@ -9,79 +9,130 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
-import sys, time
+import sys, time, os, traceback
+from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
+import geopandas as gp
+from operator import itemgetter
+import geopandas as gp
 
+## ===================================================================================
+def errorMsg(errorOption=1):
+
+    """ By default, error messages will be printed and logged immediately.
+        If errorOption is set to 2, return the message back to the function that it
+        was called from.  This is used in DownloadElevationTile function or in functions
+        that use multi-threading functionality"""
+
+    try:
+
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        theMsg = "\t" + traceback.format_exception(exc_type, exc_value, exc_traceback)[1] + "\n\t" + traceback.format_exception(exc_type, exc_value, exc_traceback)[-1]
+
+        print(theMsg)
+
+    except:
+        print("Unhandled error in unHandledException method")
+        pass
+
+## ===================================================================================
+def dummy(indexL):
+
+    index = gp.read_file(indexL)
+    headers = index.columns.tolist()
+
+    messageList = list()
+    messageList.append("Hello how are you?")
+    messageList.append("I'm doing fine.")
+    messageList.append("good to hear")
+
+    del index
+    return(messageList,[])
 
 
 if __name__ == '__main__':
 
-    bHeader = True
-    downloadFile = r'E:\DSHub\Elevation\USGS_3DEP_1M_Metadata_Elevation_02082023.txt'
+    try:
 
-    # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
-    headerValues = open(downloadFile).readline().rstrip().split(',')
+        indexLayer = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro.shp'
+        gridLayer = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_test.shp'
 
-    urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by HUC; 07040006:[[ur1],[url2]]
-    elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
-    recCount = 0
-    badLines = 0
+        result = dummy(indexLayer)
+        msgs = result[0]
+        dsh3mDEMlist = result[1]
 
-    uniqueSourceIDList = list()
-    duplicateSourceIDs = 0
-    uniqueURLs = list()
-    duplicateURLs = 0
+        exit()
 
-    """ ---------------------------- Open Download File and Parse Information into dictionary ------------------------"""
-    with open(downloadFile, 'r') as fp:
-        for line in fp:
-            items = line.split(',')
 
-            # Skip header line and empty lines
-            if bHeader and recCount == 0 or line == "\n":
-                recCount+=1
-                continue
+##        # get headers
+##        source = ogr.Open(dsh3mIdxShp)
+##        layer = source.GetLayer()
+##        headers = []
+##        ldefn = layer.GetLayerDefn()
+##        for n in range(ldefn.GetFieldCount()):
+##            fdefn = ldefn.GetFieldDefn(n)
+##            headers.append(fdefn.name)
+##        print(headers)
+##        exit()
 
-            # Skip if number of items are incorrect
-            if len(items) != len(headerValues):
-                badLines+=1
-                recCount+=1
-                continue
+##        import geopandas as gpd
+##
+##        poly1 = gpd.read_file(dsh3mIdxShp)
+##        poly2 = gpd.read_file(gridShp)
+##
+##        dsh3mDict = dict()
+##
+##        for idx, row in poly2.iterrows():
+##            print('---------------------------------')
+##            subPoly1 = poly1.within(row)
+##            print(subPoly1)
+##        exit()
+##
+##        polygon = poly2.geometry[0]
+##
+##
+##        poly1.within(polygon)
+##        poly1.intersects(polygon)
+##
+##    except:
+##        errorMsg()
 
-            hucDigit = items[headerValues.index("huc_digit")]
-            prod_title = items[headerValues.index("prod_title")]
-            pub_date = items[headerValues.index("pub_date")]
-            last_updated = items[headerValues.index("last_updated")]
-            size = items[headerValues.index("size")]
-            fileFormat = items[headerValues.index("format")]
-            sourceID = items[headerValues.index("sourceID")]
-            metadata_url = items[headerValues.index("metadata_url")]
-            downloadURL = items[headerValues.index("download_url")].strip()
+        # Read the best available 3M index
+        index = gp.read_file(indexLayer)
 
-            if sourceID in uniqueSourceIDList:
-                recCount+=1
-                duplicateSourceIDs+=1
-                continue
-            else:
-                uniqueSourceIDList.append(sourceID)
+        # Read the AOI grid
+        grid = gp.read_file(gridLayer)
 
-            if downloadURL in uniqueURLs:
-                recCount+=1
-                duplicateURLs+=1
-                continue
-            else:
-                uniqueURLs.append(downloadURL)
+        demDict = dict()
 
-            # Add info to urlDownloadDict
-            if hucDigit in urlDownloadDict:
-                urlDownloadDict[hucDigit].append([downloadURL,sourceID])
-            else:
-                urlDownloadDict[hucDigit] = [[downloadURL,sourceID]]
+        for g in grid.index:
 
-            # Add info to elevMetadataDict
-            elevMetadataDict[sourceID] = [hucDigit,prod_title,pub_date,last_updated,
-                                          size,fileFormat,sourceID,metadata_url,downloadURL]
-            recCount+=1
+            # isolate grid as an aoi to use as a mask
+            mask = grid.iloc[[g]].copy()
 
-    # subtract header for accurate record count
-    if bHeader: recCount = recCount -1
-    print(f"Rec Count: {recCount:,} -- Duplicate SourceIDs: {duplicateSourceIDs:,} -- Duplicate URLs: {duplicateURLs:,}")
+            # RID value of grid i.e. 332
+            rid = mask.rid[g]
+
+            # clip index using current aoi
+            idxClip = gp.clip(index, mask)
+            idxClip.reset_index(inplace=True)
+
+            # Lists of DEM records that are within current aoi
+            listOfDEMlists = list()
+
+            # iterate through each DEM record and capture all attributes
+            for dems in idxClip.index:
+
+                vals = idxClip.iloc[dems].copy()
+                vals.drop(labels = 'geometry', inplace=True)
+                vals = vals.tolist()
+                listOfDEMlists.append(vals)
+
+            # Sort all lists by resolution and last_update date
+            dateSorted = sorted(listOfDEMlists, key=itemgetter(32,3))
+
+            demDict[rid] = dateSorted
+
+    except:
+        errorMsg()
