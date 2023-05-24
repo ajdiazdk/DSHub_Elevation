@@ -107,6 +107,36 @@ and return them.  This will be used to append to the DLStatus file.
         - USGS_3DEP_1M_Metadata_Elevation_02242023_Download_ConsoleMsgs.txt --> USGS_3DEP_1M_Step2_Download_ConsoleMsgs.txt
         - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL.txt --> USGS_3DEP_1M_Step2_RASTER2PGSQL.txt
 
+5/19/2023
+    - Updated the following header values to remove issues with shapefile field constraints.
+      The following header field names changed:
+        last_updated > lastupdated
+        sourceID     > sourceid
+        metadata_url > meta_url
+        download_url > downld_url
+        DEMname      > dem_name
+        DEMpath      > dem_path
+        rast_columns > columns
+        rast_rows    > rows
+        bandCount    > bandcount
+        cellSize     > cellsize
+        rdsFormat    > rdsformat
+        bitDepth     > bitdepth
+        noDataVal    > nodataval
+        srType       > srs_type
+        EPSG         > epsg_code
+        srsName      > srs_name
+        rast_top     > rds_top
+        rast_left    > rds_left
+        rast_right   > rds_right
+        rast_bottome > rds_bottom
+        minStat      > min
+        meanStat     > mean
+        maxStat      > max
+        stDevStat    > stdev
+        blockXsize   > blck_xsize
+        blockYsize   > blck_ysize
+
 Things to consider/do:
   - rename key sql reserved words:
         - top, bottom, left, right --> rast_top,rast_bottom,rast_left,rast_right
@@ -572,14 +602,11 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
-##        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
-##                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
-##                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
 
         # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-        header = ('huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,'
-                  'download_url,DEMname,DEMpath,rast_columns,rast_rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
-                  'EPSG,srsName,rast_top,rast_left,rast_right,rast_bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+        header = ('huc_digit,prod_title,pub_date,lastupdated,rast_size,format,sourceid,metaurl,'
+                  'downld_url,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
+                  'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize')
 
         g.write(header)
 
@@ -640,9 +667,9 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
 ##                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
 
         # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-        header = ('huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,'
-                  'download_url,DEMname,DEMpath,rast_columns,rast_rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
-                  'EPSG,srsName,rast_top,rast_left,rast_right,rast_bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
+        header = ('huc_digit,prod_title,pub_date,lastupdated,rast_size,format,sourceid,metaurl,'
+                  'downld_url,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
+                  'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize')
 
         g.write(header)
 
@@ -1065,7 +1092,7 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
                     lineNum +=1
 
                 huc8digit = items[headerValues.index("huc_digit")]
-                downloadURL = items[headerValues.index("download_url")].strip()
+                downloadURL = items[headerValues.index("downld_url")].strip()
 
                 if downloadURL in failedDownloadList:
                     g.write("\n" + line.strip())
@@ -1136,12 +1163,12 @@ def main(dlFile,dlDir,bReplace):
                 hucDigit = items[headerValues.index("huc_digit")]
                 prod_title = items[headerValues.index("prod_title")]
                 pub_date = items[headerValues.index("pub_date")]
-                last_updated = items[headerValues.index("last_updated")]
+                last_updated = items[headerValues.index("lastupdated")]
                 size = items[headerValues.index("rast_size")]
                 fileFormat = items[headerValues.index("format")]
-                sourceID = items[headerValues.index("sourceID")]
-                metadata_url = items[headerValues.index("metadata_url")]
-                downloadURL = items[headerValues.index("download_url")].strip()
+                sourceID = items[headerValues.index("sourceid")]
+                metadata_url = items[headerValues.index("meta_url")]
+                downloadURL = items[headerValues.index("downld_url")].strip()
 
                 # Add info to urlDownloadDict
                 if hucDigit in urlDownloadDict:

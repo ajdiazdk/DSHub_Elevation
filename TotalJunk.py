@@ -16,6 +16,7 @@ from osgeo import ogr
 import geopandas as gp
 from operator import itemgetter
 import geopandas as gp
+import random
 
 ## ===================================================================================
 def errorMsg(errorOption=1):
@@ -55,84 +56,29 @@ if __name__ == '__main__':
 
     try:
 
-        indexLayer = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro.shp'
-        gridLayer = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_test.shp'
+        idxCopyShpPath = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro_DSH3M.shp'
+        idxCopy_ds = ogr.GetDriverByName('ESRI Shapefile').Open(idxCopyShpPath,1)
+        #idxCopy_Lyr = idxCopy_ds.GetLayerByIndex(0)
+        idxCopy_Lyr = idxCopy_ds.GetLayer()
+        layerDefinition = idxCopy_Lyr.GetLayerDefn()
+        feat = idxCopy_Lyr.GetNextFeature()
 
-        result = dummy(indexLayer)
-        msgs = result[0]
-        dsh3mDEMlist = result[1]
+        # iterate through DEM tiles and update statistics
+        while feat:
+            # sourceID of the record
+            randVal = str(random.randint(0,10000000000))
+            #sourceID = feat.GetField("sourceID")
+            #print(f"Updating values for {sourceID}")
+            feat.SetField("sourceID", "DONE8888")
+            #feat=None
+            #print(f"\tUpdating field sourceID FROM: {sourceID} TO: {randVal}")
+            #idxCopy_Lyr.SetFeature(feat)
+            feat = idxCopy_Lyr.GetNextFeature()
 
-        exit()
+        idxCopy_Lyr.SetFeature(feat)
+        idxCopy_ds.Destroy()
+        del idxCopy_ds
 
-
-##        # get headers
-##        source = ogr.Open(dsh3mIdxShp)
-##        layer = source.GetLayer()
-##        headers = []
-##        ldefn = layer.GetLayerDefn()
-##        for n in range(ldefn.GetFieldCount()):
-##            fdefn = ldefn.GetFieldDefn(n)
-##            headers.append(fdefn.name)
-##        print(headers)
-##        exit()
-
-##        import geopandas as gpd
-##
-##        poly1 = gpd.read_file(dsh3mIdxShp)
-##        poly2 = gpd.read_file(gridShp)
-##
-##        dsh3mDict = dict()
-##
-##        for idx, row in poly2.iterrows():
-##            print('---------------------------------')
-##            subPoly1 = poly1.within(row)
-##            print(subPoly1)
-##        exit()
-##
-##        polygon = poly2.geometry[0]
-##
-##
-##        poly1.within(polygon)
-##        poly1.intersects(polygon)
-##
-##    except:
-##        errorMsg()
-
-        # Read the best available 3M index
-        index = gp.read_file(indexLayer)
-
-        # Read the AOI grid
-        grid = gp.read_file(gridLayer)
-
-        demDict = dict()
-
-        for g in grid.index:
-
-            # isolate grid as an aoi to use as a mask
-            mask = grid.iloc[[g]].copy()
-
-            # RID value of grid i.e. 332
-            rid = mask.rid[g]
-
-            # clip index using current aoi
-            idxClip = gp.clip(index, mask)
-            idxClip.reset_index(inplace=True)
-
-            # Lists of DEM records that are within current aoi
-            listOfDEMlists = list()
-
-            # iterate through each DEM record and capture all attributes
-            for dems in idxClip.index:
-
-                vals = idxClip.iloc[dems].copy()
-                vals.drop(labels = 'geometry', inplace=True)
-                vals = vals.tolist()
-                listOfDEMlists.append(vals)
-
-            # Sort all lists by resolution and last_update date
-            dateSorted = sorted(listOfDEMlists, key=itemgetter(32,3))
-
-            demDict[rid] = dateSorted
 
     except:
         errorMsg()
