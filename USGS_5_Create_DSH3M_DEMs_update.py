@@ -60,7 +60,7 @@ THINGS TO ADD:
 
 """
 
-import os, traceback, sys, time
+import os, traceback, sys, time, glob
 import threading, multiprocessing
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from datetime import datetime
@@ -326,7 +326,7 @@ def createMultiResolutionOverlay(idx,grid):
             idxFeatCount = idx_Lyr.GetFeatureCount()
             layerDefinition = idx_Lyr.GetLayerDefn()
             numOfFields = layerDefinition.GetFieldCount()
-            AddMsgAndPrint(f"\tNumber of DSH3M Index features in {os.path.basename(idx)}: {idxFeatCount}")
+            AddMsgAndPrint(f"\n\tNumber of USGS Index features in {os.path.basename(idx)}: {idxFeatCount:,}")
 
         # Validate grid layer
         if grid_ds is None:
@@ -335,7 +335,7 @@ def createMultiResolutionOverlay(idx,grid):
         else:
             gridLyr = grid_ds.GetLayer()
             gridFeatCount = gridLyr.GetFeatureCount()
-            AddMsgAndPrint(f"\tNumber of Grid Cells in {os.path.basename(gridShp)}: {gridFeatCount}")
+            AddMsgAndPrint(f"\tNumber of Grid Cells in {os.path.basename(gridShp)}: {gridFeatCount:,}\n")
 
         # {332: [-491520.0, 1720320.0, -368640.0, 1843200.0]}
         gridExtentDict = dict()
@@ -363,12 +363,20 @@ def createMultiResolutionOverlay(idx,grid):
             listOfDEMlists = list()
             numOfSelectedFeats = 0
 
+            # Store unique source IDs to get an accurate DEM file count
+            uniqueSourceIDs = list()
+
             # iterate through every feature and get DEM information
             for idxFeat in idx_Lyr:
 
                 # List of attributes for 1 DEM
-                #
                 idxFeatValList = list()
+
+                sourceID = idxFeat.GetField("sourceID")
+                if sourceID in uniqueSourceIDs:
+                    continue
+                else:
+                    uniqueSourceIDs.append(sourceID)
 
                 # iterate through feature's attributes
                 for i in range(numOfFields):
@@ -508,7 +516,7 @@ def createSoil3MDEM(item):
             except:
                 messageList.append(f"{theTab}{'Failed to Delete':<35} {out_raster:<60}")
                 failedDEMs.append(sourceID)
-                return (messageList,[sourceID,last_update,])
+                return (messageList,False)
 
         rds = gdal.Open(input_raster)
         rdsInfo = gdal.Info(rds,format="json")
@@ -667,11 +675,11 @@ def createSoil3MDEM(item):
     except:
         failedDEMs.append(sourceID)
         messageList.append(f"\n{theTab}{errorMsg(errorOption=2)}")
-        return (messageList,[])
+        return (messageList,False)
 
 
 ## ===================================================================================
-def mergeGridDEMs(listsOfDEMs):
+def mergeGridDEMs(gridID,listsOfDEMs):
 
     try:
 
@@ -690,18 +698,19 @@ def mergeGridDEMs(listsOfDEMs):
         else:
             gridFolder = getEBSfolder(gridID)
 
-        gridRaster = os.path.join(gridFolder,f"dsh3m_grid{gridID}.tif")
+        mergeRaster = os.path.join(gridFolder,f"dsh3m_grid{gridID}.tif")
 
-        if os.path.exists(gridRaster):
+        if os.path.exists(mergeRaster):
             try:
                 if bReplaceMerge:
-                    os.remove(gridRaster)
-                    AddMsgAndPrint(f"\t\tSuccessfully Deleted {os.path.basename(gridRaster)}")
+                    os.remove(mergeRaster)
+                    AddMsgAndPrint(f"\t\tSuccessfully Deleted {os.path.basename(mergeRaster)}")
                 else:
-                    AddMsgAndPrint(f"\t\t{'Merged DEM Exists':<25} {os.path.basename(gridRaster):<60}")
-                    return True
+                    AddMsgAndPrint(f"\t\t{'Merged DEM Exists:':<15} {os.path.basename(mergeRaster):<60}")
+                    AddMsgAndPrint(f"\t\tGathering Statists for {os.path.basename(mergeRaster)}")
+                    return getRasterInformation_MT((gridID,mergeRaster),csv=False)
             except:
-                AddMsgAndPrint(f"\t\t{'Failed to Delete':<35} {gridRaster:<60}")
+                AddMsgAndPrint(f"\t\t{'Failed to Delete':<35} {mergeRaster:<60}")
                 return False
 
         clipExtent = gridExtentDict[gridID]
@@ -721,12 +730,18 @@ def mergeGridDEMs(listsOfDEMs):
                                 #options=["COMPRESS=LZW", "TILED=YES"])
                                 #options="__RETURN_OPTION_LIST__")
 
-        g = gdal.Warp(gridRaster,mosaicList,options=args)
+        g = gdal.Warp(mergeRaster,mosaicList,options=args)
         g = None
 
         mergeStop = toc(mergeStart)
         AddMsgAndPrint(f"\tSuccessfully Merged. Merge Time: {mergeStop}")
-        return True
+
+        AddMsgAndPrint(f"\n\tGathering Merged DEM Statistical Information")
+
+        # grid_id,size,format,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize'
+        rasterStatList = getRasterInformation_MT((gridID,mergeRaster),csv=False)
+
+        return rasterStatList
 
     except:
         errorMsg()
@@ -736,7 +751,7 @@ def mergeGridDEMs(listsOfDEMs):
 def createElevMetadataFile_MT(dsh3mRasters,idxShp):
 
     # updates metadata file for soil3m DEMS
-    # soil3Mdict: sourceID = rasterPath
+    # dsh3mRasters: sourceID = rasterPath
 
     try:
 
@@ -748,7 +763,7 @@ def createElevMetadataFile_MT(dsh3mRasters,idxShp):
         i = 1 # progress tracker
 
         """ --------------------- Step1: Gather Statistic Information ------------------------------------------"""
-        AddMsgAndPrint(f"\n\tGathering Individual DEM Statistical Information")
+        AddMsgAndPrint(f"\n\tGathering DSH3M DEM Statistical Information")
         with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
             # use a set comprehension to start all tasks.  This creates a future object
@@ -772,12 +787,12 @@ def createElevMetadataFile_MT(dsh3mRasters,idxShp):
                     i+=1
                     demStatDict[ID] = rastInfo
 
-        AddMsgAndPrint(f"\n\tSuccessfully Gathered stats for {goodStats:,} DEMs")
+        AddMsgAndPrint(f"\tSuccessfully Gathered stats for {goodStats:,} DSH3M DEMs")
 
         if badStats > 0:
-            AddMsgAndPrint(f"\tProblems with Gathering stats for {badStats:,} DEMs")
+            AddMsgAndPrint(f"\tProblems with Gathering stats for {badStats:,} DSH3M DEMs")
 
-        """ --------------------- Step2: Make a copy of Index shapefile ---------------------------------"""
+        """ --------------------- Step2: Make a copy of USGS Index shapefile to create DSH3M Index ---------------------"""
         idx_ds = ogr.GetDriverByName('ESRI Shapefile').Open(idxShp)
         idx_Lyr = idx_ds.GetLayerByIndex(0)
         idx_defn = idx_Lyr.GetLayerDefn()
@@ -805,11 +820,12 @@ def createElevMetadataFile_MT(dsh3mRasters,idxShp):
         # Save and close DataSources
         output_ds = None
         idx_ds = None
-        AddMsgAndPrint(f"\tSuccessfully made a copy of {os.path.basename(idxShp)} --> {os.path.basename(idxCopyShpPath)}")
+        AddMsgAndPrint(f"\n\tSuccessfully copied {os.path.basename(idxShp)} --> {os.path.basename(idxCopyShpPath)}")
 
-        """ --------------------- Step3: Open Index shapefile and update stats ---------------------------------"""
+        """ --------------------- Step3: Open DSH3M Index shapefile and update stats --------------------------------"""
+        AddMsgAndPrint(f"\n\tUpdating DSH3M DEM stats on {os.path.basename(idxCopyShpPath)} spatial index")
         missingRecords=0
-        idxCopy_ds = ogr.GetDriverByName('ESRI Shapefile').Open(idxCopyShpPath)
+        idxCopy_ds = ogr.GetDriverByName('ESRI Shapefile').Open(idxCopyShpPath,1)
         #idxCopy_Lyr = idxCopy_ds.GetLayerByIndex(0)
         idxCopy_Lyr = idxCopy_ds.GetLayer(0)
         layerDefinition = idxCopy_Lyr.GetLayerDefn()
@@ -824,72 +840,84 @@ def createElevMetadataFile_MT(dsh3mRasters,idxShp):
         startPos = fieldList.index('columns')
         stopPos = fieldList.index('blockYsize')
         #stopPos = fieldList.index('blk_ysize')
+        demNamePos = fieldList.index('DEMname')
+
+        # Lists of updated dsh3m stats that will be written to a CSV file
+        dsh3mNewStats = list()
+
+        # counter for features updated; should be the same as fieldCount
+        featUpdated = 0
 
         # iterate through DEM tiles and update statistics
         for feat in idxCopy_Lyr:
             # sourceID of the record
             sourceID = feat.GetField("sourceID")
-            AddMsgAndPrint(f"\tUpdating sourceID: {sourceID}")
 
             if not sourceID in demStatDict:
                 #AddMsgAndPrint("Could not update shapefile record for sourceID: {sourceID}")
                 missingRecords+=1
                 continue
+            else:
+                dsh3mPath = dsh3mStatDict[sourceID]
+                dsh3mName = os.path.basename(dsh3mPath)  # isolate the name to update attributes
 
+            #AddMsgAndPrint(f"\n\t\tUpdating sourceID: {sourceID}")
             rastStatList = demStatDict[sourceID].split(',')
+            featValues = list()
 
-            # iterate through fields and update attributes
+            # iterate through fields and collect and update attributes
             j=0
-            for i in range(startPos,stopPos+1):
+            for i in range(0,fieldCount):
                 oldVal = feat.GetField(fieldList[i])
-                feat.SetField(fieldList[i], rastStatList[j])
-                AddMsgAndPrint(f"\t\tUpdating field {fieldList[i]} FROM: {oldVal} TO: {rastStatList[j]}")
-                j+=1
+
+                # Update field name
+                if i == demNamePos:
+                    feat.SetField(fieldList[demNamePos],dsh3mName)
+                    #AddMsgAndPrint(f"\t\t\tUpdate: DEMname FROM: {oldVal} --> {os.path.basename(dsh3mName)}")
+                    featValues.append(dsh3mName)
+
+                # Update raster information
+                elif i >= startPos and i <= stopPos:
+                    feat.SetField(fieldList[i], rastStatList[j])
+                    #AddMsgAndPrint(f"\t\t\tUpdate: {fieldList[i]} FROM: {oldVal} --> {rastStatList[j]}")
+                    featValues.append(rastStatList[j])
+                    j+=1
+
+                # field not updated
+                else:
+                    #AddMsgAndPrint(f"\t\t\tNo Change {fieldList[i]}: {oldVal}")
+                    #AddMsgAndPrint(f"\t\t\tPos i:{i} - j:{j} -- {fieldList[i]}: {oldVal}")
+                    featValues.append(oldVal)
+
+            dsh3mNewStats.append(featValues)
             idxCopy_Lyr.SetFeature(feat)
+
+            featUpdated+=1
 
         idxCopy_ds.Destroy()
         del idxCopy_ds
 
+        if len(featUpdated):
+            AddMsgAndPrint(f"\t\t{featUpdated:,} index features updated")
+
         if missingRecords:
-            AddMsgAndPrint(f"\n\tThere were {missingRecords:,} DSH3M footprints whose attributes were not updated")
+            AddMsgAndPrint(f"\t\t{missingRecords:,} index features were not updated")
+
+        """ --------------------- Step4: Create CSV version of DSH3M Index shapefile --------------------------------"""
+        if len(dsh3mNewStats):
+            AddMsgAndPrint(f"\n\tCreating DSH3M Elevation Metadata CSV File")
+            dsh3mCSVfile = f"{metadataPath}{os.sep}USGS_3DEP_DSH3M_Step5_Elevation_Metadata.txt"
+            g = open(dsh3mCSVfile,'a+')
+            g.write(','.join(str(e) for e in headerValues))
+
+            for rec in dsh3mNewStats:
+                csv = ','.join(str(e) for e in rec)
+                g.write(f"\n{csv}")
+            g.close()
+            AddMsgAndPrint(f"\t\tDSH3M Elevation Metadata CSV File Path: {dsh3mCSVfile}")
 
         return idxCopyShpPath
 
-        # Create Master Elevation File
-        soil3MmetadataFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_Elevation_Metadata.txt"
-
-        g = open(soil3MmetadataFile,'a+')
-        header = ','.join(str(e) for e in headerValues)
-        g.write(header)
-
-        total = len(elevMetadataDict)
-        index = 1
-
-        # Iterate through all of the sourceID files in the download file (elevMetadatDict)
-        for srcID,demInfo in elevMetadataDict.items():
-
-            # 9 item INFO: huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
-            firstPart = ','.join(str(e) for e in demInfo[0:9])
-
-            # srcID must exist in soil3Mdict (successully populated during download)
-            if srcID in soil3Mdict:
-                demFilePath = soil3Mdict[srcID]
-                demFileName = os.path.basename(demFilePath)
-                secondPart = demStatDict[srcID]
-
-                g.write(f"\n{firstPart},{demFileName},{os.path.dirname(demFilePath)},{secondPart}")
-
-            # srcID failed during the download process.  Pass since it will be accounted for in error file
-            elif srcID in failedDEMs:
-                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in dsh3mDict; accounted for in failedDEMs")
-                continue
-
-            else:
-                AddMsgAndPrint(f"\n\t\tWARNING: SourceID: {srcID} does not exist in dsh3mDict; NOT accounted for in failedDEMs -- Inspect")
-                continue
-
-        g.close()
-        return soil3MmetadataFile
 
     except:
         errorMsg()
@@ -901,7 +929,7 @@ def createElevMetadataFile_MT(dsh3mRasters,idxShp):
 
 
 #### ===================================================================================
-def getRasterInformation_MT(rasterItem):
+def getRasterInformation_MT(rasterItem,csv=True):
 
     # Raster information will be added to dlStatusList
     # sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus --
@@ -1028,7 +1056,16 @@ def getRasterInformation_MT(rasterItem):
         rasterInfoList = [columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
                           top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
 
-        rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
+        if csv:
+            rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
+        else:
+            # used for merged tiles
+            size = os.path.getsize(raster)
+            demName = os.path.basename(raster)
+            demPath = os.path.dirname(raster)
+            rasterStatDict = [srcID,size,'GTiff',demName,demPath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
+                              top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
+
         return rasterStatDict
 
     except:
@@ -1076,14 +1113,18 @@ def createRaster2pgSQLFile(masterElevFile):
         masterElevRecCount = len(open(masterElevFile).readlines()) - 1  # subtract header
 
         recCount = 0
-        r2pgsqlFilePath = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_DSH3M_RASTER2PGSQL.txt"
+        r2pgsqlFilePath = f"{metadataPath}{os.sep}USGS_3DEP_DSH3M_Step5_Mosaic_RASTER2PGSQL.txt"
 
         g = open(r2pgsqlFilePath,'a+')
 
         total = sum(1 for line in open(masterElevFile)) -1
-        #label = "Generating Raster2PGSQL Statements"
+        headerValues = open(masterElevFile).readline().rstrip().split(',')
 
         invalidCommands = list()
+
+        sridPos = headerValues.index('epsg_code')
+        demNamePos = headerValues.index('dem_name')
+        demPathPos = headerValues.index('dem_path')
 
         """ ------------------- Open Master Elevation File and write raster2pgsql statements ---------------------"""
         with open(masterElevFile, 'r') as fp:
@@ -1097,12 +1138,12 @@ def createRaster2pgSQLFile(masterElevFile):
                 items = line.split(',')
 
                 # Raster2pgsql parameters
-                srid = items[19]
+                srid = items[sridPos]
                 tileSize = '507x507'
-                demPath = f"{items[10]}{os.sep}{items[9]}"
+                demPath = f"{items[demPathPos]}{os.sep}{items[demNamePos]}"
                 dbName = 'elevation'
                 dbTable = f"elevation_DSH3M"  # elevation_3m
-                demName = items[9]
+                demName = items[demNamePos]
                 password = 'itsnotflat'
                 localHost = '10.11.11.10'
                 port = '6432'
@@ -1139,7 +1180,6 @@ def createRaster2pgSQLFile(masterElevFile):
     except:
         errorMsg()
 
-
 ## ===================================================================================
 if __name__ == '__main__':
 
@@ -1148,17 +1188,19 @@ if __name__ == '__main__':
         """---------------------------------  Setup ---------------------------------- """
         # Script Parameters
         # File from Step#2
-        #dsh3mIdxShp = r'D:\projects\DSHub\reampling\snapGrid\USGS_DSH3M_Sample.shp'
         dsh3mIdxShp = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro.shp'
-        gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_367_.shp'
+        gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_test.shp'
+        metadataPath = r'D:\projects\DSHub\reampling'
+        #gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_367_.shp'
         bMultiThreadMode = True
-        bReplace = False
-        bReplaceMerge = False
+        bReplace = True
+        bReplaceMerge = True
+        bDeleteDSH3Mdata = True
         bDetails = True
 
         # claim gdal parameters
         #gdal.UseExceptions()    # Enable exceptions
-        ogr.UseExceptions()
+        #ogr.UseExceptions()
         gdal.SetConfigOption('GDAL_PAM_ENABLED', 'TRUE')
 
 ##        # Path to the DSH3M Elevation Index from the original elevation data
@@ -1203,26 +1245,33 @@ if __name__ == '__main__':
         """ -------------------------- Establish Console LOG FILE ------------------------------------------"""
         # Setup Log file that captures console messages
         # USGS_3DEP_DSH3M_Step5_ConsoleMsgs.txt
-        msgLogFile = f"{os.path.dirname(dsh3mIdxShp)}{os.sep}USGS_3DEP_DSH3M_Step5_ConsoleMsgs.txt"
+        msgLogFile = f"{metadataPath}{os.sep}USGS_3DEP_DSH3M_Step5_ConsoleMsgs.txt"
         today = datetime.today().strftime('%m%d%Y')
         h = open(msgLogFile,'a+')
         h.write(f"Executing: USGS_5_Create_DSH3M_DEMs {today}\n\n")
         h.write(f"User Selected Parameters:\n")
-        h.write(f"\tDSH3M Elevation Index Layer: {dsh3mIdxShp}\n")
+        h.write(f"\tUSGS Elevation Index Layer: {dsh3mIdxShp}\n")
         h.write(f"\tCONUS Grid Layer: {gridShp}\n")
-        h.write(f"\tOverwrite Data: {bReplace}\n")
+        h.write(f"\tOutput Metadata Path: {metadataPath}\n")
+        h.write(f"\tOverwrite DHS3M DEM Data: {bReplace}\n")
+        h.write(f"\tDelete Intermediate DSH3M Files: {bDeleteDSH3Mdata}\n")
+        h.write(f"\tOverwrite DHS3M Merged Datasets: {bReplaceMerge}\n")
         h.write(f"\tVerbose Mode: {bDetails}\n")
         h.close()
 
-        # Get Headers from dsh3m index layer
+        """ -------------------------- STEP 1: Create Multi-Resolution Overaly ----------------------------"""
+        # Get Headers from USGS index layer
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
-        try:
-            index = gp.read_file(dsh3mIdxShp)
-            headerValues = index.columns.tolist()
-            del index
-        except:
-            AddMsgAndPrint("\nFailed to open {dsh3mIdxShp}")
-            AddMsgAndPrint(errorMsg())
+        idx_ds = ogr.GetDriverByName('ESRI Shapefile').Open(dsh3mIdxShp)
+        idx_Lyr = idx_ds.GetLayer(0)
+        layerDefinition = idx_Lyr.GetLayerDefn()
+
+        # Int - shapefile field count
+        fieldCount = layerDefinition.GetFieldCount()
+
+        # List of shapefile field names
+        headerValues = [layerDefinition.GetFieldDefn(i).GetName() for i in range(fieldCount)]
+        idx_ds = None
 
         # key:grid ID -- value: list of lists of the DEMs that intersect the grid ID
         AddMsgAndPrint("\nSTEP 1: Creating DSH3M Multi-resolution Overlay")
@@ -1259,7 +1308,7 @@ if __name__ == '__main__':
 
             numOfSoil3MtoProcess = len(items)
             AddMsgAndPrint(f"\n\tGrid ID: {gridID} (Grid {gridCounter} of {totalNumOfGrids}) has {numOfSoil3MtoProcess:,} DEMs that need a DSH3M DEM created")
-            for k,v in resCounts.items():
+            for k, v in sorted(resCounts.items()):
                 AddMsgAndPrint(f"\t\t{k}M DEMs: {v}")
 
             gridStartTime = tic()
@@ -1276,11 +1325,6 @@ if __name__ == '__main__':
 
                         msgs = new3mDEM.result()[0]
 
-                        # [sourceID,last_update,out_raster,source]
-                        soil3MList = new3mDEM.result()[1]
-                        sourceID = soil3MList[0]
-                        dsh3mRaster = soil3MList[2]
-
                         # Print Messages from results
                         i+=1
                         j=1
@@ -1291,22 +1335,30 @@ if __name__ == '__main__':
                                 AddMsgAndPrint(printMessage)
                             j+=1
 
+                        # [sourceID,last_update,out_raster,source]
+                        soil3MList = new3mDEM.result()[1]
+
+                        # Failed to produce DSH3M; it simply won't be added to dsh3mDict
+                        # merged dataset will have a missing DEM
+                        if not soil3MList:
+                            continue
+
+                        sourceID = soil3MList[0]
+                        dsh3mRaster = soil3MList[2]
+
                         # Handle results
-                        if len(soil3MList) > 0:
+                        if len(soil3MList) > 0 :
+
+                            if not sourceID in dsh3mStatDict:
+                                dsh3mStatDict[sourceID] = dsh3mRaster
 
                             if not gridID in dsh3mDict:
                                 dsh3mDict[gridID] = [soil3MList]
                             else:
                                 dsh3mDict[gridID].append(soil3MList)
 
-                            if not sourceID in dsh3mStatDict:
-                                dsh3mStatDict[sourceID] = dsh3mRaster
-                            else:
-                                AddMsgAndPrint(f"\t\t\tDouble sourceID: {sourceID}: -- {dsh3mRaster}")
-
-
             else:
-                """------------------  Execute in Single Mode --------------- """
+                """------------------ Execute in Single Mode --------------- """
                 for item in items:
 
                     new3mDEMresult = createSoil3MDEM(item)
@@ -1315,18 +1367,17 @@ if __name__ == '__main__':
                     sourceID = soil3MList[0]
                     dsh3mRaster = soil3MList[2]
 
-
                     if len(soil3MList) > 0:
+
+                        if not sourceID in dsh3mStatDict:
+                            dsh3mStatDict[sourceID] = dsh3mRaster
+
                         if not gridID in dsh3mDict:
                             dsh3mDict[gridID] = [soil3MList]
                         else:
                             dsh3mDict[gridID].append(soil3MList)
 
-                        if not sourceID in dsh3mStatDict:
-                            dsh3mStatDict[sourceID] = dsh3mRaster
-                        else:
-                            AddMsgAndPrint(f"\t\t\tDouble sourceID: {sourceID}: -- {dsh3mRaster}")
-
+                    # Handle results
                     i+=1
                     j=1
                     for printMessage in msgs:
@@ -1339,12 +1390,17 @@ if __name__ == '__main__':
             AddMsgAndPrint(f"\n\t\tGrid ID: {gridID} Processing Time: {toc(gridStartTime)}")
             gridCounter+=1
 
+        if len(failedDEMs):
+            AddMsgAndPrint(f"\n\tThere were {len(failedDEMs)} DEMs that failed to produce DSH3M DEMs")
+
         dsh3mStopTime = toc(dsh3mStartTime)
         AddMsgAndPrint(f"\n\tTotal Processing Time to create DSH3M DEMs: {dsh3mStopTime}")
 
         """ -------------------------- Step3: Merge DSH3M DEMs ------------------------------------------"""
         AddMsgAndPrint("\nSTEP 3: Merging DSH3M DEMs")
         gridCounter = 1
+        mergedGridsStats = list()
+        startMerge = tic()
 
         # Set output Coordinate system to 5070
         spatialRef = osr.SpatialReference()
@@ -1355,53 +1411,98 @@ if __name__ == '__main__':
         # key: gridID -- value: [[sourceID,last_update,out_raster,source],[x,y,z],[x,y,z]]
         for gridID,dsh3mRasters in dsh3mDict.items():
 
-            mergeResult = mergeGridDEMs(dsh3mRasters)
-            gridCounter+=1
+            mergeResult = mergeGridDEMs(gridID,dsh3mRasters)
 
+            if mergeResult:
+                mergedGridsStats.append(mergeResult)
+
+            gridCounter+=1
         del gridID, dsh3mRasters
+        stopMerge = toc(startMerge)
+
+        if len(mergedGridsStats):
+            AddMsgAndPrint(f"\n\tCreating Mosaic DSH3M Elevation Metadata CSV File")
+            mosaicDSH3mCSVfile = f"{metadataPath}{os.sep}USGS_3DEP_DSH3M_Step5_Mosaic_Elevation_Metadata.txt"
+            g = open(mosaicDSH3mCSVfile,'a+')
+            mergeHeaderValues = r'grid_id,size,format,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize'
+
+            g.write(mergeHeaderValues)
+
+            for rec in mergedGridsStats:
+                csv = ','.join(str(e) for e in rec)
+                g.write(f"\n{csv}")
+            g.close()
+            AddMsgAndPrint(f"\t\tMosaic DSH3M Elevation Metadata CSV File Path: {mosaicDSH3mCSVfile}")
 
         """ ----------------------------- Step 4: Create dsh3m Elevation Metadata ShapeFile ----------------------------- """
         if len(dsh3mStatDict):
-            AddMsgAndPrint(f"\nSTEP 4: Creating Elevation Metadata Shapefile for DSH3M DEMs")
+            AddMsgAndPrint(f"\nSTEP 4: Creating DSH3M Elevation Metadata")
             metadataFileStart = tic()
             metadataFile = createElevMetadataFile_MT(dsh3mStatDict,dsh3mIdxShp)
-            AddMsgAndPrint(f"\n\tDSH3M Elevation Metadata File Path: {metadataFile}")
+            AddMsgAndPrint(f"\n\tDSH3M Elevation Metadata Shapefile Path: {metadataFile}")
             metadataFileStop = toc(metadataFileStart)
-            exit()
 
-            """ ----------------------------- Create Raster2pgsql File ---------------------------------- """
-            if os.path.exists(metadataFile):
-                AddMsgAndPrint(f"\nCreating Raster2pgsql File\n")
-                r2pgsqlStart = tic()
-                r2pgsqlFile = createRaster2pgSQLFile(metadataFile)
-                AddMsgAndPrint(f"\t\nDSH3M Raster2pgsql File Path: {r2pgsqlFile}")
-                AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
-                r2pgsqlStop = toc(r2pgsqlStart)
-            else:
-                AddMsgAndPrint(f"\nDSH3M Raster2pgsql File will NOT be created")
+        """ ----------------------------- Step 5: Create Raster2pgsql File ---------------------------------------------- """
+        if os.path.exists(mosaicDSH3mCSVfile):
+            r2pgsqlStart = tic()
+            AddMsgAndPrint(f"\nCreating Raster2pgsql File\n")
+            r2pgsqlFile = createRaster2pgSQLFile(mosaicDSH3mCSVfile)
+            AddMsgAndPrint(f"\n\tDSH3M Mosaic Raster2pgsql File Path: {r2pgsqlFile}")
+            AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
+            r2pgsqlStop = toc(r2pgsqlStart)
         else:
-            AddMsgAndPrint(f"\nNo information available to produce DSH3M Metadata Database Elevation File")
-            AddMsgAndPrint(f"\nNo information available to produce DSH3M Raster2pgsql File")
+            AddMsgAndPrint(f"\nDSH3M Raster2pgsql File will NOT be created")
+
+        """ ----------------------------- Step 6: Delete dsh3m DEMs ------------------------------------------------------ """
+        #'63e730a8d34efa0476ae840d': 'D:\\projects\\DSHub\\reampling\\1M\\USGS_1M_14_x34y415_KS_StatewideFordGray_2018_A18_dsh3m.tif'
+
+        if bDeleteDSH3Mdata:
+
+            AddMsgAndPrint(f"\nDeleting Intermediate DSH3M DEM Files")
+
+            deletedFile = 0
+            invalidFiles = 0
+
+            for sourceID,dsh3mPath in dsh3mStatDict.items():
+
+                # Delete all files associated with the DEMname (.xml, aux...etc)
+                for file in glob.glob(f"{dsh3mPath.split('.')[0]}*"):
+                    if os.path.isfile(file):
+                        try:
+                            os.remove(file)
+                            if bDetails:AddMsgAndPrint(f"\tSuccessfully Deleted: {file}")
+                            deletedFile+=1
+                        except:
+                            AddMsgAndPrint(f"\Failed to Delete: {file}")
+                    else:
+                        AddMsgAndPrint(f"\tInvalid file: {file}")
+                        invalidFiles+=1
+
+            if invalidFiles:
+                AddMsgAndPrint(f"\n\tTotal # of DSH3M Invalid Files: {invalidFiles:,}")
+
+            AddMsgAndPrint(f"\n\tTotal # of DSH3M Files Deleted: {deletedFile:,}")
 
         """ ------------------------------------ SUMMARY -------------------------------------------- """
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
 
         AddMsgAndPrint(f"\nTotal Processing Time: {toc(startTime)}")
-        AddMsgAndPrint(f"\tCreate DSH3M DEMs Time: {soil3MstopTime}")
+        AddMsgAndPrint(f"\tCreate DSH3M DEMs Time: {dsh3mStopTime}")
+        AddMsgAndPrint(f"\tCreate DSH3M Merged DEMs Time: {stopMerge}")
         AddMsgAndPrint(f"\tCreate DSH3M Metadata Elevation File Time: {metadataFileStop}")
         AddMsgAndPrint(f"\tCreate DSH3M Raster2pgsql File Time: {r2pgsqlStop}")
 
         # Report number of original DEMs processed for Soil3M
-        if len(soil3MDict) == recCount:
-            AddMsgAndPrint(f"\nSuccessfully Processed ALL {len(soil3MDict):,} original DEM files")
-        elif len(soil3MDict) == 0:
-            AddMsgAndPrint(f"\nNo original DEMs files were processed")
-        else:
-            AddMsgAndPrint(f"\nProcessed {len(soil3MDict):,} out of {recCount:,} original DEM files")
-
-        if len(failedDEMs):
-            AddMsgAndPrint(f"\nFailed to create Soil3M files for {len(failedDEMs):,} original DEM files:")
-            AddMsgAndPrint(f"{failedDEMs}")
+##        if len(soil3MDict) == recCount:
+##            AddMsgAndPrint(f"\nSuccessfully Processed ALL {len(soil3MDict):,} original DEM files")
+##        elif len(soil3MDict) == 0:
+##            AddMsgAndPrint(f"\nNo original DEMs files were processed")
+##        else:
+##            AddMsgAndPrint(f"\nProcessed {len(soil3MDict):,} out of {recCount:,} original DEM files")
+##
+##        if len(failedDEMs):
+##            AddMsgAndPrint(f"\nFailed to create Soil3M files for {len(failedDEMs):,} original DEM files:")
+##            AddMsgAndPrint(f"{failedDEMs}")
 
 
     except:
