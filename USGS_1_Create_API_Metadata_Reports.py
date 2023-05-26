@@ -481,7 +481,7 @@ if __name__ == '__main__':
         #hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_10300101'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20230519'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20230526'
         tnmResolution = '1M'
         bAlaska = False
 
