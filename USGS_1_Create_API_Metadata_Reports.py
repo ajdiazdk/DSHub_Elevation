@@ -481,8 +481,8 @@ if __name__ == '__main__':
         #hucBoundaries = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\Default.gdb\WBDHU8_10300101'
         hucCodeFld = 'huc8'
         hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20230526'
-        tnmResolution = '1M'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\20230530'
+        tnmResolution = '3M'
         bAlaska = False
 
         if not arcpy.Exists(hucBoundaries):
@@ -729,7 +729,7 @@ if __name__ == '__main__':
 
         #-------------------------------------------------- Write Elevation download file
         g = open(metadataFile2path,'a+')
-        g.write(f"huc_digit,prod_title,pub_date,lastupdated,rast_size,format,sourceid,meta_url,downld_url") # log headers
+        g.write(f"huc_digit,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
 
         for i in range(0,len(hucDigitList)):
             g.write(f"\n{hucDigitList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
