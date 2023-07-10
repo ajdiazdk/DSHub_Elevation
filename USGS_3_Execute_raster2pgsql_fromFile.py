@@ -25,6 +25,19 @@ This is script #3 in the USGS Elevation acquisition workflow developed for the D
         - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL_ConsoleMsgs.txt -- > USGS_3DEP_1M_Step3_Exec_RASTER2PGSQL_ConsoleMsgs.txt
         - USGS_3DEP_1M_Metadata_Elevation_02242023_RASTER2PGSQL_FAILED.txt --> USGS_3DEP_1M_Step3_Exec_RASTER2PGSQL_FAILED.txt
 
+7/7/2023
+    - Updated raster2pgsql function to distinguish messages returned between errors and
+      warnings.  Added a 'Warning' category.
+
+      Encountered the following errors with Alaska:
+      'warning: this file used to have optimizations in its layout, but thoseartly, invalidated
+       by later changes'
+
+Things to consider/do:
+    - Warning messages are assumed to be duplicated.  If there are multiple warnings I should compare
+      them to see if they are unique.
+    - Try to get a list of raster2pgsql errors to handle messages better.
+
 """
 
 #-------------------------------------------------------------------------------
@@ -113,8 +126,8 @@ def runRaster2pgsql(cmd):
         DEMname = os.path.basename(cmdItems[10])
 
         msgDict = dict()
-        errorList = ['error','failed','fail','uncommit','aborted','notice',
-                     'warning','unable','not recognized','inoperable']
+        errorList = ['error','failed','fail','uncommit','aborted','notice','memory',
+                     'warning','unable','not recognized','inoperable','syntax']
         words_re = re.compile("|".join(errorList))
 
         # Send command to operating system
@@ -124,18 +137,43 @@ def runRaster2pgsql(cmd):
 
         # returns a tuple (stdout_data, stderr_data)
         msgs, errors = execCmd.communicate()
-        errors = ','.join(errors.strip().split('\n'))  # some errors return mutliple carriage returns
+        errors = ','.join(errors.strip().split('\n')).lower()  # some errors return mutliple carriage returns
 
         # Collect messages
-        if words_re.search(errors.lower()) or not execCmd.returncode == 0:
-            msgDict['Error'] = f"{cmd}\n\t{errors}"
+        # 0 = completed, however there may be warnings
+        errorResults = words_re.search(errors)
+
+        if errorResults:
+            errorGroup = errorResults.group()
+
+            # Warning messages
+            if errorGroup in ('warning') and execCmd.returncode == 0:
+
+                # number of warnings; isolate 1 message
+                # If there are multiple warnings I should compare them to see if they are unique;
+                # Assumption is that the warnings are duplicated
+                warningCounts = matches = re.findall(r'\b(?:' + '|'.join(['warning']) + r')\b', errors)
+                warningIndices = [m.start() for m in re.finditer(r"\bwarning\b", errors)]
+
+                # Extract warning message
+                if len(warningCounts) > 1:
+                    warningMessage = errors[warningIndices[0]:warningIndices[1]]
+                else:
+                    warningMessage = errors[warningIndices[0]:]
+
+                msgDict['Warning'] = f"Loaded {DEMname} but with the following Warning: {warningMessage}"
+
+            # Error messages; What is the error group here? Investigate after more errors arise
+            else:
+                msgDict['Error'] = f"{cmd}\n\t{errors}"
+
         else:
             msgDict['Success'] = f"Successfully loaded {DEMname}"
 
         return msgDict
 
     except:
-        msgDict['Error'] = f"{cmd}\n\t{errorMsg(errorOption=2)}"
+        msgDict['Error'] = f"\"{cmd}\"\n\t{errorMsg(errorOption=2)}"
         return msgDict
 
 ## ===================================================================================
@@ -150,7 +188,10 @@ if __name__ == '__main__':
             print(f"{raster2pgsqlFile} does NOT exist. Try Again")
             raster2pgsqlFile = input("Enter full path to Raster2pgsql File: ")
 
+
         resolution = raster2pgsqlFile.split(os.sep)[-1].split('_')[2]
+
+        """ ---------------------------- Establish Console LOG FILE ---------------------------------------------------"""
         raster2pgsqlLogFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}USGS_3DEP_{resolution}_Step3_Exec_RASTER2PGSQL_ConsoleMsgs.txt"
         raster2pgsqlErrorFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}USGS_3DEP_{resolution}_Step3_Exec_RASTER2PGSQL_FAILED.txt"
 
@@ -166,6 +207,8 @@ if __name__ == '__main__':
         raster2pgsqlList = list() # List of commnands to run in multi-thread
         invalidCommands = list() # List of invalid commands or that contain an unknown parameter ('#')
 
+        """ ---------------------------- Inspect and report raster2pgsql statements ---------------------------------------------------"""
+        # Look for '#' in raster2pgsql commands; Likely added from script#2
         AddMsgAndPrint(f"Checking Raster2pgsql Statements")
         with open(raster2pgsqlFile, 'r') as fp:
             for rasterLine in fp:
@@ -187,6 +230,7 @@ if __name__ == '__main__':
                 iCount+=1
                 raster2pgsqlList.append(cmd)
 
+        # Report invalid commands
         numOfInvalidCommands = len(invalidCommands)
         if numOfInvalidCommands:
             AddMsgAndPrint(f"\tThere are {numOfInvalidCommands:,} invalid raster2pgsql command or that contain invalid parameters:")
@@ -196,11 +240,13 @@ if __name__ == '__main__':
             logError.close
             del logError
 
+        """ ---------------------------- Execute raster2pgsql statements in MT mode ---------------------------------------------------"""
         # Run commands in multi-threading mode
         if len(raster2pgsqlList):
             AddMsgAndPrint(f"\nRunning raster2pgsql on {len(raster2pgsqlList):,} DEM files")
             r2pTracker = 0
             successCount = 0
+            warningCount = 0
             failedCount = 0
 
             with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
@@ -211,8 +257,10 @@ if __name__ == '__main__':
                 # yield future objects as they are done.
                 for future in as_completed(runR2pgsqlCmd):
                     msgs = future.result()
+
                     for status in msgs:
                         r2pTracker+=1
+
                         if status == 'Error':
                             AddMsgAndPrint(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
                             failedCount+=1
@@ -222,6 +270,10 @@ if __name__ == '__main__':
                             logError.write(f"\n{isolatedCommand}")
                             logError.close
                             del logError
+
+                        elif status == 'Warning':
+                            AddMsgAndPrint(f"\t{msgs['Warning']} -- ({r2pTracker:,} of {recCount:,})")
+                            warningCount+=1
 
                         elif status == 'Success':
                             AddMsgAndPrint(f"\t{msgs['Success']} -- ({r2pTracker:,} of {recCount:,})")
@@ -246,8 +298,15 @@ if __name__ == '__main__':
         if successCount == recCount:
             AddMsgAndPrint(f"\nALL {recCount:,} DEMs were successfully loaded to the database")
 
-        if failedCount > 0:
-            AddMsgAndPrint(f"\nThere were {failedCount:,} of {len(raster2pgsqlList):,} DEMS that failed loading process")
+        else:
+            if successCount > 0:
+                AddMsgAndPrint(f"\nThere were {successCount:,} of {len(raster2pgsqlList):,} DEMs were successfully loaded.")
+
+            if warningCount > 0:
+                AddMsgAndPrint(f"\nThere were {warningCount:,} of {len(raster2pgsqlList):,} DEMS that loaded with warnings.")
+
+            if failedCount > 0:
+                AddMsgAndPrint(f"\nThere were {failedCount:,} of {len(raster2pgsqlList):,} DEMS that failed loading process.")
 
     except:
         errorMsg()

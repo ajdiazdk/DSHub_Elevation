@@ -148,6 +148,9 @@ Example:
 Bug: Too many 10M DEMs were being removed.  Problem occurred in checkForDuplicates function.  Updated function
 to check for positions already accounted for by duplicate URLs.
 
+6/28/2023
+Updated functionality to send multiple requests for the same HUC
+
 """
 ## ===================================================================================
 def AddMsgAndPrint(msg):
@@ -478,11 +481,11 @@ if __name__ == '__main__':
 
         # 9 Tool Parameters
         #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU8'
-        #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK'
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK_1902'
+        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK'
+        #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK_1902'
         hucCodeFld = 'huc4'
         hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\06132023_OPR\TEST'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\20230628_OPR'
         tnmResolution = '5M_AK_OPR'
         bAlaska = True
 
@@ -510,7 +513,8 @@ if __name__ == '__main__':
                            '5M_AK_OPR':'Original Product Resolution (OPR) Digital Elevation Model (DEM)',
                            '60M_AK':'National Elevation Dataset (NED) Alaska 2 arc-second'}
 
-        maxProdsPerPage = 10000
+        # 1,000 records is the max --- DO NOT CHANGE!
+        maxProdsPerPage = 1000
 
         """ ---------------------------- Establish Metdata and log FILES ---------------------------------------------------"""
         today = datetime.today().strftime('%m%d%Y')  #11192022
@@ -550,10 +554,10 @@ if __name__ == '__main__':
         invalidHUC = list()           # invalid hucs; must be 2,4,8 huc-digits - must be integer
         badAPIurls = dict()           # huc:API URL - These URLs returned an error code
         emptyHUCs = list()            # Watershed with NO DEMS associated to it; according to API
-        allAccountedFor = list()
+        allAccountedFor = list()      # # of HUCs whose DEMs are accounted for by adjacent HUCs
         unaccountedHUCs = list()      # Not a Bad url, not an empty watershed, unaccounted for result
         numOfTotalTiles = 0           # Total of all DEMS from watersheds; including overalp DEMs
-        numOfTotalOverlaps = 0
+        numOfTotalOverlaps = 0        # Total # of DEMs that overlap with adjacent HUCs
         uniqueSourceIDlist = list()   # unique list of sourceIDs
 
         # master lists for each data element collected from USGS API
@@ -578,8 +582,9 @@ if __name__ == '__main__':
             hucName = row[1]
             hucLength = len(hucDigit)
 
-            AddMsgAndPrint(f"\t{hucLength}-digit HUC {hucDigit}: {hucName}")
+            AddMsgAndPrint(f"\n\t{hucLength}-digit HUC {hucDigit}: {hucName}")
 
+            # geometry multi-parts are irrelavant
             if hucDigit in uniqueHUCs:
                 AddMsgAndPrint(f"\tDUPLICATE HUC.  Skipping Record")
                 duplicateHUC.append(hucDigit)
@@ -599,110 +604,150 @@ if __name__ == '__main__':
                 invalidHUC.append(hucDigit)
                 continue
 
-            # Formulate API rquest
-            params = urllibEncode({'f': 'json',
-                                   'datasets': tnmProductAlias[tnmResolution],
-                                   'polyType': f"huc{hucLength}",
-                                   'polyCode': hucDigit,
-                                   'max':maxProdsPerPage,
-                                   'offset':'1000'})
-
-            # concatenate URL and API parameters
-            tnmURLhuc = f"{tnmAPIurl}{params}"
-
-            # Send REST API request
-            try:
-                with urllib.request.urlopen(tnmURLhuc) as conn:
-                    resp = conn.read()
-                results = json.loads(resp)
-            except:
-                badAPIurls[hucDigit] = tnmURLhuc
-                AddMsgAndPrint(f"\t\tBad Request")
-                f.write(f"\n{hucDigit},{hucName},-999,{tnmURLhuc}")
-                continue
-
+            bRecordsAccounted = False  # boolean to
             i = 0  # Counter for unique DEMs
             j = 0  # Counter for duplicate DEM that exists in a different HUC
+            k = 0  # Counter for records per request; resetted if multiple requets are needed
+            recordStart = 0
+            numOfHucDEMfiles = 0
+            requestNumber = 0
 
-            if 'errorMessage' in results:
-                AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
-                badAPIurls[hucDigit] = tnmURLhuc
+            while not bRecordsAccounted:
 
-            elif results['errors']:
-                AddMsgAndPrint(f"\t\tError Message in results: {results['errors']}")
-                badAPIurls[hucDigit] = tnmURLhuc
+                requestNumber+=1
 
-            # JSON results
-            elif 'total' in results:
+                # Formulate API rquest
+                params = urllibEncode({'f': 'json',
+                                       'datasets': tnmProductAlias[tnmResolution],
+                                       'polyType': f"huc{hucLength}",
+                                       'polyCode': hucDigit,
+                                       'max':maxProdsPerPage,
+                                       'offset':recordStart})
 
-                # the # of DEMs associated with the watershed
-                numOfHucDEMfiles = results['total']
-                if numOfHucDEMfiles > 0:
+                # concatenate URL and API parameters
+                tnmURLhuc = f"{tnmAPIurl}{params}"
 
-                    numOfTotalTiles += numOfHucDEMfiles
+                # Send REST API request
+                try:
+                    with urllib.request.urlopen(tnmURLhuc) as conn:
+                        resp = conn.read()
+                    results = json.loads(resp)
+                except:
+                    badAPIurls[hucDigit] = tnmURLhuc
+                    AddMsgAndPrint(f"\t\tBad Request")
+                    f.write(f"\n{hucDigit},{hucName},-999,{tnmURLhuc}")
+                    break
 
-                    # collect info from unique elevation files
-                    for itemInfo in results['items']:
+                if 'errorMessage' in results:
+                    AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
+                    badAPIurls[hucDigit] = tnmURLhuc
+                    bRecordsAccounted = True
 
-                        sourceID = itemInfo['sourceId']
-                        title = itemInfo['title']
-                        pubDate = itemInfo['publicationDate']
-                        lastModified = itemInfo['modificationInfo']
-                        size = itemInfo['sizeInBytes']
-                        fileFormat = itemInfo['format']
-                        metadataURL = itemInfo['metaUrl']
-                        downloadURL = itemInfo['downloadURL']
+                elif results['errors']:
+                    AddMsgAndPrint(f"\t\tError Message in results: {results['errors']}")
+                    badAPIurls[hucDigit] = tnmURLhuc
+                    bRecordsAccounted = True
 
-                        # use sourceID to filter out duplicate DEMs from adjacent watersheds
-                        if sourceID in uniqueSourceIDlist:
-                            #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
-                            j+=1
-                            numOfTotalOverlaps+=1
-                            continue
+                # JSON results
+                elif 'total' in results:
+
+                    # the # of DEMs associated with the HUC
+                    numOfHucDEMfiles = results['total']
+
+                    if numOfHucDEMfiles > 0:
+
+                        if requestNumber==1:
+                            numOfTotalTiles += numOfHucDEMfiles
+                            AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
+
+                        # collect info from unique elevation files
+                        for itemInfo in results['items']:
+
+                            k+=1
+
+                            sourceID = itemInfo['sourceId']
+                            title = itemInfo['title']
+                            pubDate = itemInfo['publicationDate']
+                            lastModified = itemInfo['modificationInfo']
+                            size = itemInfo['sizeInBytes']
+                            fileFormat = itemInfo['format']
+                            metadataURL = itemInfo['metaUrl']
+                            downloadURL = itemInfo['downloadURL']
+
+                            # use sourceID to filter out duplicate DEMs from adjacent watersheds
+                            if sourceID in uniqueSourceIDlist:
+                                #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
+                                j+=1
+                                numOfTotalOverlaps+=1
+                                continue
+                            else:
+                                uniqueSourceIDlist.append(sourceID)
+
+                            # Ran into a situation where size was incorrectly populated as none
+                            # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
+                            if not size:
+                                size = 0
+
+                            hucDigitList.append(hucDigit)
+                            titleList.append(title)
+                            pubDateList.append(pubDate)
+                            lastModifiedDate.append(lastModified)
+                            sizeList.append(size)
+                            fileFormatList.append(fileFormat)
+                            sourceIDList.append(sourceID)
+                            metadataURLList.append(metadataURL)
+                            downloadURLList.append(downloadURL)
+
+                            i+=1
+
+                        # DEMs NOT ACCOUNTED FOR - lOOP AGAIN
+                        # num of HUC DEMs is greater than 1000 rec limit AND counters for unique and
+                        # duplicate DEMs are less than total
+                        if numOfHucDEMfiles > maxProdsPerPage and ((i+j) < numOfHucDEMfiles):
+                            AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {k:,}")
+                            recordStart+=1000
+                            k=0
+
+                        # NO NEED TO LOOP AGAIN
+                        # API request is less than record limit BUT DEM files are unaccounted for --
+                        # Wrong count from USGS API?
+                        # Look into this for patterns
+                        elif numOfHucDEMfiles < maxProdsPerPage and ((i+j) != numOfHucDEMfiles):
+                            AddMsgAndPrint(f"\t\t\tThere are {numOfHucDEMfiles - (i+j):,} files that are not accounted for. ")
+                            #AddMsgAndPrint(f"\t\t\tTry INCREASING max # of products per page; Currently set to {maxProdsPerPage:,}")
+                            AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
+                            AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
+                            AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
+                            f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
+                            bRecordsAccounted = True
+
+                        # DEMs ACCOUNTED FOR - NO NEED TO LOOP AGAIN
                         else:
-                            uniqueSourceIDlist.append(sourceID)
 
-                        # Ran into a situation where size was incorrectly populated as none
-                        # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
-                        if not size:
-                            size = 0
+                            # HUC's DEMs have been already accounted for by adjacent DEMs
+                            if j==numOfHucDEMfiles:
+                                allAccountedFor.append(hucDigit)
 
-                        hucDigitList.append(hucDigit)
-                        titleList.append(title)
-                        pubDateList.append(pubDate)
-                        lastModifiedDate.append(lastModified)
-                        sizeList.append(size)
-                        fileFormatList.append(fileFormat)
-                        sourceIDList.append(sourceID)
-                        metadataURLList.append(metadataURL)
-                        downloadURLList.append(downloadURL)
+                            if requestNumber>1:
+                                AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {k:,}")
 
-                        #g.write(f"\n{hucDigit},{title},{pubDate},{lastModified},{size},{fileFormat},{sourceID},{metadataURL},{downloadURL}")
-                        i+=1
+                            #AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
+                            AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
+                            AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
+                            f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
+                            bRecordsAccounted = True
 
-                    # Format Statements depending on DEM quantities
-                    if i==0:
-                        allAccountedFor.append(hucDigit)
-
-                    AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
-                    AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
-                    AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
-                    f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
-
-                    # total number of tiles for this watershed are neither unique nor duplicate.
-                    if numOfHucDEMfiles != (i+j):
-                        AddMsgAndPrint(f"\t\t\tThere are {numOfHucDEMfiles - (i+j):,} files that are not accounted for.")
-                        AddMsgAndPrint(f"\t\t\tTry INCREASING max # of products per page; Currently set to {maxProdsPerPage:,}")
+                    else:
+                        AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation files")
+                        f.write(f"\n{hucDigit},{hucName},0,{tnmURLhuc}")
+                        emptyHUCs.append(hucDigit)
+                        bRecordsAccounted = True
 
                 else:
-                    AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation files")
-                    f.write(f"\n{hucDigit},{hucName},0,{tnmURLhuc}")
-                    emptyHUCs.append(hucDigit)
-
-            else:
-                # I haven't seen an error like this
-                AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {hucDigit}: {hucName}")
-                unaccountedHUCs.append(hucDigit)
+                    # I haven't seen an error like this
+                    AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {hucDigit}: {hucName}")
+                    unaccountedHUCs.append(hucDigit)
+                    bRecordsAccounted = True
 
         f.close()
 
@@ -741,7 +786,7 @@ if __name__ == '__main__':
             AddMsgAndPrint(f"{str(unaccountedHUCs)}")
 
         """ ------------------------------------ SUMMARY -------------------------------------- """
-        AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
+        AddMsgAndPrint(f"\n{'-'*40} SUMMARY {'-'*40}")
 
         # Summary of HUCs
         AddMsgAndPrint(f"Total # of Input HUCs: {totalWatersheds:,}")

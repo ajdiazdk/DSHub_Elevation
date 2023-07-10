@@ -140,6 +140,18 @@ and return them.  This will be used to append to the DLStatus file.
 6/2/2023
     - Modified DownloadElevationTile function to handle zip files from 3M
 
+7/7/2023
+    - Updated getRasterInformation_MT function to provide error handling for EPSG
+      codes.  AK 5M DEMs were erroring when describing SRS.
+
+      File "USGS_2_Download_Elevation_by_MetadataFile.py", line 870, in getRasterInformation_MT
+      srs.AutoIdentifyEPSG()
+
+      RuntimeError: OGR Error: Unsupported SRS
+
+      Also added functionality to pass raster information that had already been described
+      vs. returning all '#'s
+
 Things to consider/do:
   - rename key sql reserved words:
         - top, bottom, left, right --> rast_top,rast_bottom,rast_left,rast_right
@@ -785,6 +797,8 @@ def getRasterInformation_MT(rasterItem):
     # rasterStatDict
     # '5eacfc1d82cefae35a250bec' = '10012,10012,1,1.0,GeoTIFF,Float32,-999999.0,PROJECTED,26919,NAD83 / UTM zone 19N,5150006.0,439994.0,450006.0,5139994.0,366.988,444.228,577.808,34.396,256,256'
 
+    # rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
+
     try:
         srcID = rasterItem[0]
         raster = rasterItem[1]
@@ -807,7 +821,7 @@ def getRasterInformation_MT(rasterItem):
             return rasterStatDict
 
         rds = gdal.Open(raster)
-        rdsInfo = gdal.Info(rds,format="json")
+        rdsInfo = gdal.Info(rds,format="json",computeMinMax=True,stats=True,showMetadata=True)
 
         # ------------------------- Raster Properties -----------------------------
         columns = rasterInfoList.append(rdsInfo['size'][0])
@@ -827,21 +841,31 @@ def getRasterInformation_MT(rasterItem):
         # What is returned when a raster is undefined??
         prj = rds.GetProjection()  # GDAL returns projection in WKT
         srs = osr.SpatialReference(prj)
-        srs.AutoIdentifyEPSG()
-        epsg = srs.GetAttrValue('AUTHORITY',1)
 
-        if not srs.GetAttrValue('projcs') is None:
-            srsType = 'PROJECTED'
-            srsName = srs.GetAttrValue('projcs')
-        else:
-            srsType = 'GEOGRAPHIC'
-            srsName = srs.GetAttrValue('geogcs')
+        # If no valid EPSG is found, an error will be thrown
+        try:
+            srs.AutoIdentifyEPSG()
+            epsg = srs.GetAttrValue('AUTHORITY',1)
+        except:
+            epsg = '#'
+
+##        try:
+##            if not srs.GetAttrValue('projcs') is None:
+##                srsType = 'PROJECTED'
+##                srsName = srs.GetAttrValue('projcs')
+##            else:
+##                srsType = 'GEOGRAPHIC'
+##                srsName = srs.GetAttrValue('geogcs')
+##        except:
+##            srsType = '#'
 
         # Returns 0 or 1; opposite would be IsGeographic
         if srs.IsProjected():
             srsName = srs.GetAttrValue('projcs')
+            srsType = 'PROJECTED'
         else:
             srsName = srs.GetAttrValue('geogcs')
+            srsType = 'GEOGRAPHIC'
 
         rasterInfoList.append(srsType)
         rasterInfoList.append(epsg)
@@ -856,7 +880,10 @@ def getRasterInformation_MT(rasterItem):
 
         right,top = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
         left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
-        rasterInfoList.append(top,left,right,bottom)
+        rasterInfoList.append(top)
+        rasterInfoList.append(left)
+        rasterInfoList.append(right)
+        rasterInfoList.append(bottom)
 
         # ---------------------- Raster Statistics ------------------------
         # ComputeStatistics vs. GetStatistics(0,1) vs. ComputeBandStats
@@ -874,7 +901,6 @@ def getRasterInformation_MT(rasterItem):
             stDevStat = rdsInfo['bands'][0]['stdDev']
             blockXsize = rdsInfo['bands'][0]['block'][0]
             blockYsize = rdsInfo['bands'][0]['block'][1]
-            rasterInfoList.append(minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize)
 
             # stat info is included in JSON info but stats are not calculated;
             # calc statistics if min,max or mean are not greater than 0.0
@@ -889,7 +915,9 @@ def getRasterInformation_MT(rasterItem):
                 stDevStat = bandStats[3]
                 blockXsize = bandInfo.GetBlockSize()[0]
                 blockYsize = bandInfo.GetBlockSize()[1]
-                rasterInfoList.append(minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize)
+
+            for stat in (minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize):
+                rasterInfoList.append(stat)
 
         # Stat info is not included in JSON info above.
         # Force calculation of Raster Statistics
@@ -915,7 +943,9 @@ def getRasterInformation_MT(rasterItem):
             stDevStat = bandStats[3]
             blockXsize = bandInfo.GetBlockSize()[0]
             blockYsize = bandInfo.GetBlockSize()[1]
-            rasterInfoList.append(minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize)
+
+            for stat in (minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize):
+                rasterInfoList.append(stat)
 
         #rasterInfoList = [columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
         #                  top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
@@ -924,6 +954,7 @@ def getRasterInformation_MT(rasterItem):
         return rasterStatDict
 
     except:
+        AddMsgAndPrint(f"Failed: {os.path.basename(raster)}")
         errorMsg()
 
         # Return the info that was collected and pad the rest with '#'
@@ -1134,7 +1165,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 else:
                     g.write(r2pgsqlCommand + "\n")
 
-                print(f"\t\tSuccessfully wrote raster2pgsql command -- ({recCount:,} of {total:,})")
+                print(f"\t\tSuccessfully wrote raster2pgsql command for {demName} -- ({recCount:,} of {total:,})")
                 recCount+=1
 
         g.close()
@@ -1143,7 +1174,7 @@ def createRaster2pgSQLFile(masterElevFile):
         # Inform user about invalid raster2pgsql commands so that they can be fixed.
         numOfInvalidCommands = len(invalidCommands)
         if numOfInvalidCommands:
-            AddMsgAndPrint(f"\tThere are {numOfInvalidCommands:,} invalid raster2pgsql commands or that contain invalid parameters:")
+            AddMsgAndPrint(f"\n\tThere are {numOfInvalidCommands:,} invalid raster2pgsql commands or that contain invalid parameters:")
             for invalidCmd in invalidCommands:
                 AddMsgAndPrint(f"\t\t{invalidCmd}")
 
@@ -1458,36 +1489,36 @@ if __name__ == '__main__':
 
     gdal.SetConfigOption('GDAL_PAM_ENABLED', 'TRUE')
 
-    # DOWNLOAD FILE
-    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
-    while not os.path.exists(dlFile):
-        print(f"{dlFile} does NOT exist. Try Again")
-        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
+##    # DOWNLOAD FILE
+##    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
+##    while not os.path.exists(dlFile):
+##        print(f"{dlFile} does NOT exist. Try Again")
+##        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
+##
+##    # DOWNLOAD FOLDER
+##    # Windows (nt) vs Linux (posix)
+##    if os.name == 'nt':
+##        dlFolder = input("\nEnter path where elevation files will be download to: ")
+##        while not os.path.exists(dlFolder):
+##            print(f"{dlFolder} does NOT exist. Try Again")
+##            dlFolder = input("Enter path where elevation files will be download to: ")
+##    else:
+##        dlFolder = False
+##
+##    # REPLACE DATA
+##    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
+##    while not bReplace.lower() in ("yes","no","y","n"):
+##        print(f"Please Enter Yes or No")
+##        bReplace = input("Do you want to replace existing data? (Yes/No): ")
+##
+##    if bReplace.lower() in ("yes","y"):
+##        bReplace = True
+##    else:
+##        bReplace = False
 
-    # DOWNLOAD FOLDER
-    # Windows (nt) vs Linux (posix)
-    if os.name == 'nt':
-        dlFolder = input("\nEnter path where elevation files will be download to: ")
-        while not os.path.exists(dlFolder):
-            print(f"{dlFolder} does NOT exist. Try Again")
-            dlFolder = input("Enter path where elevation files will be download to: ")
-    else:
-        dlFolder = False
-
-    # REPLACE DATA
-    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
-    while not bReplace.lower() in ("yes","no","y","n"):
-        print(f"Please Enter Yes or No")
-        bReplace = input("Do you want to replace existing data? (Yes/No): ")
-
-    if bReplace.lower() in ("yes","y"):
-        bReplace = True
-    else:
-        bReplace = False
-
-##    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\test\USGS_3DEP_3M_Metadata_Elevation_04052023.txt'
-##    dlFolder = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\test\dl_test'
-##    bReplace = True
+    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\test_OPR\USGS_3DEP_5M_AK_OPR_AK_Step1B_ElevationDL_06282023.txt'
+    dlFolder = r'D:\projects\DSHub\Elevation\Alaska'
+    bReplace = True
 
     main(dlFile,dlFolder,bReplace)
     input("\nHit Enter to Continue: ")

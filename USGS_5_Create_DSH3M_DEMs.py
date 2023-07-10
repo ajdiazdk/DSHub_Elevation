@@ -67,7 +67,6 @@ from datetime import datetime
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
-import geopandas as gp
 from operator import itemgetter
 
 ## ===================================================================================
@@ -232,75 +231,6 @@ def convertMasterDBfileToDict(elevMetdataFile):
         errorMsg()
         return False
 
-## ===================================================================================
-def createMultiResolutionOverlay_gp(indexLayer, gridLayer):
-
-    try:
-        # Read the best available 3M index
-        index = gp.read_file(indexLayer)
-
-        # Read the AOI grid
-        grid = gp.read_file(gridLayer)
-
-    except:
-        AddMsgAndPrint("\nFailed to open input layers")
-        AddMsgAndPrint(errorMsg())
-
-    demDict = dict()
-
-    oneMcnt = 0
-    threeMcnt = 0
-    tenMcnt = 0
-    gridCnt = 0
-    recCnt = 0
-
-    for g in grid.index:
-
-        # isolate grid as an aoi to use as a mask
-        mask = grid.iloc[[g]].copy()
-
-        # RID value of grid i.e. 332
-        rid = mask.rid[g]
-
-        # clip index using current aoi
-        idxClip = gp.clip(index, mask)
-        idxClip.reset_index(inplace=True)
-
-        # Lists of DEM records that are within current aoi
-        listOfDEMlists = list()
-
-        # iterate through each DEM record and capture all attributes
-        for dems in idxClip.index:
-
-            vals = idxClip.iloc[dems].copy()
-            vals.drop(labels = 'geometry', inplace=True)
-            vals = vals.tolist()
-            del vals[0]
-            source = vals[-1]
-
-            if source == 1:
-                oneMcnt+=1
-            elif source == 3:
-                threeMcnt+=1
-            else:
-                tenMcnt+=1
-
-            recCnt+=1
-            listOfDEMlists.append(vals)
-
-        # Sort all lists by resolution and last_update date
-        lastUpdatePos = headerValues.index('lastupdate')
-        dateSorted = sorted(listOfDEMlists, key=itemgetter(sourcePos,lastUpdatePos), reverse=True)
-        demDict[rid] = dateSorted
-
-        gridCnt+=1
-
-    AddMsgAndPrint(f"\tThere are {gridCnt} grid tiles that overlayed with {recCnt} DEMs:")
-    AddMsgAndPrint(f"\t\t1M DEMs:  {oneMcnt:,}")
-    AddMsgAndPrint(f"\t\t3M DEMs:  {threeMcnt:,}")
-    AddMsgAndPrint(f"\t\t10M DEMs: {tenMcnt:,}")
-
-    return demDict
 
 ## ===================================================================================
 def createMultiResolutionOverlay(idx,grid):
@@ -495,7 +425,7 @@ def createSoil3MDEM(item):
             failedDEMs.append(sourceID)
             return (messageList,False)
 
-        # D:\projects\DSHub\reampling\1M\USGS_1M_Madison_EPSG5070.tif
+        # D:\projects\DSHub\reampling\1M\USGS_1M_Madison_dsh3m.tif
         #out_raster = f"{input_raster.split('.')[0]}_dsh3m.{input_raster.split('.')[1]}"
         out_raster = f"{input_raster.split('.')[0]}_dsh3m.tif"
         messageList.append(f"\n{theTab}Output DEM: {out_raster}")
@@ -683,12 +613,239 @@ def createSoil3MDEM(item):
 
 
 ## ===================================================================================
-def mergeGridDEMs(gridID,listsOfDEMs):
+def createAk5MDEM(item):
+    """
+    item is passed over as a tuple with the key = 0 and the values = 1
+    returns tuple """
+
+    try:
+        messageList = list()
+
+        # Positions of individual field names
+        last_update = item[headerValues.index("lastupdate")]
+        fileFormat = item[headerValues.index("format")]
+        sourceID = item[headerValues.index("sourceid")]
+        DEMname = item[headerValues.index("dem_name")]
+        DEMpath = item[headerValues.index("dem_path")]
+        noData = float(item[headerValues.index("nodataval")]) # returned as string
+        EPSG = item[headerValues.index("epsg_code")]
+        srsName = item[headerValues.index("srs_name")]
+        top = item[headerValues.index("rds_top")]
+        left = item[headerValues.index("rds_left")]
+        right = item[headerValues.index("rds_right")]
+        bottom = item[headerValues.index("rds_bottom")]
+        source = item[headerValues.index("source_res")]
+
+        if bDetails:
+            messageList.append(f"\n\t\t\tProcessing DEM: {DEMname} -- {source}M")
+            theTab = "\t\t\t\t"
+        else:
+            theTab = "\t\t\t"
+
+        # D:\projects\DSHub\reampling\1M\USGS_1M_Madison.tif
+        input_raster = os.path.join(DEMpath,DEMname)
+
+        if not os.path.exists(input_raster):
+            messageList.append(f"{theTab}{input_raster} does NOT exist! Skipping!")
+            failedDEMs.append(sourceID)
+            return (messageList,False)
+
+        # D:\projects\DSHub\Elevation\Alaska\USGS_OPR_AK_Juneau_Landslide_2021_D21_be_W0524N6469_EPSG3338.tif
+        #out_raster = f"{input_raster.split('.')[0]}_dsh3m.{input_raster.split('.')[1]}"
+        out_raster = f"{input_raster.split('.')[0]}_ak5m.tif"
+        messageList.append(f"\n{theTab}Output DEM: {out_raster}")
+
+        ak5mList = [sourceID,last_update,out_raster,source]
+
+        # ak5M DEM exists b/c it was currently generated
+        if sourceID in dsh3mStatDict:
+            messageList.append(f"{theTab}{'AK5M DEM Exists from grid overlap':<25} {os.path.basename(out_raster):<60}")
+            return (messageList,ak5mList)
+
+        # AK5M DEM exists b/c it was previously generated
+        if os.path.exists(out_raster):
+            try:
+                if bReplace:
+                    os.remove(out_raster)
+                    messageList.append(f"{theTab}Successfully Deleted {os.path.basename(out_raster)}")
+                else:
+                    messageList.append(f"{theTab}{'AK5M DEM Exists':<25} {os.path.basename(out_raster):<60}")
+                    return (messageList,dsh3mList)
+            except:
+                messageList.append(f"{theTab}{'Failed to Delete':<35} {out_raster:<60}")
+                failedDEMs.append(sourceID)
+                return (messageList,False)
+
+        rds = gdal.Open(input_raster)
+        rdsInfo = gdal.Info(rds,format="json")
+
+        # Set source Coordinate system to EPSG from input record
+        inSpatialRef = osr.SpatialReference()
+        inSpatialRef.ImportFromEPSG(int(EPSG))
+        inputSRS = f"EPSG:{inSpatialRef.GetAuthorityCode(None)}"
+
+        # Degrees vs Meters
+        inputUnits = inSpatialRef.GetAttrValue('UNIT')
+
+        # Set output Coordinate system to 5070
+        outSpatialRef = osr.SpatialReference()
+        outSpatialRef.ImportFromEPSG(3338)
+        outputSRS = f"EPSG:{outSpatialRef.GetAuthorityCode(None)}"
+
+        # create Transformation
+        coordTrans = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+        #messageList.append(f"\n\t Projecting from {inputSRS} to {outputSRS}")
+
+        # ----------------------- Project extent coords to 3338 --------------------------------
+        # Create a geometry object of X,Y coordinates for LL, UL, UR, and LR in the source SRS
+        # This represents the coords from the raster extent and will be projected to 5070
+        # Degree coordinates are passed in lat/long (Y,X) format; all others are passed in as X,Y
+
+        if inputUnits == 'degree':
+            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(left)+")")
+            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(left)+")")
+            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(right)+")")
+            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(right)+")")
+        else:
+            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
+            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
+            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
+            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
+
+        # Coordinates in native SRS
+        if bDetails:
+            messageList.append(f"\n{theTab}------------ {inputSRS} Exents ------------")
+            messageList.append(f"{theTab}LL Coords - {pointLL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymin)'}")
+            messageList.append(f"{theTab}UL Coords - {pointUL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymax)'}")
+            messageList.append(f"{theTab}UR Coords - {pointUR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymax)'}")
+            messageList.append(f"{theTab}LR Coords - {pointLR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymin)'}")
+
+        # Project individual coordinates to 5070
+        # 'POINT (800676.587222594 1918952.70626254)'
+        pointLL.Transform(coordTrans)
+        pointUL.Transform(coordTrans)
+        pointUR.Transform(coordTrans)
+        pointLR.Transform(coordTrans)
+
+        # Coordinates in 3338
+        if bDetails:
+            messageList.append(f"\n{theTab}------------ {outputSRS} Exents ------------")
+            messageList.append(f"{theTab}LL Coords - {pointLL} (Xmin,Ymin)")
+            messageList.append(f"{theTab}UL Coords - {pointUL} (Xmin,Ymax)")
+            messageList.append(f"{theTab}UR Coords - {pointUR} (Xmax,Ymax)")
+            messageList.append(f"{theTab}LR Coords - {pointLR} (Xmax,Ymin)")
+
+        # Convert the Transform object into a List of projected coordinates and extract
+        # [(1308220.3216564057, -526949.4675336559)]
+        prjLL = pointLL.GetPoints()[0]
+        prjUL = pointUL.GetPoints()[0]
+        prjUR = pointUR.GetPoints()[0]
+        prjLR = pointLR.GetPoints()[0]
+
+        # ----------------------- Unsnapped 3338 Extent --------------------------------
+        # Truncate coordinates to remove precion otherwise mod%3 would never equal 0
+        # Get the highest Y-coord to determine the most northern (top) extent - Ymax
+        newTop = int(max(prjUL[1],prjUR[1]))
+
+        # Get the lowest Y-coord to determine the most southern (bottom) extent - Ymin
+        newBottom = int(min(prjLL[1],prjLR[1]))
+
+        # Get the lowest X-coord to determine the most western (left) extent - Xmin
+        newLeft = int(min(prjUL[0],prjLL[0]))
+
+        # Get the highest X-coord to determine the most eastern (right) extent - Xmax
+        newRight = int(max(prjUR[0],prjLR[0]))
+
+        # ----------------------- Snapped 3338 Extent --------------------------------
+        # update extent values so that they are snapped to a aoi3M cell.
+        # new extent value will be divisible by 5.
+
+        # Extent position 0-newTop, 1-newRight
+        extPos = 0
+
+        for extent in [newTop,newRight,newBottom,newLeft]:
+
+            bDivisibleBy3 = False
+            while not bDivisibleBy3:
+
+                # Extent is evenly divisible by 5; update new coordinate value
+                if extent % 5 == 0:
+
+                    # Update extent variables to one more 3M cell
+                    if extPos == 0:
+                        newTop = extent + 5
+                    elif extPos == 1:
+                        newRight = extent + 5
+                    elif extPos == 2:
+                        newBottom = extent - 5
+                    elif extPos == 3:
+                        newLeft = extent - 5
+
+                    extPos+=1
+                    bDivisibleBy3 = True
+
+                # Extent is not evenly divisible by 5; grow by 1M
+                else:
+                    # Top and Right coordinates will add 1 meter;
+                    # Left and Bottom coordinates will subtract 1 meter
+                    if extPos <= 1:
+                        extent = extent + 1
+                    else:
+                        extent = extent - 1
+
+        if bDetails:
+            messageList.append(f"\n{theTab}------------ {outputSRS} Snapped Exents ------------")
+            messageList.append(f"{theTab}LL Coords - POINT ({newLeft} {newBottom}) (Left,Bottom)")
+            messageList.append(f"{theTab}UL Coords - POINT ({newLeft} {newTop}) (Left,Top)")
+            messageList.append(f"{theTab}UR Coords - POINT ({newRight} {newTop}) (Right,Top)")
+            messageList.append(f"{theTab}LR Coords - POINT ({newRight} {newBottom}) (Right,Bottom)")
+
+        if fileFormat == 'GeoTIFF':
+            outputFormat = 'GTiff'
+        else:
+            outputFormat = 'HFA' # Erdas Imagine .img
+
+        # Add srcNodata and dstNodata
+        # removed srcNodata and made output format TIFF; regardless of inputs
+        args = gdal.WarpOptions(format="GTiff",
+                                xRes=5,
+                                yRes=5,
+                                #srcNodata=noData,
+                                dstNodata=-999999.0,
+                                srcSRS=inputSRS,
+                                dstSRS=outputSRS,
+                                outputBounds=[newLeft, newBottom, newRight, newTop],
+                                outputBoundsSRS=outputSRS,
+                                resampleAlg=gdal.GRA_Bilinear,
+                                multithread=True)
+                                #creationOptions=["COMPRESS=DEFLATE", "TILED=YES","PREDICTOR=2","ZLEVEL=9","PROFILE=GeoTIFF"])
+
+        g = gdal.Warp(out_raster, input_raster, options=args)
+        g = None # flush and close out
+
+        if bDetails:
+            messageList.append(f"\n{theTab}Successfully Created Soil3M DEM: {os.path.basename(out_raster)}")
+        else:
+            messageList.append(f"{theTab}{'Successfully Created Soil3M DEM:':<35} {os.path.basename(out_raster):>60}")
+
+        # [sourceID,last_update,out_raster,source]
+        return (messageList,dsh3mList)
+
+    except:
+        failedDEMs.append(sourceID)
+        messageList.append(f"\n{theTab}{errorMsg(errorOption=2)}")
+        return (messageList,False)
+
+## ===================================================================================
+def mergeGridDEMs(itemCollection):
     # listsOfDEMS - [sourceID,last_update,out_raster,source]
 
     try:
+        gridID = itemCollection[0]
+        listsOfDEMs = itemCollection[1]
+        messageList = list()
 
-        AddMsgAndPrint(f"\n\tGrid ID: {gridID} (Grid {mergeGrid} of {totalNumOfGrids}) has {len(listsOfDEMs):,} DSH3M DEMs that will be merged")
+        messageList.append(f"Grid ID: {gridID} has {len(listsOfDEMs):,} DSH3M DEMs that will be merged")
         mergeStart = tic()
 
         # Sort List by Source and last_update
@@ -710,14 +867,15 @@ def mergeGridDEMs(gridID,listsOfDEMs):
             try:
                 if bReplaceMerge:
                     os.remove(mergeRaster)
-                    AddMsgAndPrint(f"\t\tSuccessfully Deleted {os.path.basename(mergeRaster)}")
+                    messageList.append(f"\t\tSuccessfully Deleted {os.path.basename(mergeRaster)}")
                 else:
-                    AddMsgAndPrint(f"\t\t{'Merged DEM Exists:':<15} {os.path.basename(mergeRaster):<60}")
-                    AddMsgAndPrint(f"\t\tGathering Statists for {os.path.basename(mergeRaster)}")
-                    return getRasterInformation_MT((gridID,mergeRaster),csv=False)
+                    messageList.append(f"\t\t{'Merged DEM Exists:':<15} {os.path.basename(mergeRaster):<60}")
+                    messageList.append(f"\t\tGathering Statists for {os.path.basename(mergeRaster)}")
+                    rasterStatList = getRasterInformation_MT((gridID,mergeRaster),csv=False)
+                    return (messageList,rasterStatList)
             except:
-                AddMsgAndPrint(f"\t\t{'Failed to Delete':<35} {mergeRaster:<60}")
-                return False
+                messageList.append(f"\t\t{'Failed to Delete':<35} {mergeRaster:<60}")
+                return (messageList,False)
 
         clipExtent = gridExtentDict[gridID]
 
@@ -740,14 +898,13 @@ def mergeGridDEMs(gridID,listsOfDEMs):
         g = None
 
         mergeStop = toc(mergeStart)
-        AddMsgAndPrint(f"\t\tSuccessfully Merged. Merge Time: {mergeStop}")
-
-        AddMsgAndPrint(f"\n\tGathering Merged DEM Statistical Information")
+        messageList.append(f"\t\tSuccessfully Merged. Merge Time: {mergeStop}")
+        messageList.append(f"\t\tGathering Merged DEM Statistical Information")
 
         # grid_id,size,format,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize'
         rasterStatList = getRasterInformation_MT((gridID,mergeRaster),csv=False)
 
-        return rasterStatList
+        return (messageList,rasterStatList)
 
     except:
         errorMsg()
@@ -1198,10 +1355,10 @@ if __name__ == '__main__':
         # File from Step#2
 ##        dsh3mIdxShp = r'D:\projects\DSHub\reampling\dsh3m\chad_index_final.shp'
 ##        gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_test.shp'
-##        metadataPath = r'D:\projects\DSHub\reampling'
-##        bReplace = True
-##        bReplaceMerge = True
-##        bDeleteDSH3Mdata = True
+##        metadataPath = r'D:\projects\DSHub\reampling\TEST'
+##        bReplace = False
+##        bReplaceMerge = False
+##        bDeleteDSH3Mdata = False
 ##        bDetails = True
 
         # PARAM#1 -- Path to the DSH3M Elevation Index from the original elevation data
@@ -1445,17 +1602,55 @@ if __name__ == '__main__':
         spatialRef.ImportFromEPSG(5070)
         srs = f"EPSG:{spatialRef.GetAuthorityCode(None)}"
 
-        # dsh3mRasters - dict of list containing lists of completed dsh3m rasters; each list contains 4 values
-        # key: gridID -- value: [[sourceID,last_update,out_raster,source],[x,y,z],[x,y,z]]
-        for gridID,dsh3mRasters in dsh3mDict.items():
+        if bMultiThreadMode:
+            """------------------  Execute in Multi-Thread Mode --------------- """
+            with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
-            mergeResult = mergeGridDEMs(gridID,dsh3mRasters)
+                # use a set comprehension to start all tasks.  This creates a future object
+                futureMerge = {executor.submit(mergeGridDEMs, item): item for item in dsh3mDict.items()}
 
-            if mergeResult:
-                mergedGridsStats.append(mergeResult)
+                # yield future objects as they are done.
+                for mergeResults in as_completed(futureMerge):
+
+                    msgs = mergeResults.result()[0]
+                    stats = mergeResults.result()[1]
+
+                    # Print Messages from results
+                    j=1
+                    for printMessage in msgs:
+                        if j==1:
+                            AddMsgAndPrint(f"\n\tGrid {mergeGrid} of {totalNumOfGrids} -- {printMessage}")
+                        else:
+                            AddMsgAndPrint(printMessage)
+                        j+=1
+
+                    if stats:
+                        mergedGridsStats.append(stats)
+                    mergeGrid+=1
+
+        else:
+            # dsh3mRasters - dict of list containing lists of completed dsh3m rasters; each list contains 4 values
+            # key: gridID -- value: [[sourceID,last_update,out_raster,source],[x,y,z],[x,y,z]]
+            for items in dsh3mDict.items():
+
+                mergeResults = mergeGridDEMs(items)
+
+                msgs = mergeResults[0]
+                stats = mergeResults[1]
+
+                # Print Messages from results
+                j=1
+                for printMessage in msgs:
+                    if j==1:
+                        AddMsgAndPrint(f"\n\tGrid {mergeGrid} of {totalNumOfGrids} -- {printMessage}")
+                    else:
+                        AddMsgAndPrint(printMessage)
+                    j+=1
+
+                if stats:
+                    mergedGridsStats.append(stats)
                 mergeGrid+=1
 
-        del gridID, dsh3mRasters
         stopMerge = toc(startMerge)
 
         if len(mergedGridsStats):

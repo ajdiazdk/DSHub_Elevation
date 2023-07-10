@@ -230,6 +230,76 @@ def convertMasterDBfileToDict(elevMetdataFile):
         return False
 
 ## ===================================================================================
+def createMultiResolutionOverlay_gp(indexLayer, gridLayer):
+
+    try:
+        # Read the best available 3M index
+        index = gp.read_file(indexLayer)
+
+        # Read the AOI grid
+        grid = gp.read_file(gridLayer)
+
+    except:
+        AddMsgAndPrint("\nFailed to open input layers")
+        AddMsgAndPrint(errorMsg())
+
+    demDict = dict()
+
+    oneMcnt = 0
+    threeMcnt = 0
+    tenMcnt = 0
+    gridCnt = 0
+    recCnt = 0
+
+    for g in grid.index:
+
+        # isolate grid as an aoi to use as a mask
+        mask = grid.iloc[[g]].copy()
+
+        # RID value of grid i.e. 332
+        rid = mask.rid[g]
+
+        # clip index using current aoi
+        idxClip = gp.clip(index, mask)
+        idxClip.reset_index(inplace=True)
+
+        # Lists of DEM records that are within current aoi
+        listOfDEMlists = list()
+
+        # iterate through each DEM record and capture all attributes
+        for dems in idxClip.index:
+
+            vals = idxClip.iloc[dems].copy()
+            vals.drop(labels = 'geometry', inplace=True)
+            vals = vals.tolist()
+            del vals[0]
+            source = vals[-1]
+
+            if source == 1:
+                oneMcnt+=1
+            elif source == 3:
+                threeMcnt+=1
+            else:
+                tenMcnt+=1
+
+            recCnt+=1
+            listOfDEMlists.append(vals)
+
+        # Sort all lists by resolution and last_update date
+        lastUpdatePos = headerValues.index('lastupdate')
+        dateSorted = sorted(listOfDEMlists, key=itemgetter(sourcePos,lastUpdatePos), reverse=True)
+        demDict[rid] = dateSorted
+
+        gridCnt+=1
+
+    AddMsgAndPrint(f"\tThere are {gridCnt} grid tiles that overlayed with {recCnt} DEMs:")
+    AddMsgAndPrint(f"\t\t1M DEMs:  {oneMcnt:,}")
+    AddMsgAndPrint(f"\t\t3M DEMs:  {threeMcnt:,}")
+    AddMsgAndPrint(f"\t\t10M DEMs: {tenMcnt:,}")
+
+    return demDict
+
+## ===================================================================================
 def createSoil3MDEM(item):
     """ item is passed over as a tuple with the key = 0 and the values = 1"""
 
