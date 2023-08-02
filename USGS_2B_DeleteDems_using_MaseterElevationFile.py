@@ -129,11 +129,13 @@ if __name__ == '__main__':
                 DEMname = items[dlFileHeaderItems["DEMname"]]
                 DEMpath = items[dlFileHeaderItems["DEMpath"]]
 
+                dlFile_recCount+=1
+
                 # Delete all files associated with the DEMname (.xml, aux...etc)
                 for file in glob.glob(f"{DEMpath}{os.sep}{DEMname.split('.')[0]}*"):
                     if os.path.isfile(file):
                         os.remove(file)
-                        AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)}")
+                        AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)} -- ({dlFile_recCount:,} of {recCount:,})")
                         deletedFile+=1
                     else:
                         AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
@@ -148,15 +150,18 @@ if __name__ == '__main__':
 ##                    AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
 ##                    invalidFiles+=1
 
-                dlFile_recCount+=1
-
         del fp, deleteLogFileName
 
         """ ------------------------------------ SUMMARY -------------------------------------- """
         end = toc(start)
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
-        AddMsgAndPrint(f"\nNumber of associated files deleted: {deletedFile:,}")
-        AddMsgAndPrint(f"\nNumber of invalid files: {invalidFiles:,}")
+
+        AddMsgAndPrint(f"\nNumber of files to delete: {recCount:,}")
+        if deletedFile > recCount:
+            AddMsgAndPrint(f"\nNumber of total associated files deleted: {deletedFile:,}")
+
+        if invalidFiles:
+            AddMsgAndPrint(f"\nNumber of invalid files: {invalidFiles:,}")
 
     except:
         errorMsg()

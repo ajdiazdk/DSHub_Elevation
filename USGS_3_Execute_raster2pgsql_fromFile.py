@@ -161,11 +161,11 @@ def runRaster2pgsql(cmd):
                 else:
                     warningMessage = errors[warningIndices[0]:]
 
-                msgDict['Warning'] = f"Loaded {DEMname} but with the following Warning: {warningMessage}"
+                msgDict['Warning'] = f"Loaded {DEMname} but with the following Warning: {warningMessage}\n"
 
             # Error messages; What is the error group here? Investigate after more errors arise
             else:
-                msgDict['Error'] = f"{cmd}\n\t{errors}"
+                msgDict['Error'] = f"{cmd}: ERROR: {errors}\n"
 
         else:
             msgDict['Success'] = f"Successfully loaded {DEMname}"

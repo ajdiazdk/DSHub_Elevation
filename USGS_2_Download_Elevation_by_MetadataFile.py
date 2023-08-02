@@ -152,6 +152,17 @@ and return them.  This will be used to append to the DLStatus file.
       Also added functionality to pass raster information that had already been described
       vs. returning all '#'s
 
+7/11/2023
+    - Updated the srsName in rasterInformation function to remove commas.  This gets translated as
+      a separate value when importing the master metadata file in the postgres database.
+    - Replaced '#' with 'None' in repsonse to DBeaver import errors.  Turns out I could've left it alone
+      and simply set the NULL mark value to '#' but None is more intuitive and pythonic.
+
+7/27/2023
+    - Updated the unzip function to look for specific DEMs when dealing with the 5M_AK_DSM
+    -
+
+
 Things to consider/do:
   - rename key sql reserved words:
         - top, bottom, left, right --> rast_top,rast_bottom,rast_left,rast_right
@@ -371,19 +382,44 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         # 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n30x50_w091x75_la_atchafalayabasin_2010.zip'
         fileName = dlURL.split('/')[-1]
 
-        # path to where file will be downloaded to
+        # path to where file will be downloaded to - zip or DEM
         local_file = f"{downloadFolder}{os.sep}{fileName}"
         now = datetime.today().strftime('%m%d%Y %H:%M:%S')
 
         # ====================================================================
         def searchDirforDEM(filename,returnFile=False):
+            """ This function searches for DEM(s) within a directory and either retuns
+                TRUE or FALSE or returns a list of filenames.
+                - Return False even if 1 DEM is missing from zipfile"""
+
+            if fileFormat in ('geotiff','tiff','tif'):
+                ext = '.tif'
+            else:
+                ext = '.img'
+
+            # 5M_AK_DSM product returns zipfiles with multiple DEMs with arbitrary names
+            if resolution == '5M_AK_DSM':
+
+                zipFile = zipfile.ZipFile(filename)
+                zipFileList = zipFile.filelist
+                localDEMlist = list() # list of local DEM files that exist based on the existing zipfile
+
+                for zinfo in zipFileList:
+                    if zinfo.filename.endswith(ext):
+                        localDEMpath = f"{downloadFolder}{os.sep}{zinfo.filename}"
+                        if os.path.exists(localDEMpath):
+                            localDEMlist.append(localDEMpath)
+                        else:
+                            return False
+
+                if localDEMlist:
+                    return localDEMlist
+                else:
+                    return False
+
+
             # Return DEM path
             demWildCard = f"{downloadFolder}{os.sep}{fileName.split('.')[0]}*"
-
-            if fileFormat == 'IMG':
-                ext = '.img'
-            else:
-                ext = '.tif'
 
             for file in glob.glob(demWildCard):
                 if file.endswith(ext):
@@ -394,11 +430,10 @@ def DownloadElevationTile(itemCollection,downloadFolder):
             return False
         # ====================================================================
 
-        # download file already exists, delete it if bReplaceData is True;
-        # download file could be a IMG, TIF or Zip file.
+        # DL file exists: delete it if bReplaceData is True
         if os.path.isfile(local_file):
 
-            # Delete local_file before redownloading
+            # bReplaceData = True: Delete existing local_file before redownloading
             if bReplaceData:
                 try:
                     os.remove(local_file)
@@ -408,22 +443,25 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                     failedDownloadList.append(dlURL)
                     return messageList
 
-            #
+            # bReplaceData = False: Capture
             else:
                 dlSize = os.stat(local_file).st_size
                 if dlSize > 0:
                     totalDownloadSize+=dlSize
 
-                    # ZIP FILE: verify if DEM exists within dlFolder.
-                    # Does exist: - don't unzip
-                    # Doesn't exist: - unzip
+                    # local_file is a ZIP FILE: verify if DEM(s) exists within dlFolder.
+                    # DEM exists: don't unzip --- DEM doesn't exist: unzip
                     if zipfile.is_zipfile(local_file):
 
                         # DEM already exists in directory; no need to unzip it again.
                         result = searchDirforDEM(fileName,returnFile=True)
                         if result:
-                            dlImgFileDict[sourceID] = result
-                            messageList.append(f"{theTab}{'File will be added to Raster2pgsql file (B):':<40} {os.path.basename(result):<60} {convert_bytes(dlSize):>20}")
+
+                            for file in result:
+                                dlImgFileDict[sourceID] = result
+                                messageList.append(f"{theTab}{'File will be added to Raster2pgsql file (B):':<40} {os.path.basename(file):<60} {convert_bytes(os.stat(file).st_size):>20}")
+
+                        # DEM(s) are missing; unzip it again to be safe
                         else:
                             dlZipFileDict[sourceID] = local_file
                             messageList.append(f"{theTab}{'File exists but will be unzipped:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
@@ -444,6 +482,7 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                         failedDownloadList.append(dlURL)
                         return messageList
 
+        # DL file doens't exist: download file - could be a IMG, TIF or Zip file.
         # 3M zip files don't exist but unzipped DEM may exist
         elif fileName.endswith('.zip'):
 
@@ -502,7 +541,8 @@ def DownloadElevationTile(itemCollection,downloadFolder):
 ## ===================================================================================
 def unzip(itemCollection):
     # Unzip files
-    # itemCollection = ('581d2d68e4b08da350d665a5',r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_testingFiles\ned19_n42x75_w091x00_ia_northeast_2007.zip')
+    # itemCollection:
+    # ('581d2d68e4b08da350d665a5',r'E:\python_scripts\DSHub\LinuxWorkflow\TEMP_testingFiles\ned19_n42x75_w091x00_ia_northeast_2007.zip')
 
     try:
         messageList = list()
@@ -531,8 +571,8 @@ def unzip(itemCollection):
             # Lookup the file format from the elevMetadataDict
             fileFormat = elevMetadataDict[sourceID][headerValues.index("format")].lower()
 
-            if fileFormat == 'geotiff':
-                fileType = 'tif'        # 1M DEMs
+            if fileFormat in ('geotiff','tiff','tif'):
+                fileType = 'tif'        # 1M DEMs, AK 5M DSM
             else:
                 fileType = fileFormat   # 3M DEMs (img)
 
@@ -576,10 +616,20 @@ def unzip(itemCollection):
                     else:
                         messageList.append(f"\t\t{zinfo.filename} wasn't properly unzipped...bizarre")
 
-                    # DEM file
+                    # Actual DEM file
                     if unzippedFilePath.endswith(fileType):
-                        demFilePath = unzippedFilePath
-                        dlImgFileDict[sourceID] = unzippedFilePath
+
+                        # Added this to ensure only 'DSM' files are captured and not ORI files for 5M_AK_DSM
+                        if resolution == '5M_AK_DSM':
+                            if zinfo.filename.startswith('DSM'):
+                                demFilePath = unzippedFilePath
+                                dlImgFileDict[sourceID] = unzippedFilePath
+                            else:
+                                messageList.append(f"\t\t{zinfo.filename} is not a valid DEM for the {resolution} product")
+
+                        else:
+                            demFilePath = unzippedFilePath
+                            dlImgFileDict[sourceID] = unzippedFilePath
 
                 totalUnzipSize+=unzipTally
                 messageList.append(f"\t{'Successfully Unzipped:':<{leftAlign}} {zipName:<55} {convert_bytes(unzipTally):>15}")
@@ -657,21 +707,25 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
                         goodStats+=1
                     demStatDict[ID] = rastInfo
 
-        AddMsgAndPrint(f"\t\t\tSuccessfully Gathered stats for {goodStats:,} DEMs")
-        AddMsgAndPrint(f"\t\t\tProblems with Gathering stats for {badStats:,} DEMs")
+
+        if goodStats:AddMsgAndPrint(f"\t\t\tSuccessfully Gathered stats for {goodStats:,} DEMs")
+        if badStats:AddMsgAndPrint(f"\t\t\tProblems with Gathering stats for {badStats:,} DEMs")
+
         global downloadFile
 
         # Create Master Elevation File
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
-        g = open(dlMasterFilePath,'a+')
+        # Add headers to the beginning of the file if the file is new.
+        if not os.path.exists(dlMasterFilePath):
 
-        # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-        header = ('huc_digit,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
-                  'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
-                  'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
+            g = open(dlMasterFilePath,'a+')
 
-        g.write(header)
+            # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
+            header = ('huc_digit,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
+                      'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
+                      'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
+            g.write(header)
 
         total = len(elevMetadataDict)
         index = 1
@@ -811,13 +865,13 @@ def getRasterInformation_MT(rasterItem):
         # Raster doesn't exist; download error
         if not os.path.exists(raster):
             AddMsgAndPrint(f"\t\t{os.path.basename(raster)} DOES NOT EXIST. Could not get Raster Information")
-            rasterStatDict[srcID] = ','.join('#'*20)
+            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
             return rasterStatDict
 
         # Raster size is 0 bytes; download error
         if not os.stat(raster).st_size > 0:
             AddMsgAndPrint(f"\t\t{os.path.basename(raster)} Is EMPTY. Could not get Raster Information")
-            rasterStatDict[srcID] = ','.join('#'*20)
+            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
             return rasterStatDict
 
         rds = gdal.Open(raster)
@@ -834,7 +888,7 @@ def getRasterInformation_MT(rasterItem):
         try:
             noDataVal = rdsInfo['bands'][0]['noDataValue']
         except:
-            noDataVal = '#'
+            noDataVal = 'None'
         rasterInfoList.append(noDataVal)
 
         # -------------------- Raster Spatial Reference Information ------------------------
@@ -847,7 +901,7 @@ def getRasterInformation_MT(rasterItem):
             srs.AutoIdentifyEPSG()
             epsg = srs.GetAttrValue('AUTHORITY',1)
         except:
-            epsg = '#'
+            epsg = 'None'
 
 ##        try:
 ##            if not srs.GetAttrValue('projcs') is None:
@@ -857,19 +911,19 @@ def getRasterInformation_MT(rasterItem):
 ##                srsType = 'GEOGRAPHIC'
 ##                srsName = srs.GetAttrValue('geogcs')
 ##        except:
-##            srsType = '#'
+##            srsType = 'None'
 
         # Returns 0 or 1; opposite would be IsGeographic
         if srs.IsProjected():
-            srsName = srs.GetAttrValue('projcs')
             srsType = 'PROJECTED'
+            srsName = srs.GetAttrValue('projcs')
         else:
-            srsName = srs.GetAttrValue('geogcs')
             srsType = 'GEOGRAPHIC'
+            srsName = srs.GetAttrValue('geogcs')
 
         rasterInfoList.append(srsType)
         rasterInfoList.append(epsg)
-        rasterInfoList.append(srsName)
+        rasterInfoList.append(srsName.replace(',','-'))  # replace commas with dashes
 
         # -------------------- Coordinate Information ------------------------
         # 'lowerLeft': [439994.0, 5139994.0]
@@ -935,7 +989,7 @@ def getRasterInformation_MT(rasterItem):
                 realData = np.where(data > 0)
                 if not np.any(realData):
                     AddMsgAndPrint(f"\t\t{os.path.basename(raster)} has no valid pixels")
-                    rasterInfoList.append('#','#','#','#','#','#')
+                    rasterInfoList.append('None','None','None','None','None','None')
 
             minStat = bandStats[0]
             maxStat = bandStats[1]
@@ -954,17 +1008,17 @@ def getRasterInformation_MT(rasterItem):
         return rasterStatDict
 
     except:
-        AddMsgAndPrint(f"Failed: {os.path.basename(raster)}")
+        AddMsgAndPrint(f"\t\tFailed: {os.path.basename(raster)}")
         errorMsg()
 
-        # Return the info that was collected and pad the rest with '#'
+        # Return the info that was collected and pad the rest with 'None'
         if len(rasterInfoList) > 0:
             if len(rasterInfoList) < 20:
                 while len(rasterInfoList) < 20:
-                    rasterInfoList.append('#')
+                    rasterInfoList.append('None')
             rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
         else:
-            rasterStatDict[srcID] = ','.join('#'*20)
+            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
         return rasterStatDict
 
 #### ===================================================================================
@@ -1242,11 +1296,15 @@ def main(dlFile,dlDir,bReplace):
         bDownloadMultithread = True
         bReplaceData = bReplace
         bUnzipFiles = True
-        bDeleteZipFiles = True
+        bDeleteZipFiles = False
 
         # Pull elevation resolution from file name
-        # USGS_3DEP_1M_Step1B_ElevationDL_04132023.txt
-        resolution = downloadFile.split(os.sep)[-1].split('_')[2]
+        # USGS_3DEP_5M_AK_DSM_Step1B_ElevationDL_07262023.txt --> 5M_AK_DSM
+        tempList = downloadFile.split(os.sep)[-1].split('_')
+        startPos = tempList.index(fnmatch.filter(tempList, '3DEP*')[0]) + 1
+        endPos = tempList.index(fnmatch.filter(tempList, 'Step*')[0]) - 1
+        resolution = '_'.join(tempList[startPos:endPos])
+        #resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
         headerValues = open(downloadFile).readline().rstrip().split(',')
@@ -1436,7 +1494,7 @@ def main(dlFile,dlDir,bReplace):
                 AddMsgAndPrint(f"\nCreating Raster2pgsql File")
                 r2pgsqlStart = tic()
                 r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
-                AddMsgAndPrint(f"\\ntRaster2pgsql File Path: {r2pgsqlFile}")
+                AddMsgAndPrint(f"\\n\tRaster2pgsql File Path: {r2pgsqlFile}")
                 AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
                 r2pgsqlStop = toc(r2pgsqlStart)
             else:
@@ -1489,36 +1547,36 @@ if __name__ == '__main__':
 
     gdal.SetConfigOption('GDAL_PAM_ENABLED', 'TRUE')
 
-##    # DOWNLOAD FILE
-##    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
-##    while not os.path.exists(dlFile):
-##        print(f"{dlFile} does NOT exist. Try Again")
-##        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
-##
-##    # DOWNLOAD FOLDER
-##    # Windows (nt) vs Linux (posix)
-##    if os.name == 'nt':
-##        dlFolder = input("\nEnter path where elevation files will be download to: ")
-##        while not os.path.exists(dlFolder):
-##            print(f"{dlFolder} does NOT exist. Try Again")
-##            dlFolder = input("Enter path where elevation files will be download to: ")
-##    else:
-##        dlFolder = False
-##
-##    # REPLACE DATA
-##    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
-##    while not bReplace.lower() in ("yes","no","y","n"):
-##        print(f"Please Enter Yes or No")
-##        bReplace = input("Do you want to replace existing data? (Yes/No): ")
-##
-##    if bReplace.lower() in ("yes","y"):
-##        bReplace = True
-##    else:
-##        bReplace = False
+    # DOWNLOAD FILE
+    dlFile = input("\nEnter full path to USGS Metadata Download Text File: ")
+    while not os.path.exists(dlFile):
+        print(f"{dlFile} does NOT exist. Try Again")
+        dlFile = input("Enter full path to USGS Metadata Download Text File: ")
 
-    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\test_OPR\USGS_3DEP_5M_AK_OPR_AK_Step1B_ElevationDL_06282023.txt'
-    dlFolder = r'D:\projects\DSHub\Elevation\Alaska'
-    bReplace = True
+    # DOWNLOAD FOLDER
+    # Windows (nt) vs Linux (posix)
+    if os.name == 'nt':
+        dlFolder = input("\nEnter path where elevation files will be download to: ")
+        while not os.path.exists(dlFolder):
+            print(f"{dlFolder} does NOT exist. Try Again")
+            dlFolder = input("Enter path where elevation files will be download to: ")
+    else:
+        dlFolder = False
+
+    # REPLACE DATA
+    bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
+    while not bReplace.lower() in ("yes","no","y","n"):
+        print(f"Please Enter Yes or No")
+        bReplace = input("Do you want to replace existing data? (Yes/No): ")
+
+    if bReplace.lower() in ("yes","y"):
+        bReplace = True
+    else:
+        bReplace = False
+
+##    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\test_OPR\USGS_3DEP_5M_AK_OPR_AK_Step1B_ElevationDL_06282023.txt'
+##    dlFolder = r'D:\projects\DSHub\Elevation\Alaska'
+##    bReplace = True
 
     main(dlFile,dlFolder,bReplace)
     input("\nHit Enter to Continue: ")

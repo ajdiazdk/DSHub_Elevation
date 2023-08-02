@@ -1130,7 +1130,7 @@ def getRasterInformation_MT(rasterItem,csv=True):
             return rasterStatDict
 
         rds = gdal.Open(raster)
-        rdsInfo = gdal.Info(rds,format="json")
+        rdsInfo = gdal.Info(rds,format="json",computeMinMax=True,stats=True,showMetadata=True)
 
         # Raster Properties
         columns = rdsInfo['size'][0]

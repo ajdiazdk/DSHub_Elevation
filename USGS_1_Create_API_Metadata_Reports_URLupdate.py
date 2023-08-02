@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+﻿0# -*- coding: utf-8 -*-
 """
 Created on Fri Sep  2 10:12:13 2022
 Updated on 2/8/2023
@@ -95,7 +95,7 @@ Things to consider/do:
 2/8/2023
 Modified code to incorporate capability for HUC4 Watersheds to use for ALASKA 10M and 5M IFSAR
 - Add validation for hucboundary path
-- Add validation for hucBoundary fields (hucCodeFld,hucNameFld)
+- Add validation for hucBoundary fields (hucCodeFld,hucCodeName)
 - Modify code to be huc digit independent.  Should work with any digit code (2,4,8)
 - Add check to verify that digit length is only 2,4 or 8 since the API only handles those
 - Started to remove code for downloading elevation data since this is handled elsewhere
@@ -136,20 +136,38 @@ Updated the name of the 3 output files to be more intuitive.
 - USGS_3DEP_1M_Metadata_API_ConsoleMsgs_02242023.txt --> USGS_3DEP_1M_Step1C_ConsoleMsgs_04132023.txt
 
 4/24/2023
-Updated the checkForDuplicateElements() function to remove duplicate files found in the USGS 10M data.
-Example:
-    USGS 1-degree block file 'USGS_13_n38w103' has 4 duplicate files:
-        Keep: USGS_13_n38w103_20210630
-        Drop: USGS_13_n38w103_20210623
-        Drop: USGS_13_n38w103_20210624
-        Drop: USGS_13_n38w103_20170927
+    - Updated the checkForDuplicateElements() function to remove duplicate files found in the USGS 10M data.
+        Example:
+            USGS 1-degree block file 'USGS_13_n38w103' has 4 duplicate files:
+                Keep: USGS_13_n38w103_20210630
+                Drop: USGS_13_n38w103_20210623
+                Drop: USGS_13_n38w103_20210624
+                Drop: USGS_13_n38w103_20170927
 
 5/1/2023
-Bug: Too many 10M DEMs were being removed.  Problem occurred in checkForDuplicates function.  Updated function
-to check for positions already accounted for by duplicate URLs.
+    - Bug: Too many 10M DEMs were being removed.  Problem occurred in checkForDuplicates function.  Updated function
+      to check for positions already accounted for by duplicate URLs.
 
 6/28/2023
-Updated functionality to send multiple requests for the same HUC
+    - Updated functionality to send multiple requests for the same HUC
+
+7/27/2023
+    - Added multiple Alaska products to determine what product contains the IFSAR that matches the USGS
+      inventory service.
+    - Updated urlenocding to:
+        urllib.parse.urlencode(params, quote_via=urllib.parse.quote, safe='()/')
+      in order to preserve the paranthesis.  I noticed that the URL generated directly from the API was
+      slightly different than the URL generated using urlencode and taking the defaults.  This puts both
+      URLs identical.
+    - Noticed an inconsistency with the TNM API in that it randomly generated 504 timeouts so I embedded
+      multiple tries to send request.  That didn't do much so I incorporated a pause of 5-10 seconds between
+      each attempt.
+    - Switched protocols to HTTP vs HTTPS and realized more consistent results
+
+8/01/2023
+    - This version includes a rewrite of sending URL queries to the TNM API.  Rather than having
+      multiple nested try and except clauses, a while statement with a max of 3 attempts was created.
+      I don't think this proved successful.
 
 """
 ## ===================================================================================
@@ -318,7 +336,7 @@ def checkForDuplicateElements():
             # above then simply inform the user of how the DEM will be loaded.
             if numOfDEMdupTitles:
 
-                AddMsgAndPrint(f"\n\tWARNING: {numOfDEMdupTitles:,} DEM files have duplicate Titles")
+                AddMsgAndPrint(f"\n\tWARNING: {numOfDEMdupTitles:,} DEM files have duplicate Titles (Likely different URLs")
                 accountedFor = 0
                 for title,count in duplicateTitles.items():
 
@@ -457,21 +475,77 @@ def checkForDuplicateElements():
         errorMsg()
         return False
 
+## ================================================================================================================
+def qaDegreeBlockElevation(degreeLyr):
+
+    try:
+        if not arcpy.Exists(degreeLyr):
+            AddMsgAndPrint(f"\tUSGS 1 Degree Block does not exist")
+            return False
+
+        dwnldDegreeBlocks = list()   # List of 1 degree-block DEMs returned from TNM API
+        missingBlocks = list()
+
+        # isolate degree block from download url
+        for url in downloadURLList:
+            degreeName = os.path.basename(os.path.dirname(url))
+            dwnldDegreeBlocks .append(degreeName)
+
+        # get a list of 1-degree blocks from USGS degree block index
+        masterDegrees = [row[0] for row in arcpy.da.SearchCursor(degreeLyr, ['degreeName'])]
+
+        for degreeBlock in masterDegrees:
+            if not degreeBlock in dwnldDegreeBlocks:
+                missingBlocks.append(degreeBlock)
+
+        if len(missingBlocks):
+
+            selQuery = ''
+            for deg in missingBlocks:
+                selQuery=f"{selQuery}'{deg}',"
+
+            AddMsgAndPrint(f"\t\tYou have {len(missingBlocks)} missing 1x1 degree blocks from this API request")
+
+            if tnmResolution == '10M':
+                for block in missingBlocks:
+
+                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.tif"
+                    metaURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.xml"
+
+                    polyCodeList.append("99")
+                    titleList.append(f"USGS 1/3 Arc Second {block} 99999999")
+                    pubDateList.append("9999-99-99")
+                    lastModifiedDate.append("9999-99-99")
+                    sizeList.append(99999999)
+                    fileFormatList.append('GeoTIFF')
+                    sourceIDList.append('999999999999999999999')
+                    metadataURLList.append(metaURL)
+                    downloadURLList.append(dwnldURL)
+
+            return selQuery
+
+        else:
+            AddMsgAndPrint("\All 1-Degree DEMs are accounted for")
+            return True
+
+    except:
+        errorMsg()
+        return False
 
 
 ## ====================================== Main Body ==================================
 # Import modules
 import sys, string, os, traceback
-import urllib, re, time, json, socket
+import urllib, re, time, json, socket, requests
 import arcgisscripting, arcpy
 from datetime import datetime
 from dateutil.parser import parse
 from collections import Counter
 
-from urllib.request import Request, urlopen, URLError
-from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
-urllibEncode = urllib.parse.urlencode
+#urllibEncode = urllib.parse.urlencode
 
 if __name__ == '__main__':
 
@@ -479,31 +553,39 @@ if __name__ == '__main__':
         # Start the clock
         startTime = tic()
 
-        # 9 Tool Parameters
-        #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU8'
-        hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK'
-        #hucBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\WBDHU4_AK_1902'
-        hucCodeFld = 'huc4'
-        hucNameFld = 'name'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\20230628_OPR'
-        tnmResolution = '5M_AK_OPR'
-        bAlaska = True
+        # 5 Tool Parameters
+        # Boundaries used to iterate through the USGS API: state, huc4, huc8
+        #apiBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU4'
+        apiBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\states_a_US_Dissolve_WGS84'
 
-        if not arcpy.Exists(hucBoundaries):
-            AddMsgAndPrint(f"\n{hucBoundaries} does NOT exist! EXITING!")
+        # Field containing the Well known poly code passed to API: huc = 'huc4'; state = 'STATE_FIPS'
+        #wkPolyCode = 'huc4'
+        wkPolyCode = 'STATE_FIPS'
+
+        # Field containing alias name for the poly code above: huc = 'name'; state = 'STATE':
+        wkPolyName = 'STATE'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801'
+        tnmResolution = '30M'
+
+        if not arcpy.Exists(apiBoundaries):
+            AddMsgAndPrint(f"\n{apiBoundaries} does NOT exist! EXITING!")
             exit()
 
-        if not fieldExists(hucBoundaries,hucCodeFld):
-            AddMsgAndPrint(f"\n{hucCodeFld} does NOT exist! EXITING!")
+        if not fieldExists(apiBoundaries,wkPolyCode):
+            AddMsgAndPrint(f"\n{wkPolyCode} does NOT exist! EXITING!")
             exit()
 
-        if not fieldExists(hucBoundaries,hucNameFld):
-            AddMsgAndPrint(f"\n{hucNameFld} does NOT exist! EXITING!")
+        if not fieldExists(apiBoundaries,wkPolyName):
+            AddMsgAndPrint(f"\n{wkPolyName} does NOT exist! EXITING!")
             exit()
 
         # Constant variables
-        totalWatersheds = int(arcpy.GetCount_management(hucBoundaries)[0])
-        tnmAPIurl = r'https://tnmaccess.nationalmap.gov/api/v1/products?'
+        totalBoundaries = int(arcpy.GetCount_management(apiBoundaries)[0])
+        tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
+        if wkPolyName == 'STATE':
+            boundaryName = 'State'
+        else:
+            boundaryName = 'Watershed'
 
         tnmProductAlias = {'1M':'Digital Elevation Model (DEM) 1 meter',
                            '3M':'National Elevation Dataset (NED) 1/9 arc-second',
@@ -511,31 +593,25 @@ if __name__ == '__main__':
                            '30M': 'National Elevation Dataset (NED) 1 arc-second',
                            '5M_AK':'Alaska IFSAR 5 meter DEM',
                            '5M_AK_OPR':'Original Product Resolution (OPR) Digital Elevation Model (DEM)',
+                           '5M_AK_ORI':'Ifsar Orthorectified Radar Image (ORI)',
+                           '5M_AK_DSM':'Ifsar Digital Surface Model (DSM)',
                            '60M_AK':'National Elevation Dataset (NED) Alaska 2 arc-second'}
 
-        # 1,000 records is the max --- DO NOT CHANGE!
-        maxProdsPerPage = 1000
 
         """ ---------------------------- Establish Metdata and log FILES ---------------------------------------------------"""
         today = datetime.today().strftime('%m%d%Y')  #11192022
 
         # Metadata file#1; USGS_3DEP_1M_Step1_Metadata_API_02082023.txt
         # huc_digit, Number of tiles associated with huc, URL for TNM API
-        if bAlaska and not tnmResolution == '5M_AK':
-            metadataFile1 = f"USGS_3DEP_{tnmResolution}_AK_Step1A_API_URLs_{today}.txt"
-        else:
-            metadataFile1 = f"USGS_3DEP_{tnmResolution}_Step1A_API_URLs_{today}.txt"
+        metadataFile1 = f"USGS_3DEP_{tnmResolution}_Step1A_API_URLs_{today}.txt"
 
         metadataFile1path = f"{metadataPath}\\{metadataFile1}"
         f = open(metadataFile1path,'a+')
-        f.write(f"huc_digit,huc_name,num_of_tiles,API_URL") # log headers
+        f.write(f"polyCode,polyName,num_of_tiles,API_URL") # log headers
 
         # Metadata file#2; USGS_3DEP_1M_Metadata_Elevation_02082023.txt
         # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
-        if bAlaska and not tnmResolution == '5M_AK':
-            metadataFile2 = f"USGS_3DEP_{tnmResolution}_AK_Step1B_ElevationDL_{today}.txt"
-        else:
-            metadataFile2 = f"USGS_3DEP_{tnmResolution}_Step1B_ElevationDL_{today}.txt"
+        metadataFile2 = f"USGS_3DEP_{tnmResolution}_Step1B_ElevationDL_{today}.txt"
         metadataFile2path =  f"{metadataPath}\\{metadataFile2}"
 
         # Log file that captures console messages
@@ -544,16 +620,16 @@ if __name__ == '__main__':
         h = open(logFilePath,'a+')
         h.write(f"Executing: USGS_1_Create_API_Metadata Script {today}\n\n")
         h.write(f"User Selected Parameters:\n")
-        h.write(f"\tTNM Product: {tnmProductAlias[tnmResolution]}\n")
-        h.write(f"\tHUC Boundary Dataset: {hucBoundaries}\n")
+        h.write(f"\tTNM Product: {tnmResolution} - {tnmProductAlias[tnmResolution]}\n")
+        h.write(f"\tAPI Boundary Dataset: {apiBoundaries}\n")
         h.write(f"\tMetadata File Path: {metadataPath}\n")
         h.close()
 
-        uniqueHUCs = list()           # unique list of huc code fields - should match totalWatersheds
-        duplicateHUC = list()         # duplicate HUC - error in water huc code field
-        invalidHUC = list()           # invalid hucs; must be 2,4,8 huc-digits - must be integer
+        uniquePolyCodes = list()      # unique list of huc code fields - should match totalBoundaries
+        duplicatePolyCodes = list()    # duplicate HUC - error in water huc code field
+        invalidPolyCodes = list()      # invalid hucs; must be 2,4,8 huc-digits - must be integer
+        emptyPolyCodes = list()       # Watershed with NO DEMS associated to it; according to API
         badAPIurls = dict()           # huc:API URL - These URLs returned an error code
-        emptyHUCs = list()            # Watershed with NO DEMS associated to it; according to API
         allAccountedFor = list()      # # of HUCs whose DEMs are accounted for by adjacent HUCs
         unaccountedHUCs = list()      # Not a Bad url, not an empty watershed, unaccounted for result
         numOfTotalTiles = 0           # Total of all DEMS from watersheds; including overalp DEMs
@@ -561,7 +637,7 @@ if __name__ == '__main__':
         uniqueSourceIDlist = list()   # unique list of sourceIDs
 
         # master lists for each data element collected from USGS API
-        hucDigitList = list()
+        polyCodeList = list()
         titleList = list()
         pubDateList = list()
         lastModifiedDate = list()
@@ -571,42 +647,54 @@ if __name__ == '__main__':
         metadataURLList = list()
         downloadURLList = list()
 
-        AddMsgAndPrint(f"\nCOMPILING USGS API URL REQUESTS FOR {totalWatersheds:,} Watershed(s) -- {tnmProductAlias[tnmResolution]}")
+        AddMsgAndPrint(f"\nCOMPILING USGS API URL REQUESTS FOR {totalBoundaries:,} {boundaryName}(s) -- {tnmResolution}: {tnmProductAlias[tnmResolution]}")
+        wbd = 0
+
+        # 500 API records is the max --- DO NOT CHANGE!
+        maxProdsPerPage = 500
 
         # Iterate through every watershed to gather elevation info
         # create dictionary of Watershed digits (keys) and API request (values)
-        orderByClause = f"ORDER BY {hucCodeFld} ASC"
-        for row in arcpy.da.SearchCursor(hucBoundaries, [hucCodeFld,hucNameFld], sql_clause=(None, orderByClause)):
+        orderByClause = f"ORDER BY {wkPolyCode} ASC"
+        for row in arcpy.da.SearchCursor(apiBoundaries, [wkPolyCode,wkPolyName], sql_clause=(None, orderByClause)):
 
-            hucDigit = row[0]
-            hucName = row[1]
-            hucLength = len(hucDigit)
+            wbd+=1
+            apiPolyCode = row[0]
+            apiPolyName = row[1]
 
-            AddMsgAndPrint(f"\n\t{hucLength}-digit HUC {hucDigit}: {hucName}")
+            # State Boundary vs HUC
+            if wkPolyName == 'Watershed':
+                hucLength = len(apiPolyCode)
+                AddMsgAndPrint(f"\n\t{hucLength}-digit HUC {apiPolyCode}: {apiPolyName} -- {wbd:,} of {totalBoundaries:,}")
+                polyType = f"huc{hucLength}"
+
+                # USGS API only handles 2,4,8 huc-digits
+                if not hucLength in (2,4,8):
+                    AddMsgAndPrint(f"\tUSGS API only handles HUC digits 2, 4 and 8. Not {hucLength}-digit")
+                    invalidPolyCodes.append(apiPolyCode)
+                    continue
+
+            else:
+                AddMsgAndPrint(f"\n\tState: {apiPolyCode}: {apiPolyName} -- {wbd:,} of {totalBoundaries:,}")
+                polyType = f"state"
 
             # geometry multi-parts are irrelavant
-            if hucDigit in uniqueHUCs:
-                AddMsgAndPrint(f"\tDUPLICATE HUC.  Skipping Record")
-                duplicateHUC.append(hucDigit)
+            if apiPolyCode in uniquePolyCodes:
+                AddMsgAndPrint(f"\tDUPLICATE {boundaryName}.  Skipping!")
+                duplicatePolyCodes.append(apiPolyCode)
                 continue
             else:
-                uniqueHUCs.append(hucDigit)
+                uniquePolyCodes.append(apiPolyCode)
 
-            # Need a valid hucDigit code; must be integer and not character
-            if hucDigit in (None,' ','NULL','Null') or not hucDigit.isdigit():
-                AddMsgAndPrint(f"\t{hucDigit} value is invalid.  Skipping Record")
-                invalidHUC.append(hucDigit)
-                continue
-
-            # USGS API only handles 2,4,8 huc-digits
-            if not hucLength in (2,4,8):
-                AddMsgAndPrint(f"\tUSGS API only handles HUC digits 2, 4 and 8. Not {hucLength}-digit")
-                invalidHUC.append(hucDigit)
+            # Need a valid apiPolyCode code; must be integer and not character
+            if apiPolyCode in (None,' ','NULL','Null') or not apiPolyCode.isdigit():
+                AddMsgAndPrint(f"\t{apiPolyCode} value is invalid.  Skipping Record")
+                invalidPolyCodes.append(apiPolyCode)
                 continue
 
             bRecordsAccounted = False  # boolean to
             i = 0  # Counter for unique DEMs
-            j = 0  # Counter for duplicate DEM that exists in a different HUC
+            j = 0  # Counter for duplicate DEM that exists in a different State/HUC
             k = 0  # Counter for records per request; resetted if multiple requets are needed
             recordStart = 0
             numOfHucDEMfiles = 0
@@ -617,35 +705,88 @@ if __name__ == '__main__':
                 requestNumber+=1
 
                 # Formulate API rquest
-                params = urllibEncode({'f': 'json',
-                                       'datasets': tnmProductAlias[tnmResolution],
-                                       'polyType': f"huc{hucLength}",
-                                       'polyCode': hucDigit,
-                                       'max':maxProdsPerPage,
-                                       'offset':recordStart})
+                params = {"datasets": tnmProductAlias[tnmResolution],
+                          "polyCode": apiPolyCode,
+                          "polyType": polyType,
+                          "offset":recordStart,
+                          "max":maxProdsPerPage}
+
+                # encode using quote() function to use UTF-8 encoding scheme.  This will translate
+                # spaces ' ' to %20
+                paramsEncoded = urllib.parse.urlencode(params, quote_via=urllib.parse.quote, safe='()/')
 
                 # concatenate URL and API parameters
-                tnmURLhuc = f"{tnmAPIurl}{params}"
+                tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
 
-                # Send REST API request
-                try:
-                    with urllib.request.urlopen(tnmURLhuc) as conn:
-                        resp = conn.read()
-                    results = json.loads(resp)
-                except:
-                    badAPIurls[hucDigit] = tnmURLhuc
-                    AddMsgAndPrint(f"\t\tBad Request")
-                    f.write(f"\n{hucDigit},{hucName},-999,{tnmURLhuc}")
+                n = 0
+                proceed = False
+                while n < 3:
+                    bError = False
+
+                    try:
+                        if n > 0:
+                            AddMsgAndPrint(f"\t\tAttempt #{n+1} - Pausing 10 seconds")
+                            time.sleep(10)
+                            theTab = "\t\t\t"
+                        else:
+                            theTab = "\t\t"
+
+                        # swtich protocols for the 3rd attempt
+                        if n == 2:
+                            if tnmAPIurl.find("https") == -1:
+                                tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
+                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to https:")
+                            else:
+                                tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
+                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to http:")
+                            tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
+
+                        with urllib.request.urlopen(tnmURLhuc) as conn:
+                            resp = conn.read()
+                        results = json.loads(resp)
+
+                    # Have received URLError 504 but results are still populated.
+                    except URLError as e:
+                        AddMsgAndPrint(f"\t\t\tURL Error Reason: {e.reason}")
+                        bError = True
+
+                    except HTTPError as e:
+                        AddMsgAndPrint(f"\t\t\tHTTP Error Reason: {e.reason}")
+                        AddMsgAndPrint(f"\t\t\tCode: {e.reason}")
+                        bError = True
+
+                    except:
+                        bError = True
+                        AddMsgAndPrint(f"\t\tUnhandled URL request error: {errorMsg(errorOption=2).strip()}")
+                        AddMsgAndPrint(f"\n\t\t----URL: {tnmURLhuc}")
+##                        print("\n\n-----------------------RESPONSE------------------------------")
+##                        print(resp)
+##                        print("\n\n-----------------------RESULTS-----------------------------")
+##                        print(results)
+##                        exit()
+
+                    if bError:
+                        if n==2:
+                            badAPIurls[apiPolyCode] = tnmURLhuc
+                            AddMsgAndPrint(f"\t\t\tBad Request: {tnmURLhuc}")
+                            f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                        n+=1
+
+                    else:
+                        proceed = True
+                        n=3
+
+                if not proceed:
                     break
 
                 if 'errorMessage' in results:
                     AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
-                    badAPIurls[hucDigit] = tnmURLhuc
+                    badAPIurls[apiPolyCode] = tnmURLhuc
                     bRecordsAccounted = True
 
-                elif results['errors']:
+                elif len(results['errors']):
                     AddMsgAndPrint(f"\t\tError Message in results: {results['errors']}")
-                    badAPIurls[hucDigit] = tnmURLhuc
+                    badAPIurls[apiPolyCode] = tnmURLhuc
                     bRecordsAccounted = True
 
                 # JSON results
@@ -676,7 +817,7 @@ if __name__ == '__main__':
 
                             # use sourceID to filter out duplicate DEMs from adjacent watersheds
                             if sourceID in uniqueSourceIDlist:
-                                #AddMsgAndPrint(f"\t\t\tTile already exists {hucDigit} -- {sourceID}")
+                                #AddMsgAndPrint(f"\t\t\tTile already exists {apiPolyCode} -- {sourceID}")
                                 j+=1
                                 numOfTotalOverlaps+=1
                                 continue
@@ -688,7 +829,7 @@ if __name__ == '__main__':
                             if not size:
                                 size = 0
 
-                            hucDigitList.append(hucDigit)
+                            polyCodeList.append(apiPolyCode)
                             titleList.append(title)
                             pubDateList.append(pubDate)
                             lastModifiedDate.append(lastModified)
@@ -705,7 +846,7 @@ if __name__ == '__main__':
                         # duplicate DEMs are less than total
                         if numOfHucDEMfiles > maxProdsPerPage and ((i+j) < numOfHucDEMfiles):
                             AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {k:,}")
-                            recordStart+=1000
+                            recordStart+=maxProdsPerPage
                             k=0
 
                         # NO NEED TO LOOP AGAIN
@@ -718,7 +859,7 @@ if __name__ == '__main__':
                             AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
                             AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
                             AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
-                            f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
+                            f.write(f"\n{apiPolyCode},{apiPolyName},{numOfHucDEMfiles},{tnmURLhuc}")
                             bRecordsAccounted = True
 
                         # DEMs ACCOUNTED FOR - NO NEED TO LOOP AGAIN
@@ -726,7 +867,7 @@ if __name__ == '__main__':
 
                             # HUC's DEMs have been already accounted for by adjacent DEMs
                             if j==numOfHucDEMfiles:
-                                allAccountedFor.append(hucDigit)
+                                allAccountedFor.append(apiPolyCode)
 
                             if requestNumber>1:
                                 AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {k:,}")
@@ -734,19 +875,20 @@ if __name__ == '__main__':
                             #AddMsgAndPrint(f"\t\t# of DEMs from API: {numOfHucDEMfiles:,}")
                             AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
                             AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
-                            f.write(f"\n{hucDigit},{hucName},{numOfHucDEMfiles},{tnmURLhuc}")
+                            f.write(f"\n{apiPolyCode},{apiPolyName},{numOfHucDEMfiles},{tnmURLhuc}")
                             bRecordsAccounted = True
 
                     else:
                         AddMsgAndPrint(f"\t\tThere are NO {tnmResolution} elevation files")
-                        f.write(f"\n{hucDigit},{hucName},0,{tnmURLhuc}")
-                        emptyHUCs.append(hucDigit)
+                        f.write(f"\n{apiPolyCode},{apiPolyName},0,{tnmURLhuc}")
+                        emptyPolyCodes.append(apiPolyCode)
                         bRecordsAccounted = True
 
                 else:
                     # I haven't seen an error like this
-                    AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {hucDigit}: {hucName}")
-                    unaccountedHUCs.append(hucDigit)
+                    AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {apiPolyCode}: {apiPolyName}")
+                    AddMsgAndPrint(f"\t\t\tResults: {results}")
+                    unaccountedHUCs.append(apiPolyCode)
                     bRecordsAccounted = True
 
         f.close()
@@ -761,7 +903,7 @@ if __name__ == '__main__':
             idxValuesToRemove.sort(reverse=True)
             AddMsgAndPrint(f"\n\tThere are {len(idxValuesToRemove):,} records that will be removed due to duplicate elements")
 
-            masterLists = [hucDigitList,titleList,pubDateList,lastModifiedDate,sizeList,
+            masterLists = [polyCodeList,titleList,pubDateList,lastModifiedDate,sizeList,
                             fileFormatList,sourceIDList,metadataURLList,downloadURLList]
             for mList in masterLists:
                 for idx in idxValuesToRemove:
@@ -770,15 +912,21 @@ if __name__ == '__main__':
         else:
             AddMsgAndPrint(f"\tNo duplicate DEM elements found were found")
 
-        hucsWithData = len(set(hucDigitList))
+        hucsWithData = len(set(polyCodeList))
         duplicateElements = len(idxValuesToRemove)
+
+        #-------------------------------------------------- QA 10M and 30M elevation by Degree block
+        if tnmResolution in ('10M','30M'):
+            degreeLyr = r'E:\GIS_Projects\DS_Hub\Boundaries\Default.gdb\CellGrid_1X1Degree_forElevation'
+            AddMsgAndPrint("\nRunning QA/QC against 1-Degree Blocks")
+            qa = qaDegreeBlockElevation(degreeLyr)
 
         #-------------------------------------------------- Write Elevation download file
         g = open(metadataFile2path,'a+')
-        g.write(f"huc_digit,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
+        g.write(f"polyCode,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
 
-        for i in range(0,len(hucDigitList)):
-            g.write(f"\n{hucDigitList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
+        for i in range(0,len(polyCodeList)):
+            g.write(f"\n{polyCodeList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
         g.close()
 
         if unaccountedHUCs:
@@ -789,24 +937,24 @@ if __name__ == '__main__':
         AddMsgAndPrint(f"\n{'-'*40} SUMMARY {'-'*40}")
 
         # Summary of HUCs
-        AddMsgAndPrint(f"Total # of Input HUCs: {totalWatersheds:,}")
-        AddMsgAndPrint(f"\t# of HUCs with Elevation Data: {hucsWithData:,}")
+        AddMsgAndPrint(f"Total # of Input {boundaryName}(s): {totalBoundaries:,}")
+        AddMsgAndPrint(f"\t# of {boundaryName}(s) with Elevation Data: {hucsWithData:,}")
 
-        if len(emptyHUCs):
-            AddMsgAndPrint(f"\t# of HUCs without Elevation Data: {len(emptyHUCs):,}")
+        if len(emptyPolyCodes):
+            AddMsgAndPrint(f"\t# of {boundaryName}(s) without Elevation Data: {len(emptyPolyCodes):,}")
         if len(allAccountedFor):
-            AddMsgAndPrint(f"\t# of HUCs whose DEMs are accounted for by adjacent HUCs: {len(allAccountedFor):,}")
+            AddMsgAndPrint(f"\t# of {boundaryName}s whose DEMs are accounted for by adjacent {boundaryName}s: {len(allAccountedFor):,}")
         if len(badAPIurls) > 0:
-            AddMsgAndPrint(f"\t# of HUCs with Bad API Requests: {len(badAPIurls):,}")
+            AddMsgAndPrint(f"\t# of {boundaryName}(s) with Bad API Requests: {len(badAPIurls):,}")
             AddMsgAndPrint("\t\tThese requests will have a -999 in num_of_tiles column")
 
         # Summary of DEMs to download
-        AddMsgAndPrint(f"\nTotal # of DEMs for all HUCs (per USGS API): {numOfTotalTiles:,}")
-        AddMsgAndPrint(f"\t# of DEMs that overlap with adjacent HUCs: {numOfTotalOverlaps:,}")
+        AddMsgAndPrint(f"\nTotal # of DEMs for all {boundaryName}(s) (per USGS API): {numOfTotalTiles:,}")
+        AddMsgAndPrint(f"\t# of DEMs that overlap with adjacent {boundaryName}(s): {numOfTotalOverlaps:,}")
         if duplicateElements:
             AddMsgAndPrint(f"\t# of DEMs with duplicate elements: {duplicateElements:,}")
 
-        AddMsgAndPrint(f"\nTotal # of unique DEMs to download: {len(hucDigitList):,}")
+        AddMsgAndPrint(f"\nTotal # of unique DEMs to download: {len(polyCodeList):,}")
 
         # Size Summary
         AddMsgAndPrint(f"\nTotal Download Size (According to USGS Metadata): {convert_bytes(sum(sizeList))}")
