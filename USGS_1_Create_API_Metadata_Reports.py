@@ -164,6 +164,15 @@ Updated the name of the 3 output files to be more intuitive.
       each attempt.
     - Switched protocols to HTTP vs HTTPS and realized more consistent results
 
+8/01/2023
+    - This version includes a rewrite of sending URL queries to the TNM API.  Rather than having
+      multiple nested try and except clauses, a while statement with a max of 3 attempts was created.
+      Each attemp is slightly different to increase chances.
+    - Modified entire code to handle State requests along with HUC.  Switched all verbiage from huc to
+      poly_code.
+    - Added the poly_name (State Name or HUC name) to all files.  Helps in troubleshooting or simply seeing
+      the quantities of every state.
+
 """
 ## ===================================================================================
 def AddMsgAndPrint(msg):
@@ -363,7 +372,7 @@ def checkForDuplicateElements():
         # USGS_13_n47w115_20230119.tif where a date is appended at the end.  However, the date doesn't correspond
         # the last_updated date or the pub_date.  Terrible QA
         """ ----------------------- Duplicate 10M Files  ----------------------------"""
-        if tnmResolution == '10M':
+        if tnmResolution in ('10M','30M'):
 
             # take the downloadURL and isolate the root file name
             # 'https://prd-tnm.s3.amazonaws.com/S....101/USGS_13_n37w101_20210623.tif' --> USGS_13_n37w101
@@ -380,6 +389,11 @@ def checkForDuplicateElements():
                 AddMsgAndPrint(f"\n\tThere are {numOf10MDEMdupURLs:,} USGS 1-degree block DEMs that have duplicate DEMs associated with them:")
 
                 for file,count in duplicate10Mfiles.items():
+
+                    # There are 30M DEMs whose file name is n65w158.zip and are coming from the old
+                    # rockyweb.usgs site.  Skip these files since the URL is bogus
+                    if len(file.split('_')) ==1:
+                        continue
 
                     AddMsgAndPrint(f"\n\t\tUSGS 1-degree block file '{file}' has {count} duplicate files:")
 
@@ -417,25 +431,23 @@ def checkForDuplicateElements():
         if tnmResolution == '3M':
 
             # take the downloadURL and isolate the root file name
-            # 'https://prd-tnm.s3.amazonaws.com/S....101/USGS_13_n37w101_20210623.tif' --> USGS_13_n37w101
+            # 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n44x00_w070x25_me_south_2010.zip' --> ned19_n44x00_w070x25_me_south_2010.zip
 
-            dlURLfileName3MList = [((f.split('/')[-1]).split('.')[0]) for f in downloadURLList] # 'USGS_13_n37w101_20210623'
-            dlURLParsedfileName3MList = ['_'.join(f.split('_')[0:3]) for f in dlURLfileName3MList] # 'ned19_n46x75_w068x50'
-            #dlURLParsedfileName3MList = ['_'.join(((f.split('/')[-1]).split('.')[0]).split('_')[0:-1]) for f in downloadURLList]
-            dlURLfileName3MSummary = dict(Counter(dlURLParsedfileName3MList))
+            dlURLfileName3MList = [((f.split('/')[-1]).split('.')[0]) for f in downloadURLList] # 'ned19_n44x00_w070x25_me_south_2010'
+            dlURLfileName3MSummary = dict(Counter(dlURLfileName3MList))
             duplicate3Mfiles = {key:value for key, value in dlURLfileName3MSummary.items() if value > 1}
 
             if len(duplicate3Mfiles):
 
                 numOf3MDEMdupURLs = len(duplicate3Mfiles)
-                AddMsgAndPrint(f"\n\tThere are {numOf3MDEMdupURLs:,} USGS 1-degree block DEMs that have duplicate DEMs associated with them:")
+                AddMsgAndPrint(f"\n\tThere are {numOf3MDEMdupURLs:,} USGS 3M DEMs that have duplicate URL suffix names:")
 
                 for file,count in duplicate3Mfiles.items():
 
-                    AddMsgAndPrint(f"\n\t\tUSGS degree block file '{file}' has {count} duplicate files:")
+                    AddMsgAndPrint(f"\n\t\tUSGS 3M URL Suffix: '{file}' has {count} duplicate files:")
 
                     # list of index values from the files that are duplicated
-                    indexVal = [i for i, x in enumerate(dlURLParsedfileName3MList) if x == file]
+                    indexVal = [i for i, x in enumerate(dlURLfileName3MList) if x == file]
 
                     # Remove index positions that have already been accounted for above
                     alreadyAccounted = list()
@@ -499,19 +511,22 @@ def qaDegreeBlockElevation(degreeLyr):
             for deg in missingBlocks:
                 selQuery=f"{selQuery}'{deg}',"
 
-            AddMsgAndPrint(f"\t\tYou have {len(missingBlocks)} missing 1x1 degree blocks from this API request")
+            AddMsgAndPrint(f"\t\tYou have {len(missingBlocks):,} missing 1x1 degree blocks from this API request")
 
             for block in missingBlocks:
 
                 if tnmResolution == '10M':
-                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.tif"
-                    metaURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.xml"
+                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.tif"
+                    metaURL = f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.xml"
+                    prodTitle = f"USGS 1/3 Arc Second {block} 99999999"
                 else:
-                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.tif"
-                    metaURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.xml"
+                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.tif"
+                    metaURL = f"https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.xml"
+                    prodTitle = f"USGS 1 Arc Second {block} 99999999"
 
                 polyCodeList.append("99")
-                titleList.append(f"USGS 1/3 Arc Second {block} 99999999")
+                polyNameList.append("99")
+                titleList.append(prodTitle)
                 pubDateList.append("9999-99-99")
                 lastModifiedDate.append("9999-99-99")
                 sizeList.append(99999999)
@@ -551,18 +566,26 @@ if __name__ == '__main__':
         # Start the clock
         startTime = tic()
 
-        # 5 Tool Parameters
+        # Parameter #1
         # Boundaries used to iterate through the USGS API: state, huc4, huc8
-        #apiBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU4'
+        #apiBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\WBD_National_GDB.gdb\WBDHU8'
         apiBoundaries = r'E:\GIS_Projects\DS_Hub\hydrologic_units\HUC12.gdb\states_a_US_Dissolve_WGS84'
 
+        # Parameter #2
         # Field containing the Well known poly code passed to API: huc = 'huc4'; state = 'STATE_FIPS'
-        #wkPolyCode = 'huc4'
+        #wkPolyCode = 'huc8'
         wkPolyCode = 'STATE_FIPS'
 
+        # Parameter #3
         # Field containing alias name for the poly code above: huc = 'name'; state = 'STATE':
         wkPolyName = 'STATE'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801'
+        #wkPolyName = 'name'
+
+        # Parameter #4
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801\test'
+
+        # Parameter #5
+        #TNM Dataset Product
         tnmResolution = '30M'
 
         if not arcpy.Exists(apiBoundaries):
@@ -605,7 +628,7 @@ if __name__ == '__main__':
 
         metadataFile1path = f"{metadataPath}\\{metadataFile1}"
         f = open(metadataFile1path,'a+')
-        f.write(f"polyCode,polyName,num_of_tiles,API_URL") # log headers
+        f.write(f"poly_code,poly_name,num_of_tiles,API_URL") # log headers
 
         # Metadata file#2; USGS_3DEP_1M_Metadata_Elevation_02082023.txt
         # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
@@ -636,6 +659,7 @@ if __name__ == '__main__':
 
         # master lists for each data element collected from USGS API
         polyCodeList = list()
+        polyNameList = list()
         titleList = list()
         pubDateList = list()
         lastModifiedDate = list()
@@ -660,8 +684,11 @@ if __name__ == '__main__':
             apiPolyCode = row[0]
             apiPolyName = row[1]
 
+##            if not apiPolyCode in ['02','04','12','16','17']:
+##                continue
+
             # State Boundary vs HUC
-            if wkPolyName == 'Watershed':
+            if not wkPolyCode == 'STATE_FIPS':
                 hucLength = len(apiPolyCode)
                 AddMsgAndPrint(f"\n\t{hucLength}-digit HUC {apiPolyCode}: {apiPolyName} -- {wbd:,} of {totalBoundaries:,}")
                 polyType = f"huc{hucLength}"
@@ -716,95 +743,85 @@ if __name__ == '__main__':
                 # concatenate URL and API parameters
                 tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
 
-                # Send REST API request
-                try:
-                    # Attempt #1
-                    time.sleep(5)
-                    with urllib.request.urlopen(tnmURLhuc) as conn:
-                        resp = conn.read()
-                    results = json.loads(resp)
+                """ -------------- Send 3 request attempts to TNM API -----------------------------"""
+                n = 0
+                proceed = False
+                while n < 4:
+                    bError = False
 
-                # Have received URLError 504 but results are still populated.
-                except URLError as e:
-
-                    # URLError with no results
-                    if not 'total' in results:
-                        AddMsgAndPrint(f"\t\tURL Error: {tnmURLhuc}")
-                        AddMsgAndPrint(f"\t\tReason: {e.reason}")
-                        badAPIurls[apiPolyCode] = tnmURLhuc
-                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                        break
-
-                    # URLError with resuls - not sure if results are correct
-                    else:
-                        AddMsgAndPrint(f"\t\tURL Error but with returned results")
-                        AddMsgAndPrint(f"\t\tReason: {e.reason}")
-                        AddMsgAndPrint(f"\t\tURL: {tnmURLhuc}")
-
-                except HTTPError as e:
-                    # HTTPError with no results
-                    if not 'total' in results:
-                        AddMsgAndPrint(f"\t\tHTTP Error: {tnmURLhuc}")
-                        AddMsgAndPrint(f"\t\tReason: {e.reason}")
-                        AddMsgAndPrint(f"\t\tCode: {e.reason}")
-                        badAPIurls[apiPolyCode] = tnmURLhuc
-                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                        break
-
-                    # HTTPError with resuls - not sure if results are correct
-                    else:
-                        AddMsgAndPrint(f"\t\tHTTP Error but with returned results")
-                        AddMsgAndPrint(f"\t\tReason: {e.reason}")
-                        AddMsgAndPrint(f"\t\tCode: {e.reason}")
-                        AddMsgAndPrint(f"\t\tURL: {tnmURLhuc}")
-
-                except:
                     try:
-                        AddMsgAndPrint(f"\t\t2nd Attempt - Pausing 10 seconds")
-                        time.sleep(5)
+                        # ---------------  Attempt #1 - Normal Parameters
+                        if n==0 or n==3:
 
-                        request = urllib.request.Request(tnmURLhuc,headers={'User-Agent': 'Mozilla'})
+                            if n==3:AddMsgAndPrint(f"\t\t4th Attempt");time.sleep(12)
 
-                        with urllib.request.urlopen(request) as conn:
-                            resp = conn.read()
-                        results = json.loads(resp)
+                            with urllib.request.urlopen(tnmURLhuc) as conn:
+                                resp = conn.read()
+                            results = json.loads(resp)
 
-                    except URLError as e:
-                        if not 'total' in results:
-                            AddMsgAndPrint(f"\t\t\tURL Error: {tnmURLhuc}")
-                            AddMsgAndPrint(f"\t\t\tReason: {e.reason}")
-                            badAPIurls[apiPolyCode] = tnmURLhuc
-                            f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                            break
+                        # ---------------  Attempt #2 - spoof server by changing user-Agent
+                        elif n==1:
+                            AddMsgAndPrint(f"\t\t2nd Attempt - Swithing user-agent")
+                            time.sleep(9)
+                            request = urllib.request.Request(tnmURLhuc,headers={'User-Agent': 'UX/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'})
 
-                        # URLError with resuls - not sure if results are correct
+                            with urllib.request.urlopen(request) as conn:
+                                resp = conn.read()
+                            results = json.loads(resp)
+
+                        # --------------- Attempt #3 - swtich HTTP:// protocols
                         else:
-                            AddMsgAndPrint(f"\t\t\tURL Error but with returned results")
-                            AddMsgAndPrint(f"\t\t\tReason: {e.reason}")
-                            AddMsgAndPrint(f"\t\t\tURL: {tnmURLhuc}")
+                            AddMsgAndPrint(f"\t\t3rd Attempt - Switching Protocols")
+                            time.sleep(8)
+                            if tnmAPIurl.find("https") == -1:
+                                tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
+                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to https:")
+                            else:
+                                tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
+                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to http:")
+                            tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
+
+                            with urllib.request.urlopen(tnmURLhuc) as conn:
+                                resp = conn.read()
+                            results = json.loads(resp)
+
+                    # Have received URLError 504 but results are still populated.
+                    except URLError as e:
+                        AddMsgAndPrint(f"\t\t\tURL Error Reason: {e.reason}")
+                        bError = True
 
                     except HTTPError as e:
-                        if not 'total' in results:
-                            AddMsgAndPrint(f"\t\tHTTP Error: {tnmURLhuc}")
-                            AddMsgAndPrint(f"\t\tReason: {e.reason}")
-                            AddMsgAndPrint(f"\t\tCode: {e.reason}")
-                            badAPIurls[apiPolyCode] = tnmURLhuc
-                            f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                            break
+                        AddMsgAndPrint(f"\t\t\tHTTP Error Reason: {e.reason}")
+                        AddMsgAndPrint(f"\t\t\tCode: {e.reason}")
+                        bError = True
 
-                        # HTTPError with resuls - not sure if results are correct
-                        else:
-                            AddMsgAndPrint(f"\t\t\tHTTP Error but with returned results")
-                            AddMsgAndPrint(f"\t\t\tReason: {e.reason}")
-                            AddMsgAndPrint(f"\t\t\tCode: {e.reason}")
-                            AddMsgAndPrint(f"\t\t\tURL: {tnmURLhuc}")
+                    except json.JSONDecodeError as e:
+                        bError = True
 
                     except:
-                        badAPIurls[apiPolyCode] = tnmURLhuc
-                        AddMsgAndPrint(f"\t\t\tUnhandled URL request error: {errorMsg(errorOption=2).strip()}")
-                        AddMsgAndPrint(f"\t\t\tURL: {tnmURLhuc}")
-                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                        break
+                        AddMsgAndPrint(f"\t\tUnhandled URL request error: {errorMsg(errorOption=2).strip()}")
+                        AddMsgAndPrint(f"\n\t\t----URL: {tnmURLhuc}")
+                        bError = True
+
+                    if bError:
+                        # last attempt reached - log it as error
+                        if n==3:
+                            badAPIurls[apiPolyCode] = tnmURLhuc
+                            AddMsgAndPrint(f"\t\t\tBad Request: {tnmURLhuc}")
+                            f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+
+                        try:
+                            del resp, results,conn
+                        except:
+                            pass
+                        n+=1
+
+                    else:
+                        proceed = True
+                        n=4
+
+                if not proceed:
+                    break
 
                 if 'errorMessage' in results:
                     AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")
@@ -857,6 +874,7 @@ if __name__ == '__main__':
                                 size = 0
 
                             polyCodeList.append(apiPolyCode)
+                            polyNameList.append(apiPolyName)
                             titleList.append(title)
                             pubDateList.append(pubDate)
                             lastModifiedDate.append(lastModified)
@@ -930,7 +948,7 @@ if __name__ == '__main__':
             idxValuesToRemove.sort(reverse=True)
             AddMsgAndPrint(f"\n\tThere are {len(idxValuesToRemove):,} records that will be removed due to duplicate elements")
 
-            masterLists = [polyCodeList,titleList,pubDateList,lastModifiedDate,sizeList,
+            masterLists = [polyCodeList,polyNameList,titleList,pubDateList,lastModifiedDate,sizeList,
                             fileFormatList,sourceIDList,metadataURLList,downloadURLList]
             for mList in masterLists:
                 for idx in idxValuesToRemove:
@@ -950,10 +968,10 @@ if __name__ == '__main__':
 
         #-------------------------------------------------- Write Elevation download file
         g = open(metadataFile2path,'a+')
-        g.write(f"polyCode,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
+        g.write(f"poly_code,poly_name,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
 
         for i in range(0,len(polyCodeList)):
-            g.write(f"\n{polyCodeList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
+            g.write(f"\n{polyCodeList[i]},{polyNameList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
         g.close()
 
         if unaccountedHUCs:

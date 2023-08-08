@@ -103,11 +103,11 @@ if __name__ == '__main__':
             "last_updated":3,
             "size":4,
             "format":5,
-            "sourceID":6,
+            "sourceid":6,
             "metadata_url":7,
             "download_url":8,
-            "DEMname":9,
-            "DEMpath":10}
+            "dem_name":9,
+            "dem_path":10}
 
         bHeader = True
         downloadDict = dict()  # contains download URLs and sourceIDs grouped by HUC; 07040006:[[ur1],[url2]]
@@ -125,9 +125,9 @@ if __name__ == '__main__':
                     dlFile_recCount+=1
                     continue
 
-                sourceID = items[dlFileHeaderItems["sourceID"]]
-                DEMname = items[dlFileHeaderItems["DEMname"]]
-                DEMpath = items[dlFileHeaderItems["DEMpath"]]
+                sourceID = items[dlFileHeaderItems["sourceid"]]
+                DEMname = items[dlFileHeaderItems["dem_name"]]
+                DEMpath = items[dlFileHeaderItems["dem_path"]]
 
                 dlFile_recCount+=1
 
@@ -138,7 +138,7 @@ if __name__ == '__main__':
                         AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)} -- ({dlFile_recCount:,} of {recCount:,})")
                         deletedFile+=1
                     else:
-                        AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {fullPath}")
+                        AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {file}")
                         invalidFiles+=1
 
 ##                fullPath = os.path.join(DEMpath,DEMname)

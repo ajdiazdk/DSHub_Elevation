@@ -164,11 +164,6 @@ Updated the name of the 3 output files to be more intuitive.
       each attempt.
     - Switched protocols to HTTP vs HTTPS and realized more consistent results
 
-8/01/2023
-    - This version includes a rewrite of sending URL queries to the TNM API.  Rather than having
-      multiple nested try and except clauses, a while statement with a max of 3 attempts was created.
-      I don't think this proved successful.
-
 """
 ## ===================================================================================
 def AddMsgAndPrint(msg):
@@ -506,21 +501,24 @@ def qaDegreeBlockElevation(degreeLyr):
 
             AddMsgAndPrint(f"\t\tYou have {len(missingBlocks)} missing 1x1 degree blocks from this API request")
 
-            if tnmResolution == '10M':
-                for block in missingBlocks:
+            for block in missingBlocks:
 
+                if tnmResolution == '10M':
                     dwnldURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.tif"
                     metaURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/13/TIFF/current/{block}/USGS_13_{block}.xml"
+                else:
+                    dwnldURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.tif"
+                    metaURL = f"https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Elevation/1/TIFF/current/{block}/USGS_1_{block}.xml"
 
-                    polyCodeList.append("99")
-                    titleList.append(f"USGS 1/3 Arc Second {block} 99999999")
-                    pubDateList.append("9999-99-99")
-                    lastModifiedDate.append("9999-99-99")
-                    sizeList.append(99999999)
-                    fileFormatList.append('GeoTIFF')
-                    sourceIDList.append('999999999999999999999')
-                    metadataURLList.append(metaURL)
-                    downloadURLList.append(dwnldURL)
+                polyCodeList.append("99")
+                titleList.append(f"USGS 1/3 Arc Second {block} 99999999")
+                pubDateList.append("9999-99-99")
+                lastModifiedDate.append("9999-99-99")
+                sizeList.append(99999999)
+                fileFormatList.append('GeoTIFF')
+                sourceIDList.append('999999999999999999999')
+                metadataURLList.append(metaURL)
+                downloadURLList.append(dwnldURL)
 
             return selQuery
 
@@ -535,7 +533,7 @@ def qaDegreeBlockElevation(degreeLyr):
 
 ## ====================================== Main Body ==================================
 # Import modules
-import sys, string, os, traceback
+import sys, string, os, traceback, ast
 import urllib, re, time, json, socket, requests
 import arcgisscripting, arcpy
 from datetime import datetime
@@ -564,8 +562,8 @@ if __name__ == '__main__':
 
         # Field containing alias name for the poly code above: huc = 'name'; state = 'STATE':
         wkPolyName = 'STATE'
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801'
-        tnmResolution = '30M'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\10M\test'
+        tnmResolution = '10M'
 
         if not arcpy.Exists(apiBoundaries):
             AddMsgAndPrint(f"\n{apiBoundaries} does NOT exist! EXITING!")
@@ -581,7 +579,7 @@ if __name__ == '__main__':
 
         # Constant variables
         totalBoundaries = int(arcpy.GetCount_management(apiBoundaries)[0])
-        tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
+        tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
         if wkPolyName == 'STATE':
             boundaryName = 'State'
         else:
@@ -718,66 +716,72 @@ if __name__ == '__main__':
                 # concatenate URL and API parameters
                 tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
 
-                n = 0
-                proceed = False
-                while n < 3:
-                    bError = False
+                # Send REST API request
+                try:
+                    # Attempt #1
+                    time.sleep(5)
+                    with urllib.request.urlopen(tnmURLhuc) as conn:
+                        resp = conn.read()
+                    results = json.loads(resp)
+                    print("\t\t----------option A")
 
+                # Have received URLError 504 but results are still populated.
+                except URLError as e:
+                    AddMsgAndPrint(f"\t\tURL Error: {tnmURLhuc}")
+                    AddMsgAndPrint(f"\t\tReason: {e.reason}")
+                    badAPIurls[apiPolyCode] = tnmURLhuc
+                    f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                    break
+
+                except HTTPError as e:
+                    AddMsgAndPrint(f"\t\tHTTP Error: {tnmURLhuc}")
+                    AddMsgAndPrint(f"\t\tReason: {e.reason}")
+                    AddMsgAndPrint(f"\t\tCode: {e.reason}")
+                    badAPIurls[apiPolyCode] = tnmURLhuc
+                    f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                    break
+
+                except json.JSONDecodeError as e:
                     try:
-                        if n > 0:
-                            AddMsgAndPrint(f"\t\tAttempt #{n+1} - Pausing 10 seconds")
-                            time.sleep(10)
-                            theTab = "\t\t\t"
-                        else:
-                            theTab = "\t\t"
+                        AddMsgAndPrint(f"\t\t2nd Attempt")
+                        time.sleep(10)
+                        try:
+                            del resp, results,conn
+                        except:
+                            pass
+                        request = urllib.request.Request(tnmURLhuc,headers={'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'})
 
-                        # swtich protocols for the 3rd attempt
-                        if n == 2:
-                            if tnmAPIurl.find("https") == -1:
-                                tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to https:")
-                            else:
-                                tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to http:")
-                            tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
-
-                        with urllib.request.urlopen(tnmURLhuc) as conn:
+                        with urllib.request.urlopen(request) as conn:
                             resp = conn.read()
-                        results = json.loads(resp)
+                        try:
+                            results = json.loads(resp)
+                            print("\t\t----------option C")
+                        except json.JSONDecodeError as e:
+                            dataform = str(resp).strip("'<>() ").replace('\'', '\"')
+                            results = json.loads(dataform)
+                            print("\t\t----------option D")
 
-                    # Have received URLError 504 but results are still populated.
                     except URLError as e:
-                        AddMsgAndPrint(f"\t\t\tURL Error Reason: {e.reason}")
-                        bError = True
+                        AddMsgAndPrint(f"\t\t\tURL Error: {tnmURLhuc}")
+                        AddMsgAndPrint(f"\t\t\tReason: {e.reason}")
+                        badAPIurls[apiPolyCode] = tnmURLhuc
+                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                        break
 
                     except HTTPError as e:
-                        AddMsgAndPrint(f"\t\t\tHTTP Error Reason: {e.reason}")
-                        AddMsgAndPrint(f"\t\t\tCode: {e.reason}")
-                        bError = True
+                        AddMsgAndPrint(f"\t\tHTTP Error: {tnmURLhuc}")
+                        AddMsgAndPrint(f"\t\tReason: {e.reason}")
+                        AddMsgAndPrint(f"\t\tCode: {e.reason}")
+                        badAPIurls[apiPolyCode] = tnmURLhuc
+                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                        break
 
                     except:
-                        bError = True
-                        AddMsgAndPrint(f"\t\tUnhandled URL request error: {errorMsg(errorOption=2).strip()}")
-                        AddMsgAndPrint(f"\n\t\t----URL: {tnmURLhuc}")
-##                        print("\n\n-----------------------RESPONSE------------------------------")
-##                        print(resp)
-##                        print("\n\n-----------------------RESULTS-----------------------------")
-##                        print(results)
-##                        exit()
-
-                    if bError:
-                        if n==2:
-                            badAPIurls[apiPolyCode] = tnmURLhuc
-                            AddMsgAndPrint(f"\t\t\tBad Request: {tnmURLhuc}")
-                            f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
-                        n+=1
-
-                    else:
-                        proceed = True
-                        n=3
-
-                if not proceed:
-                    break
+                        badAPIurls[apiPolyCode] = tnmURLhuc
+                        AddMsgAndPrint(f"\t\t\tUnhandled URL request error: {errorMsg(errorOption=2).strip()}")
+                        AddMsgAndPrint(f"\t\t\tURL: {tnmURLhuc}")
+                        f.write(f"\n{apiPolyCode},{apiPolyName},-999,{tnmURLhuc}")
+                        break
 
                 if 'errorMessage' in results:
                     AddMsgAndPrint(f"\t\tError Message from server: {results['errorMessage']}")

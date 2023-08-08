@@ -195,7 +195,7 @@ Things to consider/do:
 """
 
 ## ========================================== Import modules ===============================================================
-import sys, string, os, traceback, glob, csv
+import sys, string, os, traceback, glob, csv, fnmatch
 import urllib, re, time, json, socket, zipfile
 import numpy as np
 from datetime import datetime
@@ -344,27 +344,215 @@ def getDownloadFolder(huc,res):
         return False
 
 ## ===================================================================================
-def DownloadElevationTile(itemCollection,downloadFolder):
-    # Description
-    # This function will open a URL and download the contents to the specified
-    # download folder. If bReplaceData is True, delete the local file version of the
-    # download file.
-    # Total download file size will be tallied.
-    # Information to create download Status file will be collected:
-    # sourceID,prod_title,downloadPath,numOfFiles,size,now,True if successful download else False
-    #
-    # It can be used within the ThreadPoolExecutor to send multiple USGS downloads
-    #
-    # Parameters
-    # itemCollection (dictionary):
-    #   key:HUC
-    #   values:
-    #       url: https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n47x75_w120x25_wa_columbiariver_2010.zip
-    #       sourceID = 17020010
-    #       fileFormat = 'IMG' or 'GeoTIFF'
-    #
-    # Returns
-    # a list of messages that will be printed as a "future" object representing the execution of the callable.
+def getDownloadFolder2(filename):
+    """ This function returns a directory that was created in LINUX.  Directory
+        structure was determined by parsing the filename for each unique USGS
+        Dataset product.  The following describes the product and dir determination
+         - 1M: isolate lat long from name (xy) and take the last digit
+               'USGS_one_meter_x41y492_ME_NRCS_Lot4_2013.tif' --> x41y492 --> 2
+         - 3M: isolate upper left xy and take the first digit
+               'ned19_n27x25_w082x25_fl_wcnt5co04_eastsarasota_2007.zip' --> n27x25 --> 2
+         - 10M: isolate 1-x1 degree block and take the last digit
+               'USGS_13_n58w171_20200415.tif' --> n58w171 --> 5
+         - 30M: isolate 1-x1 degree block and take the last digit
+               'USGS_1_n07e158_20130911.tif' --> n07e158 --> 0
+         - Other: take the last digit
+    """
+
+    try:
+        # ['USGS', '1M', '19', 'x44y515', 'ME', 'CrownofMaine', '2018', 'A18.tif']
+        fileElements = filename.split('_')
+
+        # Remove USGS from the name
+        if fileElements[0] == 'USGS':
+            del fileElements[0]
+
+        # Lists of unique naming patterns by dataset product
+        oneM = ['1M', 'one','ONE','One', '1m']
+        threeM = ['ned19','imgned19']
+        tenM = ['13']
+        thirtyM = ['1']
+        ak_opr = ['opr','OPR']
+
+        firstElement = fileElements[0]
+
+        # ------------------------ File is a 1M USGS File
+        if firstElement in oneM:
+            i=0
+            block = ''
+            ld = ''
+            for element in fileElements:
+
+                # x41y492
+                if element.startswith('x'):
+                    block = fileElements[i]
+                    break
+                i+=1
+
+            if block[-1].isdigit():
+                ld = block[-1]
+
+            res = '1m'
+
+        # ------------------------ File is a 3M USGS File
+        # The EBS distribution of 3M files is very uneven.
+        # Need to develop a better way to distribute files
+        elif firstElement in threeM:
+            i=0
+            block = ''
+            ld = ''
+
+            if fileElements[0] in threeM:
+                del fileElements[0]
+
+            for element in fileElements:
+                # n39x00
+                if element.startswith('n'):
+                    block = fileElements[i]
+                    break
+                i+=1
+
+            for digit in block:
+                if digit.isdigit():
+                    ld = digit
+                    break
+
+            res = '3m'
+
+        # ------------------------ File is a 10M USGS File
+        elif firstElement in tenM:
+            i=0
+            block = ''
+            ld = ''
+
+            if fileElements[0] in tenM:
+                del fileElements[0]
+
+            for element in fileElements:
+
+                # n61w166
+                if element.startswith('n') or element.startswith('s'):
+                    block = fileElements[i]
+                    break
+                i+=1
+
+            for digit in reversed(block):
+                if digit.isdigit():
+                    ld = digit
+                    break
+
+            res = '10m'
+
+        # ------------------------ File is a 30M USGS File
+        elif firstElement in thirtyM:
+            i=0
+            block = ''
+            ld = ''
+
+            if fileElements[0] in thirtyM:
+                del fileElements[0]
+
+            for element in fileElements:
+
+                # n61w166 or s14w170
+                if element.startswith('n') or element.startswith('s'):
+                    block = fileElements[i]
+                    break
+                i+=1
+
+            for digit in reversed(block):
+                if digit.isdigit():
+                    ld = digit
+                    break
+
+            res = '30m'
+
+        elif firstElement in ak_opr:
+            pass
+
+        # ------------------------ oddball files that don't follow the majority convention
+        # i.e. n65w158.zip
+        else:
+            ld = None
+
+            for char in reversed(filename):
+                if char.isdigit():
+                    ld = char
+                    break
+
+            # assign arbitrary drive
+            if ld is None:
+                ld = 5
+            res = resolution.lower()
+
+        # last digit
+        if ld in ["1","9","0"]:
+            if res in ('1m','30m'):
+                drive = '06'
+            else:
+                drive = '02'
+
+        elif ld in ["2","7","8"]:
+            if res in ('1m','30m'):
+                drive = '07'
+            else:
+                drive = '03'
+
+        elif ld in ["3","6"]:
+            if res in ('1m','30m'):
+                drive = '08'
+            else:
+                drive = '04'
+
+        elif ld in ["4","5"]:
+            if res in ('1m','30m'):
+                drive = '09'
+            else:
+                drive = '05'
+
+        else:
+            AddMsgAndPrint("\t\t\tLook into download directory for {filename}")
+            drive = '09'
+
+        root = f"{os.sep}data{drive}{os.sep}gisdata{os.sep}elev"
+        downloadFolder = f"{root}{os.sep}{res}{os.sep}{ld}"
+
+        # In case another multi-thread is creating the same directory
+        try:
+            if not os.path.exists(downloadFolder):
+                os.makedirs(downloadFolder)
+        except:
+            pass
+
+        return downloadFolder
+
+    except:
+        errorMsg()
+        AddMsgAndPrint("\t\t\tFailed to determine download directory for {filename}")
+        return False
+
+## ===================================================================================
+def DownloadElevationTile(itemCollection):
+    """This function will open a URL and download the contents to the specified
+     download folder. If bReplaceData is True, delete the local file version of the
+     download file.
+     Total download file size will be tallied.
+     Information to create download Status file will be collected:
+     sourceID,prod_title,downloadPath,numOfFiles,size,now,True if successful download else False
+
+     It can be used within the ThreadPoolExecutor to send multiple USGS downloads
+
+     Parameters
+     itemCollection (dictionary):
+       key:poly_code
+       values:
+           url: https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n47x75_w120x25_wa_columbiariver_2010.zip
+           sourceID = 17020010
+           fileFormat = 'IMG' or 'GeoTIFF'
+
+     Returns
+     a list of messages that will be printed as a "future" object representing the execution of the callable.
+    """
 
     try:
         messageList = list()
@@ -381,6 +569,17 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         # Filename could be a zipfile or DEM file (.TIF, .IMG)
         # 'https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/19/IMG/ned19_n30x50_w091x75_la_atchafalayabasin_2010.zip'
         fileName = dlURL.split('/')[-1]
+
+        # ------------------  Determine Download Directory
+        # if OS is Linux then downloadfolder will have to be set
+        # if OS is Windows then downloadfolder was passed in.
+        if not dlFolder:
+            downloadFolder = getDownloadFolder2(fileName)
+            if not downloadFolder:
+                messageList.append(f"{theTab}Failed to set download folder for {fileName}")
+                return False
+        else:
+            downloadFolder = dlFolder
 
         # path to where file will be downloaded to - zip or DEM
         local_file = f"{downloadFolder}{os.sep}{fileName}"
@@ -417,7 +616,6 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                 else:
                     return False
 
-
             # Return DEM path
             demWildCard = f"{downloadFolder}{os.sep}{fileName.split('.')[0]}*"
 
@@ -437,9 +635,9 @@ def DownloadElevationTile(itemCollection,downloadFolder):
             if bReplaceData:
                 try:
                     os.remove(local_file)
-                    messageList.append(f"{theTab}{'File Exists; Deleted':<35} {fileName:<60}")
+                    messageList.append(f"{theTab}{'File Exists; Deleted':<40} {fileName:<60}")
                 except:
-                    messageList.append(f"{theTab:q!}{'File Exists; Failed to Delete':<35} {fileName:<60}")
+                    messageList.append(f"{theTab:q!}{'File Exists; Failed to Delete':<40} {fileName:<60}")
                     failedDownloadList.append(dlURL)
                     return messageList
 
@@ -456,20 +654,18 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                         # DEM already exists in directory; no need to unzip it again.
                         result = searchDirforDEM(fileName,returnFile=True)
                         if result:
-
-                            for file in result:
-                                dlImgFileDict[sourceID] = result
-                                messageList.append(f"{theTab}{'File will be added to Raster2pgsql file (B):':<40} {os.path.basename(file):<60} {convert_bytes(os.stat(file).st_size):>20}")
+                            dlImgFileDict[sourceID] = result
+                            messageList.append(f"{theTab}{'Zipfile and DEM exist. Adding to Raster2pgsql file:':<40} {os.path.basename(result):<60} {convert_bytes(os.stat(result).st_size):>20}")
 
                         # DEM(s) are missing; unzip it again to be safe
                         else:
                             dlZipFileDict[sourceID] = local_file
-                            messageList.append(f"{theTab}{'File exists but will be unzipped:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
+                            messageList.append(f"{theTab}{'Zipfile will be unzipped:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
 
                     # IMG or TIF; add to dlImgFileDict
                     else:
                         dlImgFileDict[sourceID] = local_file
-                        messageList.append(f"{theTab}{'DEM will be added to Raster2pgsql file (A):':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
+                        messageList.append(f"{theTab}{'DEM will be added to Raster2pgsql file:':<40} {fileName:<60} {convert_bytes(dlSize):>20}")
                     return messageList
 
                 # rare possibility - local file is corrup
@@ -492,7 +688,7 @@ def DownloadElevationTile(itemCollection,downloadFolder):
                 dlSize = os.stat(result).st_size
                 totalDownloadSize+=dlSize
                 dlImgFileDict[sourceID] = result
-                messageList.append(f"{theTab}{'File will be added to Raster2pgsql file (C):':<40} {os.path.basename(result):<60} {convert_bytes(dlSize):>20}")
+                messageList.append(f"{theTab}{'Zipfile is absent but DEM is present. Adding to Raster2pgsql file:':<40} {os.path.basename(result):<60} {convert_bytes(dlSize):>20}")
                 return messageList
 
         # Download elevation zip file
@@ -513,25 +709,25 @@ def DownloadElevationTile(itemCollection,downloadFolder):
         else:
             dlImgFileDict[sourceID] = local_file
 
-        messageList.append(f"{theTab}{'Successfully Downloaded:':<35} {fileName:<60} {convert_bytes(dlSize):>15}")
+        messageList.append(f"{theTab}{'Successfully Downloaded:':<40} {fileName:<60} {convert_bytes(dlSize):>15}")
         del request, output, dlSize
 
         return messageList
 
     except URLError as e:
-        messageList.append(f"{theTab}{'Failed to Download:':<35} {fileName:<60} {str(e):>15}")
+        messageList.append(f"{theTab}{'Failed to Download:':<40} {fileName:<60} {str(e):>15}")
         #messageList.append(f"\t{theTab}{e.__dict__}")
         failedDownloadList.append(dlURL)
         return messageList
 
     except HTTPError as e:
-        messageList.append(f"{theTab}{'Failed to Download:':<35} {fileName:<60} {str(e):>15}")
+        messageList.append(f"{theTab}{'Failed to Download:':<40} {fileName:<60} {str(e):>15}")
         #messageList.append(f"\t{theTab}{e.__dict__}")
         failedDownloadList.append(dlURL)
         return messageList
 
     except:
-        messageList.append(f"{theTab}{'Unexpected Error:':<35} {fileName:<60} -- {dlURL}")
+        messageList.append(f"{theTab}{'Unexpected Error:':<40} {fileName:<60} -- {dlURL}")
         failedDownloadList.append(dlURL)
         messageList.append(f"\t{theTab}{errorMsg(errorOption=2)}")
         return messageList
@@ -632,10 +828,10 @@ def unzip(itemCollection):
                             dlImgFileDict[sourceID] = unzippedFilePath
 
                 totalUnzipSize+=unzipTally
-                messageList.append(f"\t{'Successfully Unzipped:':<{leftAlign}} {zipName:<55} {convert_bytes(unzipTally):>15}")
+                messageList.append(f"\t{'Successfully Unzipped:':<{leftAlign}} {zipName:<60} {convert_bytes(unzipTally):>15}")
 
             else:
-                messageList.append(f"\t{'Empty Zipfile:':<{leftAlign}} {zipName:<55} {convert_bytes(zipSize):>15}")
+                messageList.append(f"\t{'Empty Zipfile:':<{leftAlign}} {zipName:<60} {convert_bytes(zipSize):>15}")
 
         else:
             # Don't have a zip file, need to find out circumstances and document
@@ -707,9 +903,8 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
                         goodStats+=1
                     demStatDict[ID] = rastInfo
 
-
-        if goodStats:AddMsgAndPrint(f"\t\t\tSuccessfully Gathered stats for {goodStats:,} DEMs")
-        if badStats:AddMsgAndPrint(f"\t\t\tProblems with Gathering stats for {badStats:,} DEMs")
+        if goodStats:AddMsgAndPrint(f"\n\t\tSuccessfully Gathered stats for {goodStats:,} DEMs")
+        if badStats:AddMsgAndPrint(f"\n\t\tProblems with Gathering stats for {badStats:,} DEMs")
 
         global downloadFile
 
@@ -722,10 +917,14 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
             g = open(dlMasterFilePath,'a+')
 
             # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-            header = ('huc_digit,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
+            header = ('poly_code,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
                       'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
                       'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
             g.write(header)
+
+        # else master elevation file exists
+        else:
+            g = open(dlMasterFilePath,'a+')
 
         total = len(elevMetadataDict)
         index = 1
@@ -733,7 +932,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         # Iterate through all of the sourceID files in the download file (elevMetadatDict)
         for srcID,demInfo in elevMetadataDict.items():
 
-            # 9 item INFO: huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            # 9 item INFO: poly_code,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
             firstPart = ','.join(str(e) for e in demInfo)
 
             # srcID must exist in dlImgFileDict (successully populated during download)
@@ -779,12 +978,12 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         dlMasterFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Elevation_Metadata.txt"
 
         g = open(dlMasterFilePath,'a+')
-##        header = ('huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
+##        header = ('poly_code,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,'
 ##                  'download_url,DEMname,DEMpath,columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srType,'
 ##                  'EPSG,srsName,top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize')
 
         # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-        header = ('huc_digit,prod_title,pub_date,lastupdated,rast_size,format,sourceid,metaurl,'
+        header = ('poly_code,prod_title,pub_date,lastupdated,rast_size,format,sourceid,metaurl,'
                   'downld_url,dem_name,dem_path,columns,rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
                   'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,min,mean,max,stdev,blk_xsize,blk_ysize')
 
@@ -797,7 +996,7 @@ def createMasterDBfile(dlImgFileDict,elevMetadataDict):
         # Iterate through all of the sourceID files in the download file (elevMetadatDict)
         for srcID,demInfo in elevMetadataDict.items():
 
-            # huc_digit,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,download_url
+            # poly_code,prod_title,pub_date,last_updated,rast_size,format,sourceID,metadata_url,download_url
             firstPart = ','.join(str(e) for e in demInfo)
 
             # srcID must exist in dlImgFileDict (successully populated during download)
@@ -1179,7 +1378,8 @@ def createRaster2pgSQLFile(masterElevFile):
         recCount = 0
         r2pgsqlFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_RASTER2PGSQL.txt"
 
-        g = open(r2pgsqlFilePath,'a+')
+        # Recreates raster2pgsql file b/c metadata file is passed over; don't want to double up
+        g = open(r2pgsqlFilePath,'w')
 
         total = sum(1 for line in open(masterElevFile)) -1
         #label = "Generating Raster2PGSQL Statements"
@@ -1217,7 +1417,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 if recCount == masterElevRecCount:
                     g.write(r2pgsqlCommand)
                 else:
-                    g.write(r2pgsqlCommand + "\n")
+                    g.write(f"{r2pgsqlCommand}\n")
 
                 print(f"\t\tSuccessfully wrote raster2pgsql command for {demName} -- ({recCount:,} of {total:,})")
                 recCount+=1
@@ -1243,9 +1443,8 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
     try:
         errorFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_FAILED.txt"
-
         AddMsgAndPrint(f"\tDownload Errors Logged to: {errorFile}")
-        g = open(errorFile,'a+')
+        g = open(errorFile,'w')
 
         lineNum = 0
         numOfErrors = 0
@@ -1258,7 +1457,6 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
                     g.write(line.strip())
                     lineNum +=1
 
-                huc8digit = items[headerValues.index("huc_digit")]
                 downloadURL = items[headerValues.index("downld_url")].strip()
 
                 if downloadURL in failedDownloadList:
@@ -1288,6 +1486,7 @@ def main(dlFile,dlDir,bReplace):
         global elevMetadataDict
         global headerValues
         global resolution
+        global dlFolder
 
         # 6 Tool Parameters
         downloadFile = dlFile         # Download File
@@ -1302,14 +1501,14 @@ def main(dlFile,dlDir,bReplace):
         # USGS_3DEP_5M_AK_DSM_Step1B_ElevationDL_07262023.txt --> 5M_AK_DSM
         tempList = downloadFile.split(os.sep)[-1].split('_')
         startPos = tempList.index(fnmatch.filter(tempList, '3DEP*')[0]) + 1
-        endPos = tempList.index(fnmatch.filter(tempList, 'Step*')[0]) - 1
+        endPos = tempList.index(fnmatch.filter(tempList, 'Step*')[0])
         resolution = '_'.join(tempList[startPos:endPos])
         #resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
-        # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
+        # ['polyCode','prod_title','pub_date','last_updated','size','format'] ...etc
         headerValues = open(downloadFile).readline().rstrip().split(',')
 
-        urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by HUC; 07040006:[[ur1],[url2]]
+        urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by poly_code; 07040006:[[ur1],[url2]]
         elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
         recCount = 0
         badLines = 0
@@ -1331,7 +1530,8 @@ def main(dlFile,dlDir,bReplace):
                     recCount+=1
                     continue
 
-                hucDigit = items[headerValues.index("huc_digit")]
+                poly_code = items[headerValues.index("poly_code")]
+                #poly_name = items[headerValues.index("poly_name")]
                 prod_title = items[headerValues.index("prod_title")]
                 pub_date = items[headerValues.index("pub_date")]
                 last_updated = items[headerValues.index("lastupdate")]
@@ -1342,13 +1542,13 @@ def main(dlFile,dlDir,bReplace):
                 downloadURL = items[headerValues.index("downld_url")].strip()
 
                 # Add info to urlDownloadDict
-                if hucDigit in urlDownloadDict:
-                    urlDownloadDict[hucDigit].append([downloadURL,sourceID,fileFormat])
+                if poly_code in urlDownloadDict:
+                    urlDownloadDict[poly_code].append([downloadURL,sourceID,fileFormat])
                 else:
-                    urlDownloadDict[hucDigit] = [[downloadURL,sourceID,fileFormat]]
+                    urlDownloadDict[poly_code] = [[downloadURL,sourceID,fileFormat]]
 
                 # Add info to elevMetadataDict
-                elevMetadataDict[sourceID] = [hucDigit,prod_title,pub_date,last_updated,
+                elevMetadataDict[sourceID] = [poly_code,prod_title,pub_date,last_updated,
                                               size,fileFormat,sourceID,metadata_url,downloadURL]
                 recCount+=1
 
@@ -1397,28 +1597,18 @@ def main(dlFile,dlDir,bReplace):
             if bDownloadMultithread: AddMsgAndPrint(f"\nDownloading in Multi-threading Mode - # of Files: {recCount:,}")
             else:                    AddMsgAndPrint(f"\nDownloading in Single Request Mode - # of Files: {recCount:,}")
 
-            # 01010201:[URL,sourceID]
-            for huc,items in urlDownloadDict.items():
+            # 01:[URL,sourceID]
+            for polycode,items in urlDownloadDict.items():
                 i = 1
-                numOfHUCelevTiles = len(items)
+                numOfPolyElevFiles = len(items) # Number of elev files in this poly_code (State or HUC)
 
-                # if OS is Linux then downloadfolder will have to be set
-                # if OS is Windows then downloadfolder was passed in.
-                if not dlFolder:
-                    downloadFolder = getDownloadFolder(huc,resolution)
-                    if not downloadFolder:
-                        AddMsgAndPrint(f"\n\tFailed to set download folder for {huc}. {numOfHUCelevTiles:,} will NOT be downloaded")
-                        continue
-                else:
-                    downloadFolder = dlFolder
-
-                AddMsgAndPrint(f"\n\tDownloading {numOfHUCelevTiles:,} elevation tiles for HUC: {huc} ---> {downloadFolder}")
+                AddMsgAndPrint(f"\n\tDownloading {numOfPolyElevFiles:,} elevation tiles for Code: {polycode}")
 
                 if bDownloadMultithread:
                     with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
                         # use a set comprehension to start all tasks.  This creates a future object
-                        future_to_url = {executor.submit(DownloadElevationTile, item, downloadFolder): item for item in items}
+                        future_to_url = {executor.submit(DownloadElevationTile, item): item for item in items}
 
                         # yield future objects as they are done.
                         for future in as_completed(future_to_url):
@@ -1433,8 +1623,8 @@ def main(dlFile,dlDir,bReplace):
 
                 else:
                     for item in items:
-                        #AddMsgAndPrint(f"\t\tDownloading elevation tile: {url.split('/')[-1]} -- {i} of {numOfHUCelevTiles}")
-                        downloadMsgs = DownloadElevationTile(item, downloadFolder)
+                        #AddMsgAndPrint(f"\t\tDownloading elevation tile: {url.split('/')[-1]} -- {i} of {numOfPolyElevFiles}")
+                        downloadMsgs = DownloadElevationTile(item)
 
                         for msg in downloadMsgs:
                             AddMsgAndPrint(msg)
@@ -1494,8 +1684,8 @@ def main(dlFile,dlDir,bReplace):
                 AddMsgAndPrint(f"\nCreating Raster2pgsql File")
                 r2pgsqlStart = tic()
                 r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
-                AddMsgAndPrint(f"\\n\tRaster2pgsql File Path: {r2pgsqlFile}")
-                AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
+                AddMsgAndPrint(f"\n\tRaster2pgsql File Path: {r2pgsqlFile}")
+                AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_{resolution.lower()}) is correct in Raster2pgsql file!!")
                 r2pgsqlStop = toc(r2pgsqlStart)
             else:
                 AddMsgAndPrint(f"\nRaster2pgsql File will NOT be created")
@@ -1574,8 +1764,8 @@ if __name__ == '__main__':
     else:
         bReplace = False
 
-##    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\test_OPR\USGS_3DEP_5M_AK_OPR_AK_Step1B_ElevationDL_06282023.txt'
-##    dlFolder = r'D:\projects\DSHub\Elevation\Alaska'
+##    dlFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\3M\20230802\test\USGS_3DEP_3M_Step1B_ElevationDL_08022023.txt'
+##    dlFolder = r'F:\DSHub\Elevation\USGS_Elevation\3M'
 ##    bReplace = True
 
     main(dlFile,dlFolder,bReplace)
