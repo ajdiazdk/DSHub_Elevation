@@ -132,11 +132,16 @@ if __name__ == '__main__':
                 dlFile_recCount+=1
 
                 # Delete all files associated with the DEMname (.xml, aux...etc)
+                # EXCEPT FOR DSH3M FILES
                 for file in glob.glob(f"{DEMpath}{os.sep}{DEMname.split('.')[0]}*"):
                     if os.path.isfile(file):
-                        os.remove(file)
-                        AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)} -- ({dlFile_recCount:,} of {recCount:,})")
-                        deletedFile+=1
+                        if file.find('dsh3m.tif') >-1:
+                            AddMsgAndPrint(f"Not Deleting DSH3M file: {os.path.basename(file)}")
+                            continue
+                        else:
+                            os.remove(file)
+                            AddMsgAndPrint(f"Successfully Deleted -- {sourceID} -- {os.path.basename(file)} -- ({dlFile_recCount:,} of {recCount:,})")
+                            deletedFile+=1
                     else:
                         AddMsgAndPrint(f"NOT a valid file -- {sourceID} -- {file}")
                         invalidFiles+=1

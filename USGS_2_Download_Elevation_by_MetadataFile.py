@@ -1,8 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
 """
-Script Name: USGS_Download_Elevation_by_MetadataFile.py
+Script Name: USGS_2_Download_Elevation_by_MetadataFile.py
 Created on Fri Sep  2 10:12:13 2022
-updated 4/5/2023
+updated 7/27/2023
 
 @author: Adolfo.Diaz
 GIS Business Analyst
@@ -160,7 +160,10 @@ and return them.  This will be used to append to the DLStatus file.
 
 7/27/2023
     - Updated the unzip function to look for specific DEMs when dealing with the 5M_AK_DSM
-    -
+    - Replaced the usage of 'HUC' and
+    - Modified the createErrorLogFile to add an increment to the newly created error log file in case
+      the errorFile might be the downloadFile being used as a 2nd run to download failed DEMs from the
+      first run; Not doing so will produce an empty file b/c the downloadfile and errorFile are the same.
 
 
 Things to consider/do:
@@ -1443,6 +1446,14 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
     try:
         errorFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_FAILED.txt"
+
+        # errorFile might be the downloadFile being used as a 2nd run to download failed
+        # DEMs from the first run.  If so, create another errorFile with an increment at the end.
+        i=2
+        while os.path.exists(errorFile):
+            errorFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_FAILED_{i}.txt"
+            i+=1
+
         AddMsgAndPrint(f"\tDownload Errors Logged to: {errorFile}")
         g = open(errorFile,'w')
 
@@ -1770,4 +1781,3 @@ if __name__ == '__main__':
 
     main(dlFile,dlFolder,bReplace)
     input("\nHit Enter to Continue: ")
-    exit()
