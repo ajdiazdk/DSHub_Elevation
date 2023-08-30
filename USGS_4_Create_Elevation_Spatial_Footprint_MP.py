@@ -12,7 +12,7 @@ cell: 608.215.7291
 
 This is script #4 in the USGS Elevation acquisition workflow developed for the DS Hub.
 
-The purpose of this script is to create a delineation around valid pixels for the input
+The purpose of this script is to create a vector footprint around valid pixels for the input
 DEMs.  The delineations are NOT bounding boxes.  Instead they act more like a convex hull
 around pixels that are greater or equal the minimum value.  It excludes NODATA pixels.
 
@@ -24,29 +24,36 @@ Parameters:
                          set to False by default but can be overwritten in main.
 """
 
-import os, subprocess, sys, traceback, re, glob, math, time, fnmatch, psutil
+import os, subprocess, sys, traceback, re, glob, math, time, fnmatch, psutil, numpy
 from datetime import datetime
 from osgeo import gdal
 from osgeo import ogr, osr
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
 ## ===================================================================================
-def AddMsgAndPrint(msg):
-
-    # Print message to python message console
-    print(msg)
+def AddMsgAndPrint(msg,msgList=list()):
 
     # Add message to log file
     try:
-        h = open(msgLogFile,'a+')
-        h.write("\n" + msg)
-        h.close
-        del h
+        if msgList:
+            h = open(msgLogFile,'a+')
+            for msg in msgList:
+                print(msg)
+                h.write("\n" + msg)
+            h.close
+            del h
+
+        else:
+            print(msg)
+            h = open(msgLogFile,'a+')
+            h.write("\n" + msg)
+            h.close
+            del h
     except:
         pass
 
 ## ===================================================================================
-def errorMsg(errorOption=1,batch=False):
+def errorMsg(errorOption=1):
     """ Capture Traceback error messages """
 
     try:
@@ -70,12 +77,16 @@ def tic():
     return time.time()
 
 ## ================================================================================================================
-def toc(_start_time):
+def toc(_start_time,seconds=False):
     """ Returns the total time by subtracting the start time - finish time"""
 
     try:
 
         t_sec = round(time.time() - _start_time)
+
+        if seconds:
+            return int(t_sec)
+
         (t_min, t_sec) = divmod(t_sec,60)
         (t_hour,t_min) = divmod(t_min,60)
 
@@ -90,7 +101,7 @@ def toc(_start_time):
         errorMsg()
 
 ## ===================================================================================
-def convertMasterDBfileToDict(elevMetdataFile):
+def convertMasterDBfileToDict(elevMetdataFile,outDir):
     """ Opens the Master Elevation Database CSV file containing the metadata for every
         DEM file, including statistical and geographical information.  Parses the content
         into a dictionary with the sourceId being the key and the rest of the information
@@ -130,15 +141,20 @@ def convertMasterDBfileToDict(elevMetdataFile):
                               '512\n']}
     """
     try:
-        AddMsgAndPrint("\nConverting input Metadata Elevation File into a dictionary")
-        mDBFnumOfRecs = len(open(elevMetdataFile).readlines())
+        AddMsgAndPrint("\nConverting input USGS Elevation Metadata File into a dictionary")
 
-        # Find sourceID in headers; return False if not found
+        # List of header values from elevation metadata file
+        headerValues = open(elevMetdataFile).readline().rstrip().split(',')
+        numOfTotalRecs = len(open(elevMetdataFile).readlines())-1
+
+        # Position of DEM Name
+        demNameIdx = headerValues.index("dem_name")
         sourceIDidx = headerValues.index('sourceid')
 
         masterDBfileDict = dict()
         recCount = 0
         badLines = 0
+        fpShapesList = list()
 
         """ ---------------------------- Open Download File and Parse Information ----------------------------------"""
         with open(elevMetdataFile, 'r') as fp:
@@ -164,6 +180,42 @@ def convertMasterDBfileToDict(elevMetdataFile):
                     badLines+=1
                     # continue
 
+                demName = items[demNameIdx]
+                prjShape = f"{outDir}{os.sep}{demName[:-4]}_FP_WGS84.shp"
+
+                # Check health of shapefile; delete and redo if it is corrupt; skip if healthy
+                if os.path.exists(prjShape):
+
+                    driver = ogr.GetDriverByName('ESRI Shapefile')
+
+                    # Open Shapefile and assess health
+                    try:
+                        # Shapefile is Corrupt
+                        dataSource = driver.Open(prjShape, 0)
+
+                        if dataSource is None:
+                            AddMsgAndPrint(f"\t-WGS84 Shapefile footprint exists but is corrupt: {os.path.basename(prjShape)}")
+
+                            # Delete corrupted Shapefile
+                            for tmpFile in glob.glob(f"{prjShape.split('.')[0]}*"):
+                                os.remove(tmpFile)
+                                if tmpFile.endswith('.shp'):
+                                    AddMsgAndPrint(f"\t-Successfully Deleted Shapefile: {os.path.basename(tmpFile)}")
+
+                        # Shapefile is healthy
+                        else:
+                            fpShapesList.append(prjShape)
+                            del driver,dataSource
+                            continue
+
+                    # Error opening Shapefile - Corrupt
+                    except:
+                        # Delete corrupted Shapefile
+                        for tmpFile in glob.glob(f"{prjShape.split('.')[0]}*"):
+                            os.remove(tmpFile)
+                            if tmpFile.endswith('.shp'):
+                                AddMsgAndPrint(f"\t-Successfully Deleted Shapefile: {os.path.basename(tmpFile)}")
+
                 sourceID = items[sourceIDidx]
 
                 # Add info to elevMetadataDict
@@ -171,25 +223,34 @@ def convertMasterDBfileToDict(elevMetdataFile):
                 recCount+=1
         del fp
 
-        if len(masterDBfileDict) == recCount:
-            return masterDBfileDict
+        # Remove Header Value from count
+        recCount-=1
 
-        if len(masterDBfileDict) == 0:
-            AddMsgAndPrint(f"\tElevation Metadata File: {os.path.basename(masterDBfile)} was empty!")
-            return False
+        if numOfTotalRecs > 0:
+            AddMsgAndPrint(f"\n\tElevation File contains {numOfTotalRecs:,} DEM files")
+
+        if recCount > 0:
+            AddMsgAndPrint(f"\t\tThere are {recCount:,} DEM files to create footprints for")
+
+        if len(fpShapesList) > 0:
+            AddMsgAndPrint(f"\t\tThere are {len(fpShapesList):,} Shapefile Footprints that already exist")
 
         if badLines > 0:
-            AddMsgAndPrint(f"\tThere are(is) {badLines} records with anomalies found")
+            AddMsgAndPrint(f"\tThere are(is) {badLines:,} records with anomalies found")
 
-        return masterDBfileDict
+        if len(masterDBfileDict) == 0:
+            AddMsgAndPrint(f"\t\tThere are no valid DEMs to create footprints for")
+            return False,False,False
+
+        return masterDBfileDict,headerValues,recCount,fpShapesList
 
     except:
         errorMsg()
-        return False
+        return False,False,False
 
 
 #### ===================================================================================
-def createFootPrint(items):
+def createFootPrint(items, headerValues,outFpDir,bGDAL):
     """        '63e7308bd34efa0476ae8401': ['11030005',
                               'USGS 1 Meter 14 x34y421 '
                               'KS_StatewideFordGray_2018_A18',
@@ -225,7 +286,14 @@ def createFootPrint(items):
     """
 
     try:
-        messageList = list()
+
+        # Establish dict of contents to return
+        returnDict = dict()
+        returnDict['msgs'] = []
+        returnDict['shp'] = []
+        returnDict['fail'] = []
+        returnDict['pTime'] = []
+
         filestart = tic()
         rasterRecord = items[1]
 
@@ -236,33 +304,8 @@ def createFootPrint(items):
         noData = float(rasterRecord[headerValues.index("nodataval")])
         minStat = float(rasterRecord[headerValues.index("rds_min")])
 
-        messageList.append(f"\n\tProcessing {demName}")
-
-        # Just in case footprint already exists - don't redo it.
-        prjShape = f"{outFpDir}{os.sep}{demName[:-4]}_FP_WGS84.shp"
-        if os.path.exists(prjShape):
-
-            driver = ogr.GetDriverByName('ESRI Shapefile')
-            dataSource = driver.Open(prjShape, 0)
-
-            # Check health of shapefile; delete and redo if it is corrupt; skip if healthy
-            if dataSource is None:
-                messageList.append(f"\t\t-WGS84 Footprint exists but is corrupt: {os.path.basename(prjShape)}")
-
-                # Delete corrupted Shapefile
-                for tmpFile in glob.glob(f"{prjShape.split('.')[0]}*"):
-                    os.remove(tmpFile)
-                    if tmpFile.endswith('.shp'):
-                        messageList.append(f"\t\t-Successfully Deleted Shapefile: {os.path.basename(tmpFile)}")
-
-            else:
-                fpShapes.append(prjShape)
-                messageList.append(f"\t\t-WGS84 Footprint exists: {os.path.basename(prjShape)}")
-                messageList.append(f"\t\t-Process Time: {toc(filestart)}")
-                return messageList
-
-            del driver,dataSource
-        del prjShape
+        demPath = f"{demDir}{os.sep}{demName}"
+        returnDict['msgs'].append(f"\n\tProcessing {demName} - Size: {round(os.path.getsize(demPath) /1024,1):,} KB")
 
         # use the minimum stat to reclassify the input raster
         calcValue = ""
@@ -271,24 +314,32 @@ def createFootPrint(items):
             calcValue = float(math.floor(minStat / 100.00) * 100)
         else:
             calcValue = noData
-        #messageList.append(f"\t\tThreshold Value: {calcValue}")
+        #returnDict['msgs'].append(f"\t\tThreshold Value: {calcValue}")
 
         # Temp Tiff that will be created and used to vectorize
-        demPath = f"{demDir}{os.sep}{demName}"
+
         fileExt = demPath.split('.')[1] # tif, img
         tempTif = f"{demPath.split('.')[0]}_TEMP.{fileExt}"
 
         # Delete TEMP raster layer
         for tmpFile in glob.glob(f"{tempTif.split('.')[0]}*"):
             os.remove(tmpFile)
-            #messageList.append(f"\t\tSuccessfully Deleted temp tiff: {os.path.basename(tmpFile)}")
+            #returnDict['msgs'].append(f"\t\tSuccessfully Deleted temp tiff: {os.path.basename(tmpFile)}")
 
         """ ------------------------- Create Raster Data Mask ----------------------------------- """
-        if os.name == 'nt':
-            gdal_calc = f"gdal_calc -A {demPath} --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
+        calcStart = tic()
+
+        if bGDAL:
+            if os.name == 'nt':
+                gdal_calc = f"gdal_calc -A {demPath} --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
+            else:
+                #gdal_calc = f"gdal_calc -A {demPath} --A_band=1 --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
+                gdal_calc = f"python3 /bin/gdal_calc.py -A {demPath} --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
+
         else:
-            #gdal_calc = f"gdal_calc -A {demPath} --A_band=1 --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
-            gdal_calc = f"python3 /bin/gdal_calc.py -A {demPath} --outfile={tempTif} --type=Byte --calc=\"A>{calcValue}\" --NoDataValue=0"
+            # create binary raster NODATA=0, DATA = 1
+            numpyCalc = '"numpy.where(A > ' + str(calcValue) + ', 1, A)"'
+            gdal_calc = f"gdal_calc -A {demPath} --outfile={tempTif} --type=Byte --calc={numpyCalc} --NoDataValue=0"
 
         # Collect messages from subprocess
         errorList = ['error','failed','fail','uncommit','aborted','notice','memory',
@@ -304,12 +355,35 @@ def createFootPrint(items):
 
         if words_re.search(errors.lower()) or not execCmd.returncode == 0:
             #msgDict['Error'] = f"{gdal_calc}\n\t{errors}"
-            messageList.append(f"\t\t-Errors creating 'data' mask: {errors}")
+            returnDict['msgs'].append(f"\t\t-Errors creating 'data' mask: {errors}")
         else:
             #msgDict['Success'] = f"Successfully created 'data' mask"
-            messageList.append(f"\t\t-Successfully created 'data' mask using values >= {calcValue}")
+            pass
+            ##returnDict['msgs'].append(f"\t\t-Successfully created 'data' mask using values >= {calcValue}")
 
-        """ ------------------------- Create Footprint Shapefile ----------------------------------- """
+        returnDict['msgs'].append(f"\t\t-GDAL Calc Process Time: {toc(calcStart)}")
+
+        """ ------------------------- Create Empty Footprint Shapefile ----------------------------------- """
+        emptyShpStart = tic()
+
+        fpLyrName = f"{demName[:-4]}_FP"                    # New shapefile name - no ext
+        fpShpPath = f"{outFpDir}{os.sep}{fpLyrName}.shp"    # New shapefile footprint path - temporary
+
+        # Remove temp shapefile if it already exists
+        if os.path.exists(fpShpPath):
+            for tmpFile in glob.glob(f"{fpShpPath.split('.')[0]}*"):
+                os.remove(tmpFile)
+            ##returnDict['msgs'].append(f"\t\t-Successfully deleted existing Shp: {fpLyrName}.shp")
+
+        # set the spatial reference for the shapefile; same as input raster
+        sp_ref = osr.SpatialReference()
+        sp_ref.ImportFromEPSG(EPSG)
+
+        # set the shapefile driver and destination of the data source
+        outDriver = ogr.GetDriverByName("ESRI Shapefile")
+        outDataSource = outDriver.CreateDataSource(outFpDir)
+        outLayer = outDataSource.CreateLayer(fpLyrName, srs=sp_ref, geom_type=ogr.wkbPolygon)
+
         # List of field names to add to shapefile
         fieldNames = {'poly_code':ogr.OFTString,
                       'prod_title':ogr.OFTString,
@@ -344,26 +418,6 @@ def createFootPrint(items):
                       'blk_ysize':ogr.OFTInteger,
                       "rastValue":ogr.OFTInteger}
 
-        # Set up the shapefile driver
-        outDriver = ogr.GetDriverByName("ESRI Shapefile")
-
-        fpLyrName = f"{demName[:-4]}_FP"                    # New shapefile name - no ext
-        fpShpPath = f"{outFpDir}{os.sep}{fpLyrName}.shp"    # New shapefile footprint path
-
-        # Remove output shapefile if it already exists
-        if os.path.exists(fpShpPath):
-            outDriver.DeleteDataSource(fpShpPath)
-            messageList.append(f"\t\t-Successfully deleted existing Shp: {fpLyrName}.shp")
-
-        # set the spatial reference for the shapefile; same as input raster
-        sp_ref = osr.SpatialReference()
-        sp_ref.ImportFromEPSG(EPSG)
-        #sp_ref.SetFromUserInput(f"EPSG:{EPSG}")
-
-        # set the destination of the data source
-        outDataSource = outDriver.CreateDataSource(outFpDir)
-        outLayer = outDataSource.CreateLayer(fpLyrName, srs=sp_ref, geom_type=ogr.wkbPolygon)
-
         # Add new Fields to the output shapefile
         for fld in fieldNames.items():
             fldname = fld[0]
@@ -380,20 +434,29 @@ def createFootPrint(items):
         # Get the output Layer's Feature Definition
         outLayerDefn = outLayer.GetLayerDefn()
 
-        """ ------------------------- Vectorize Mask ----------------------------------- """
-        # Value from raster after
+        # Raster field that will be used to vectorize
         rast_field = outLayer.GetLayerDefn().GetFieldIndex("rastValue")
 
+        returnDict['msgs'].append(f"\t\t-Create empty shapefile Process Time: {toc(emptyShpStart)}")
+
+        """ ------------------------- Vectorize Raster Data Mask ----------------------------------- """
+        vectorStart = tic()
+
         # Open raster to pass a band object to polygonize function
-        ds = gdal.Open(tempTif)
+        ds = gdal.Open(tempTif, gdal.GA_ReadOnly)
         band = ds.GetRasterBand(1)
 
         # vectorize mask
         #result = gdal.Polygonize(band, None if , outLayer, rast_field, [], callback=None)
         result = gdal.Polygonize(band, band, outLayer, rast_field, [], callback=None)
         assert result == 0, AddMsgAndPrint(f"\tPolygonize failed")
-        messageList.append(f"\t\t-Successfully vectorized mask into: {fpLyrName}.shp")
+        ##returnDict['msgs'].append(f"\t\t-Successfully vectorized mask into: {fpLyrName}.shp")
 
+        # Close the raster
+        ds = None
+        returnDict['msgs'].append(f"\t\t-Vectorize Mask Process Time: {toc(vectorStart)}")
+
+        updateAttributes = tic()
         # populate the shapefile fields after polygons exist
         for i in range(0, outLayer.GetFeatureCount()):
             feature = outLayer.GetFeature(i)
@@ -404,23 +467,28 @@ def createFootPrint(items):
 
         # close the shapefile and workspace
         outDataSource.FlushCache()
-        outDataSource.Destroy()
+        outDataSource = None
 
-        del outDataSource, outLayer, ds, band
+        del outLayer, ds, band
+        returnDict['msgs'].append(f"\t\t-Update Attribute Time: {toc(updateAttributes)}")
 
-        """ ------------------------- Project Mask to WGS84 ----------------------------------- """
-        #inDriver = ogr.GetDriverByName("ESRI Shapefile")
-        #shape = inDriver.Open(fpShpPath,0)
-        #layer = shape.GetLayer()
+        """ ------------------------- Project Mask Shapefile to WGS84 ----------------------------------- """
+        projectShpStart = tic()
 
         # projected output Shapefile
-        prjShape = f"{fpShpPath.split('.')[0]}_WGS84.shp"
+        prjShape = f"{outFpDir}{os.sep}{demName[:-4]}_FP_WGS84.shp"
 
-        # Delete if projected shp exists
+        # Remove prj shapefile if it already exists
         if os.path.exists(prjShape):
-            outDriver.DeleteDataSource(prjShape)
+            print("EXISTS")
+            for tmpFile in glob.glob(f"{prjShape.split('.')[0]}*"):
+                os.remove(tmpFile)
 
         prjCmd = f"ogr2ogr -f \"ESRI Shapefile\" {prjShape} {fpShpPath} -t_srs EPSG:4326 -s_srs EPSG:{EPSG} "# -lco ENCODING=UTF-8"
+
+        execCmd = subprocess.Popen(prjCmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
+        msgs, errors = execCmd.communicate()
+        errors = ','.join(errors.strip().split('\n'))  # some errors return mutliple carriage returns
 
         # Create 4326 prj file if not created; not sure why the prj is not automatically created.
         prjFile = f"{prjShape[0:-4]}.prj"
@@ -431,37 +499,37 @@ def createFootPrint(items):
             file = open(prjFile, 'w')
             file.write(spatialRef.ExportToWkt())
             file.close()
-            messageList.append(f"\t\t-Successfully Created WGS84 PRJ File: {prjFile}")
+            ##returnDict['msgs'].append(f"\t\t-Successfully Created WGS84 PRJ File: {prjFile}")
 
-        execCmd = subprocess.Popen(prjCmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
-        msgs, errors = execCmd.communicate()
-        errors = ','.join(errors.strip().split('\n'))  # some errors return mutliple carriage returns
+        returnDict['shp'].append(prjShape)
+        ##returnDict['msgs'].append(f"\t\t-Successfully Projected: {os.path.basename(fpShpPath)} to WGS84")
 
-        fpShapes.append(prjShape)
+        returnDict['msgs'].append(f"\t\t-Project Shapefile Process Time: {toc(projectShpStart)}")
 
-        # Close datasource
-        #shape = None
-        #del inDriver,shape,layer,prjShape
-        messageList.append(f"\t\t-Successfully Projected: {os.path.basename(fpShpPath)} to WGS84")
-
-        """ ------------------------- Delete Temp Raster Files ----------------------------------- """
+        """ ------------------------- Delete Temp Files ----------------------------------- """
         # Delete TEMP raster layer
         for tmpFile in glob.glob(f"{tempTif.split('.')[0]}*"):
             os.remove(tmpFile)
-            messageList.append(f"\t\t-Successfully Deleted temp: {os.path.basename(tmpFile)}")
+            ##returnDict['msgs'].append(f"\t\t-Successfully Deleted temp: {os.path.basename(tmpFile)}")
 
-        # Delete TEMP raster layer
-        outDriver.DeleteDataSource(fpShpPath)
-        messageList.append(f"\t\t-Successfully Deleted temp: {os.path.basename(fpShpPath)}")
+        # Delete TEMP shapefile layer
+        if os.path.exists(fpShpPath):
 
-        messageList.append(f"\t\t-Process Time: {toc(filestart)}")
-        return messageList
+            for tmpFile in glob.glob(f"{fpShpPath.split('.')[0]}.*"):
+                os.remove(tmpFile)
+        ##returnDict['msgs'].append(f"\t\t-Successfully Deleted temp: {os.path.basename(fpShpPath)}")
+
+        returnDict['msgs'].append(f"\t\t-Process Time: {toc(filestart)}")
+        returnDict['pTime'].append(toc(filestart,seconds=True))
+
+        del outDataSource
+        return returnDict
 
     except:
-        messageList.append(errorMsg(errorOption=2))
-        messageList.append(f"\t\t-Process Time: {toc(filestart)}")
-        failedFootprints.append(items)
-        return messageList
+        returnDict['msgs'].append(errorMsg(errorOption=2))
+        returnDict['msgs'].append(f"\t\t-Process Time: {toc(filestart)}")
+        returnDict['fail'].append(items)
+        return returnDict
 
 #### ===================================================================================
 def mergeFootPrints(outDir,shapefiles):
@@ -469,7 +537,7 @@ def mergeFootPrints(outDir,shapefiles):
     try:
         AddMsgAndPrint(f"\nMerging Shapefile Spatial Footprints")
 
-        """ ------------------  Create new shapefile and add fields -------------------------------"""
+        """ ------------------  Create empty output merged shapefile -------------------------------"""
         # Create a new shapefile to store the merged data
         mergeShape = f"USGS_3DEP_{resolution}_FootPrints_WGS84"
         mergeShapePath = f"{outDir}{os.sep}{mergeShape}.shp"
@@ -542,22 +610,12 @@ def mergeFootPrints(outDir,shapefiles):
         del shapefile
         AddMsgAndPrint(f"\n\t\tSuccessfully Appended {appendCnt:,} footprint Shapefiles to: {os.path.basename(mergeShapePath)}")
 
-        """ ------------------  Delete Temp Projected Files -------------------------------"""
-        AddMsgAndPrint(f"\n\tDeleting {len(shapefiles)} Projected Shapefiles")
-        deleteCnt = 0
-
-        # Add each shapefile to the merged layer
-        driver = ogr.GetDriverByName("ESRI Shapefile")
-        for shapefile in shapefiles:
-            if os.path.exists(shapefile):
-                driver.DeleteDataSource(shapefile)
-                print(f"\t\tSuccessfully Deleted {os.path.basename(shapefile)}")
-                deleteCnt+=1
-
-        AddMsgAndPrint(f"\t\tSuccessfully Deleted {deleteCnt:,} Projected Shapefiles")
+        return mergeShapePath
 
     except:
         errorMsg()
+        return False
+
 
 #### ===================================================================================
 
@@ -565,10 +623,24 @@ if __name__ == '__main__':
 
     funStarts = tic()
 
+##    # Parameter 1 - Metadata Elevation File
+##    elevationMetadataFile = input("\nEnter full path to USGS Metadata Master Elevation File: ")
+##    while not os.path.exists(elevationMetadataFile):
+##        print(f"{elevationMetadataFile} does NOT exist. Try Again")
+##        elevationMetadataFile = input("Enter full path to USGS Metadata Master Elevation File: ")
+##
+##    # Parameter 2 - Directory where spatial footprints will be saved
+##    outFpDir = input("\nEnter path where elevation footprints files will be saved to: ")
+##    while not os.path.exists(outFpDir):
+##        print(f"{outFpDir} does NOT exist. Try Again")
+##        outFpDir = input("Enter path where elevation footprints files will be saved to: ")
+
     # Parameters
-    elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801_windows\USGS_3DEP_30M_Step2_Elevation_Metadata_test.txt'
-    outFpDir = r'D:\projects\DSHub\USGS_Spatial_Footprints\30M_test'
-    outputSRS = '4326'
+    elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20230728_windows\USGS_3DEP_1M_Step2_Elevation_Metadata_10.txt'
+    outFpDir = r'D:\projects\DSHub\USGS_Spatial_Footprints\1M'
+    bMultiProcess = True
+    bGDAL = True
+    outputSRS = 4326
 
     """ ---------------------------- Establish Console LOG FILE ---------------------------------------------------"""
     tempList = elevationMetadataFile.split(os.sep)[-1].split('_')
@@ -580,7 +652,7 @@ if __name__ == '__main__':
     # Log file that captures console messages
     #logFile = os.path.basename(downloadFile).split('.')[0] + "_Download_ConsoleMsgs.txt"
 
-    msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_Create_SpatialFootprints_ConsoleMsgs.txt"
+    msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step4_Create_SpatialFootprints_{'MP' if bMultiProcess else 'SP'}_ConsoleMsgs.txt"
 
     h = open(msgLogFile,'w')
     h.write(f"Executing: USGS_4_Create_Elevation_Spatial_Footprints {today}\n\n")
@@ -588,63 +660,143 @@ if __name__ == '__main__':
     h.write(f"\tElevation Metadata File: {elevationMetadataFile}\n")
     h.write(f"\tOutput Footprint Directory: {outFpDir}\n")
     h.write(f"\tOutput Spatial Reference EPSG: {outputSRS}\n")
+    h.write(f"\tProcessing Mode: {'Multi-Processing' if bMultiProcess else 'Single-Processing'}\n")
     h.write(f"\tLog File Path: {msgLogFile}\n")
     h.close()
 
     AddMsgAndPrint(f"\n{'='*125}")
 
-    # List of header values from elevation metadata file
-    headerValues = open(elevationMetadataFile).readline().rstrip().split(',')
-    recCount = len(open(elevationMetadataFile).readlines()) - 1
+    """ ---------------------------- Retrieve Information from Elevation file ---------------------------------------------------"""
 
-    AddMsgAndPrint(f"There are {recCount:,} DEM files to create footprints for")
+    # retrieve info from elevation metadata file
+    # files = dict() containing DEM info key=sourceID values=[list of DEM record]
+    # headerValues = list of the headers
+    # recCount = Number of records to create footprint for
+    # fpShapes = list of existing shapefile footprints
+    files,headerValues,recCount,fpShapes = convertMasterDBfileToDict(elevationMetadataFile,outFpDir)
 
-    # Convert input metadata elevation file to a dictionary
-    # sourceID = [List of all attributes]
-    files = convertMasterDBfileToDict(elevationMetadataFile)
-
-    # list of tuples for footprint shapefile paths and corresponding EPSG [(path,EPSG)]
-    fpShapes = list()
-    wdir = os.path.dirname(sys.argv[0])
+    if not files:
+        AddMsgAndPrint(f"\nThere are no valid DEMs to create footprints for.  Exiting")
+        exit()
 
     fpTracker = 0
     failedFootprints = list()
+    processTimes = list()
 
-    """ ---------------------------- run createFootPrint in mult-thread mode ---------------------------------------------------"""
+    """ ---------------------------- run createFootPrint in Mult-Process mode ---------------------------------------------------"""
     rastFpStart = tic()
-    AddMsgAndPrint(f"\nCreating Spatial Footprints")
-    numOfCores = psutil.cpu_count(logical = False)
+    if bMultiProcess:
 
-    # Execute in Multi-threading mode
-    with ThreadPoolExecutor(max_workers=numOfCores) as executor:
-        ndProcessing = {executor.submit(createFootPrint, rastItems): rastItems for rastItems in files.items()}
+        if os.name == 'nt':
+            numOfCores = int(psutil.cpu_count(logical = False))         # 16 workers
+        else:
+            numOfCores = int(psutil.cpu_count(logical = True) / 2)      # 32 workers
+        AddMsgAndPrint(f"\nCreating Spatial Footprints in Multi-Process Mode using {numOfCores} workers for {recCount:,} DEM files")
 
-        # yield future objects as they are done.
-        for future in as_completed(ndProcessing):
+        # Execute in Multi-processing mode
+        with ThreadPoolExecutor(max_workers=numOfCores) as executor:
+        #with ProcessPoolExecutor(max_workers=numOfCores) as executor:
+            ndProcessing = [executor.submit(createFootPrint, rastItems, headerValues, outFpDir, bGDAL) for rastItems in files.items()]
+
+            # yield future objects as they are done.
+            for future in as_completed(ndProcessing):
+                fpTracker +=1
+                j=1
+
+                returnDict = future.result()
+                batchMsgs = list()
+                for printMessage in returnDict['msgs']:
+
+                    if j==1:
+                        batchMsgs.append(f"{printMessage} -- ({fpTracker:,} of {recCount:,})")
+                    else:
+                        batchMsgs.append(printMessage)
+                    j+=1
+
+                AddMsgAndPrint(None,msgList=batchMsgs)
+
+                if returnDict['shp']:
+                    fpShapes.append(returnDict['shp'][0])
+
+                if returnDict['fail']:
+                    failedFootprints.append(returnDict['fail'][0])
+
+                if returnDict['pTime']:
+                    processTimes.append(returnDict['pTime'][0])
+
+        rastFpStop = toc(rastFpStart)
+
+    else:
+        AddMsgAndPrint(f"\nCreating Spatial Footprints in Single-Process Mode for {recCount:,} DEM files")
+
+        for rastItems in files.items():
+            returnDict = createFootPrint(rastItems,headerValues,outFpDir,bGDAL)
+
+            batchMsgs = list()
             fpTracker +=1
             j=1
-            for printMessage in future.result():
+
+            for printMessage in returnDict['msgs']:
                 if j==1:
-                    AddMsgAndPrint(f"{printMessage} -- ({fpTracker:,} of {recCount:,})")
+                    batchMsgs.append(f"{printMessage} -- ({fpTracker:,} of {recCount:,})")
                 else:
-                    AddMsgAndPrint(printMessage)
+                    batchMsgs.append(printMessage)
                 j+=1
 
-    rastFpStop = toc(rastFpStart)
+            AddMsgAndPrint(None,msgList=batchMsgs)
 
+            if returnDict['shp']:
+                fpShapes.append(returnDict['shp'][0])
+
+            if returnDict['fail']:
+                failedFootprints.append(returnDict['fail'][0])
+
+            if returnDict['pTime']:
+                processTimes.append(returnDict['pTime'][0])
+
+        rastFpStop = toc(rastFpStart)
+
+
+    """ ---------------------------- Merge WGS84 Footprint Shapefiles ----------------------------"""
     # Merge the WGS84 Footprint shapefiles created by the 'createFootprint' function
     if len(fpShapes):
         mergeStart = tic()
-        mergeFootPrints(outFpDir,fpShapes)
+        mergedShapefile = mergeFootPrints(outFpDir,fpShapes)
         mergeStop = toc(mergeStart)
 
     funEnds = toc(funStarts)
 
+    """ ---------------------------- Delete WGS84 Footprint Shapefiles ----------------------------"""
+    if mergedShapefile:
+        AddMsgAndPrint(f"\nDeleting {len(fpShapes):,} WGS84 Footprint Shapefiles")
+        deleteCnt = 0
+
+        # Add each shapefile to the merged layer
+        driver = ogr.GetDriverByName("ESRI Shapefile")
+        for shapefile in fpShapes:
+            if os.path.exists(shapefile):
+                driver.DeleteDataSource(shapefile)
+                print(f"\t\tSuccessfully Deleted {os.path.basename(shapefile)}")
+                deleteCnt+=1
+
+    ##        for tmpFile in glob.glob(f"{shapefile.split('.')[0]}*"):
+    ##            os.remove(tmpFile)
+    ##            if tmpFile.endswith('.shp'):
+    ##                print(f"\t\tSuccessfully Deleted {os.path.basename(shapefile)}")
+    ##                deleteCnt+=1
+
+        AddMsgAndPrint(f"\n\t\tSuccessfully Deleted {deleteCnt:,} WGS84 Footprint Shapefiles")
+    else:
+        AddMsgAndPrint(f"\nMerge Failed so the {len(fpShapes):,} WGS84 Footprint Shapefiles will not be deleted")
+
     """ ------------------------------------ SUMMARY -------------------------------------------- """
     AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
 
+    AddMsgAndPrint(f"\nFinal Merged Footprint Path: {mergedShapefile}")
+
     AddMsgAndPrint(f"\nTotal Processing Time: {funEnds}")
     AddMsgAndPrint(f"\tCreate 'Data' Footprint Time: {rastFpStop}")
+    AddMsgAndPrint(f"\t\tAverage Processing Time per DEM file: {int(sum(processTimes) / len(processTimes))} seconds")
     AddMsgAndPrint(f"\tMerge Footprint Time: {mergeStop}")
 
     # Report number of DEMs processed

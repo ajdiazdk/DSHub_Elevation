@@ -188,7 +188,6 @@ if __name__ == '__main__':
             print(f"{raster2pgsqlFile} does NOT exist. Try Again")
             raster2pgsqlFile = input("Enter full path to Raster2pgsql File: ")
 
-
         resolution = raster2pgsqlFile.split(os.sep)[-1].split('_')[2]
 
         """ ---------------------------- Establish Console LOG FILE ---------------------------------------------------"""
