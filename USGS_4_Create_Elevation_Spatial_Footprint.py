@@ -175,7 +175,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
             return masterDBfileDict
 
         if len(masterDBfileDict) == 0:
-            AddMsgAndPrint(f"\tElevation Metadata File: {os.path.basename(masterDBfile)} was empty!")
+            AddMsgAndPrint(f"\tElevation Metadata File: {os.path.basename(elevMetdataFile)} was empty!")
             return False
 
         if badLines > 0:

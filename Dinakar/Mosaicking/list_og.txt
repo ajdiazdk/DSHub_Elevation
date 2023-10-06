@@ -1,0 +1,2 @@
+.\data\USGS_one_meter_x39y424_KS_Area1_2014_dsh3m.tif
+.\data\USGS_13_n39w101_20230206_dsh3m.tif

@@ -116,24 +116,37 @@ def print_progress_bar(index, total, label):
 
 ## ===================================================================================
 def runRaster2pgsql(cmd):
-# Incorporate check to see if raster exists
-# Execute a child program in a new process
-# safepoints
-# commit
+    """ This function was desinged to execute raster2pgsql commands via a subprocess to OS
+        
+    """
 
     try:
         cmdItems = cmd.split(' ')
-        DEMname = os.path.basename(cmdItems[10])
+        DEMname = os.path.basename(cmdItems[11 if os.name == 'nt' else 10])
 
         msgDict = dict()
         errorList = ['error','failed','fail','uncommit','aborted','notice','memory',
-                     'warning','unable','not recognized','inoperable','syntax']
+                     'warning','unable','not recognized','inoperable','syntax', 'cannot']
         words_re = re.compile("|".join(errorList))
-
-        # Send command to operating system
-        execCmd = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
-        #execCmd = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
-        #execCmd = subprocess.run(rasterLine, shell=True, check=True) # alternate method
+        
+        # Windows (nt) vs Linux (posix)
+        if os.name == 'nt':
+            env={'PGPASSWORD':"ilovesql",
+                 'PGHOST' : 'localhost',
+                 'PGPORT' : '5432',
+                 'PGUSER' : 'postgres',
+                 'PGDATABASE' : "elevation",
+                 'SYSTEMROOT': os.environ['SYSTEMROOT'],
+                 'PROJ_LIB': r"C:\Program Files\PostgreSQL\15\share\contrib\postgis-3.3\proj"}
+            
+            # Send command to operating system
+            execCmd = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True, env=env)
+        
+        else:
+            # Send command to operating system
+            execCmd = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
+            #execCmd = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
+            #execCmd = subprocess.run(rasterLine, shell=True, check=True) # alternate method
 
         # returns a tuple (stdout_data, stderr_data)
         msgs, errors = execCmd.communicate()
@@ -152,7 +165,7 @@ def runRaster2pgsql(cmd):
                 # number of warnings; isolate 1 message
                 # If there are multiple warnings I should compare them to see if they are unique;
                 # Assumption is that the warnings are duplicated
-                warningCounts = matches = re.findall(r'\b(?:' + '|'.join(['warning']) + r')\b', errors)
+                warningCounts = re.findall(r'\b(?:' + '|'.join(['warning']) + r')\b', errors)
                 warningIndices = [m.start() for m in re.finditer(r"\bwarning\b", errors)]
 
                 # Extract warning message
@@ -195,12 +208,15 @@ if __name__ == '__main__':
         raster2pgsqlErrorFile = f"{os.path.dirname(raster2pgsqlFile)}{os.sep}USGS_3DEP_{resolution}_Step3_Exec_RASTER2PGSQL_FAILED.txt"
 
         recCount = sum(1 for line in open(raster2pgsqlFile))
-        today = datetime.today().strftime('%m%d%Y')
 
-        AddMsgAndPrint(f"Executing: USGS_3_Execute_raster2pgsql_fromFile.py {today}\n")
-        AddMsgAndPrint(f"Raster2pgsql File: {raster2pgsqlFile})")
-        AddMsgAndPrint(f"Number of Raster2pgsql records: {recCount:,}")
-        AddMsgAndPrint(f"\n{'='*125}")
+        h = open(raster2pgsqlLogFile,'a+')
+        today = datetime.today().strftime('%m%d%Y')
+        h.write(f"Executing: USGS_3_Execute_raster2pgsql_fromFile.py {today}\n")
+        h.write("\nUser Selected Parameters:")
+        h.write(f"\tRaster2pgsql File: {raster2pgsqlFile})")
+        h.write(f"\tNumber of Raster2pgsql records: {recCount:,}")
+        h.write(f"\n{'='*125}")
+        h.close()
 
         iCount = 1
         raster2pgsqlList = list() # List of commnands to run in multi-thread
@@ -208,7 +224,7 @@ if __name__ == '__main__':
 
         """ ---------------------------- Inspect and report raster2pgsql statements ---------------------------------------------------"""
         # Look for '#' in raster2pgsql commands; Likely added from script#2
-        AddMsgAndPrint(f"Checking Raster2pgsql Statements")
+        AddMsgAndPrint("Checking Raster2pgsql Statements")
         with open(raster2pgsqlFile, 'r') as fp:
             for rasterLine in fp:
 
@@ -218,8 +234,9 @@ if __name__ == '__main__':
                 cmd = rasterLine.strip()
                 cmdItems = cmd.split(' ')
 
-                # Line inludes a '#'
-                if cmd.find('#') > -1 or not cmdItems[0] == 'raster2pgsql':
+                # windows = "C:\Program Files\PostgreSQL\15\bin\raster2pgsql.exe"
+                # linux = raster2pgsl
+                if cmd.find('#') > -1 or not cmdItems[1 if os.name == 'nt' else 0].find('raster2pgsql') > -1:
                     AddMsgAndPrint(f"\tRecord #{iCount:,} is an invalid raster2pgsql command or contains invalid parameters. Skipping")
                     #AddMsgAndPrint(f"\tLine #{iCount:,} contains an invalid 'raster2pgsql' parameter. Skipping")
                     invalidCommands.append(cmd)
@@ -238,7 +255,7 @@ if __name__ == '__main__':
                 logError.write(f"\n{invalidCmd}")
             logError.close
             del logError
-
+            
         """ ---------------------------- Execute raster2pgsql statements in MT mode ---------------------------------------------------"""
         # Run commands in multi-threading mode
         if len(raster2pgsqlList):
@@ -248,41 +265,46 @@ if __name__ == '__main__':
             warningCount = 0
             failedCount = 0
 
-            with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-
-                # use a set comprehension to start all tasks.  This creates a future object
-                runR2pgsqlCmd = {executor.submit(runRaster2pgsql, cmd): cmd for cmd in raster2pgsqlList}
-
-                # yield future objects as they are done.
-                for future in as_completed(runR2pgsqlCmd):
-                    msgs = future.result()
-
-                    for status in msgs:
-                        r2pTracker+=1
-
-                        if status == 'Error':
-                            AddMsgAndPrint(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
-                            failedCount+=1
-
-                            isolatedCommand = msgs['Error'].split('\n')[0]
-                            logError = open(raster2pgsqlErrorFile,'a+')
-                            logError.write(f"\n{isolatedCommand}")
-                            logError.close
-                            del logError
-
-                        elif status == 'Warning':
-                            AddMsgAndPrint(f"\t{msgs['Warning']} -- ({r2pTracker:,} of {recCount:,})")
-                            warningCount+=1
-
-                        elif status == 'Success':
-                            AddMsgAndPrint(f"\t{msgs['Success']} -- ({r2pTracker:,} of {recCount:,})")
-                            successCount+=1
-                        else:
-                            AddMsgAndPrint("\tStatus message not returned by raster2pgsql function")
+            with open(raster2pgsqlLogFile,'a+') as f:
+                with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+    
+                    # use a set comprehension to start all tasks.  This creates a future object
+                    runR2pgsqlCmd = {executor.submit(runRaster2pgsql, cmd): cmd for cmd in raster2pgsqlList}
+    
+                    # yield future objects as they are done.
+                    for future in as_completed(runR2pgsqlCmd):
+                        msgs = future.result()
+    
+                        for status in msgs:
+                            r2pTracker+=1
+    
+                            if status == 'Error':
+                                fp.write(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
+                                print(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
+                                failedCount+=1
+    
+                                isolatedCommand = msgs['Error'].split('\n')[0]
+                                logError = open(raster2pgsqlErrorFile,'a+')
+                                logError.write(f"\n{isolatedCommand}")
+                                logError.close
+                                del logError
+    
+                            elif status == 'Warning':
+                                f.write(f"\t{msgs['Warning']} -- ({r2pTracker:,} of {recCount:,})")
+                                print(f"\t{msgs['Warning']} -- ({r2pTracker:,} of {recCount:,})")
+                                warningCount+=1
+    
+                            elif status == 'Success':
+                                f.write(f"\t{msgs['Success']} -- ({r2pTracker:,} of {recCount:,})")
+                                print(f"\t{msgs['Success']} -- ({r2pTracker:,} of {recCount:,})")
+                                successCount+=1
+                            else:
+                                f.write("\tStatus message not returned by raster2pgsql function")
+                                print("\tStatus message not returned by raster2pgsql function")
 
         else:
             AddMsgAndPrint(f"\nThere were no valid 'RASTER2PGSQL' records to execute.  EXITING!")
-            exit()
+            sys.exit()
 
         """ ------------------------------------ SUMMARY -------------------------------------- """
         end = toc(start)

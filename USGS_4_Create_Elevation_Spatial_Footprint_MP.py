@@ -286,6 +286,10 @@ def createFootPrint(items, headerValues,outFpDir,bGDAL):
     """
 
     try:
+        # Start the timer
+        filestart = tic()
+
+        gdal.SetConfigOption("GDAL_CACHEMAX", "512")
 
         # Establish dict of contents to return
         returnDict = dict()
@@ -294,17 +298,15 @@ def createFootPrint(items, headerValues,outFpDir,bGDAL):
         returnDict['fail'] = []
         returnDict['pTime'] = []
 
-        filestart = tic()
-        rasterRecord = items[1]
-
         # Positions of item elements
+        rasterRecord = items[1]
         demName = rasterRecord[headerValues.index("dem_name")]
         demDir = rasterRecord[headerValues.index("dem_path")]
         EPSG = int(rasterRecord[headerValues.index("epsg_code")])
         noData = float(rasterRecord[headerValues.index("nodataval")])
         minStat = float(rasterRecord[headerValues.index("rds_min")])
-
         demPath = f"{demDir}{os.sep}{demName}"
+        
         returnDict['msgs'].append(f"\n\tProcessing {demName} - Size: {round(os.path.getsize(demPath) /1024,1):,} KB")
 
         # use the minimum stat to reclassify the input raster
@@ -317,9 +319,7 @@ def createFootPrint(items, headerValues,outFpDir,bGDAL):
         #returnDict['msgs'].append(f"\t\tThreshold Value: {calcValue}")
 
         # Temp Tiff that will be created and used to vectorize
-
-        fileExt = demPath.split('.')[1] # tif, img
-        tempTif = f"{demPath.split('.')[0]}_TEMP.{fileExt}"
+        tempTif = f"{demPath.split('.')[0]}_TEMP.tif"
 
         # Delete TEMP raster layer
         for tmpFile in glob.glob(f"{tempTif.split('.')[0]}*"):
@@ -348,6 +348,10 @@ def createFootPrint(items, headerValues,outFpDir,bGDAL):
 
         # Send gdal command to os
         execCmd = subprocess.Popen(gdal_calc, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,universal_newlines=True)
+
+        returnDict['msgs'].append(f"\t\t-GDAL Calc Process Time: {toc(calcStart)}")
+        returnDict['msgs'].append(f"\t\t-Process Time: {toc(filestart)}")
+        return returnDict
 
         # returns a tuple (stdout_data, stderr_data)
         msgs, errors = execCmd.communicate()
@@ -700,11 +704,12 @@ if __name__ == '__main__':
 
             # yield future objects as they are done.
             for future in as_completed(ndProcessing):
+                returnDict = future.result()
+                
                 fpTracker +=1
                 j=1
-
-                returnDict = future.result()
                 batchMsgs = list()
+                
                 for printMessage in returnDict['msgs']:
 
                     if j==1:
@@ -732,9 +737,9 @@ if __name__ == '__main__':
         for rastItems in files.items():
             returnDict = createFootPrint(rastItems,headerValues,outFpDir,bGDAL)
 
-            batchMsgs = list()
             fpTracker +=1
             j=1
+            batchMsgs = list()
 
             for printMessage in returnDict['msgs']:
                 if j==1:
@@ -756,7 +761,7 @@ if __name__ == '__main__':
 
         rastFpStop = toc(rastFpStart)
 
-
+    exit()
     """ ---------------------------- Merge WGS84 Footprint Shapefiles ----------------------------"""
     # Merge the WGS84 Footprint shapefiles created by the 'createFootprint' function
     if len(fpShapes):

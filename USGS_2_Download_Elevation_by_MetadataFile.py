@@ -1503,6 +1503,7 @@ def main(dlFile,dlDir,bReplace):
     try:
 
         startTime = tic()
+        global msgLogFile
         global bHeader
         global bReplaceData
         global downloadFile
@@ -1582,7 +1583,6 @@ def main(dlFile,dlDir,bReplace):
 
         # Log file that captures console messages
         #logFile = os.path.basename(downloadFile).split('.')[0] + "_Download_ConsoleMsgs.txt"
-        global msgLogFile
         msgLogFile = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_Download_ConsoleMsgs.txt"
 
         h = open(msgLogFile,'a+')
@@ -1680,7 +1680,7 @@ def main(dlFile,dlDir,bReplace):
                             AddMsgAndPrint(None,msgList=batchMsgs)
 
                 else:
-                    AddMsgAndPrint(f"\nThere are no files to uzip")
+                    AddMsgAndPrint("\nThere are no files to uzip")
                 unzipStop = toc(unzipStart)
 
                 if bDeleteZipFiles:
@@ -1695,7 +1695,7 @@ def main(dlFile,dlDir,bReplace):
         """ ----------------------------- Create Elevation Metadata File ----------------------------- """
         bMasterFile = False
         if len(dlImgFileDict):
-            AddMsgAndPrint(f"\nCreating Elevation Metadata File")
+            AddMsgAndPrint("\nCreating Elevation Metadata File")
             dlMasterFileStart = tic()
             dlMasterFile = createMasterDBfile_MT(dlImgFileDict,elevMetadataDict)
             AddMsgAndPrint(f"\n\tElevation Metadata File Path: {dlMasterFile}")
@@ -1704,17 +1704,17 @@ def main(dlFile,dlDir,bReplace):
 
             """ ----------------------------- Create Raster2pgsql File ---------------------------------- """
             if os.path.exists(dlMasterFile):
-                AddMsgAndPrint(f"\nCreating Raster2pgsql File")
+                AddMsgAndPrint("\nCreating Raster2pgsql File")
                 r2pgsqlStart = tic()
                 r2pgsqlFile = createRaster2pgSQLFile(dlMasterFile)
                 AddMsgAndPrint(f"\n\tRaster2pgsql File Path: {r2pgsqlFile}")
                 AddMsgAndPrint(f"\tIMPORTANT: Make sure dbTable variable (elevation_{resolution.lower()}) is correct in Raster2pgsql file!!")
                 r2pgsqlStop = toc(r2pgsqlStart)
             else:
-                AddMsgAndPrint(f"\nRaster2pgsql File will NOT be created")
+                AddMsgAndPrint("\nRaster2pgsql File will NOT be created")
         else:
-            AddMsgAndPrint(f"\nNo information available to produce Master Database Elevation File")
-            AddMsgAndPrint(f"\nNo information available to produce Raster2pgsql File")
+            AddMsgAndPrint("\nNo information available to produce Master Database Elevation File")
+            AddMsgAndPrint("\nNo information available to produce Raster2pgsql File")
 
         """ ------------------------------------ SUMMARY -------------------------------------------- """
         AddMsgAndPrint(f"\n{'-'*40}SUMMARY{'-'*40}")
@@ -1735,14 +1735,14 @@ def main(dlFile,dlDir,bReplace):
         if len(dlImgFileDict) == recCount:
             AddMsgAndPrint(f"\nSuccessfully Downloaded ALL {len(dlImgFileDict):,} DEM files")
         elif len(dlImgFileDict) == 0:
-            AddMsgAndPrint(f"\nNo DEM files were downloaded")
+            AddMsgAndPrint("\nNo DEM files were downloaded")
         else:
-            AddMsgAndPrint(f"\nDownloaded {len(dlImgFileDict):,} out of {recCount:,} DEM files")
+            AddMsgAndPrint("\nDownloaded {len(dlImgFileDict):,} out of {recCount:,} DEM files")
 
         # Create Download Error File
         if len(failedDownloadList):
             AddMsgAndPrint(f"\nFailed to Download {len(failedDownloadList):,} elevation files:")
-            errorlogFile = createErrorLogFile(downloadFile,failedDownloadList,headerValues)
+            createErrorLogFile(downloadFile,failedDownloadList,headerValues)
 
         if bUnzipFiles:
             if len(dlZipFileDict) > 0:
@@ -1779,7 +1779,7 @@ if __name__ == '__main__':
     # REPLACE DATA
     bReplace = input("\nDo you want to replace existing data? (Yes/No): ")
     while not bReplace.lower() in ("yes","no","y","n"):
-        print(f"Please Enter Yes or No")
+        print("Please Enter Yes or No")
         bReplace = input("Do you want to replace existing data? (Yes/No): ")
 
     if bReplace.lower() in ("yes","y"):
