@@ -548,11 +548,10 @@ def qaDegreeBlockElevation(degreeLyr):
 
 ## ====================================== Main Body ==================================
 # Import modules
-import sys, string, os, traceback
-import urllib, re, time, json, socket, requests
-import arcgisscripting, arcpy
+import sys, os, traceback
+import urllib, time, json
+import arcpy
 from datetime import datetime
-from dateutil.parser import parse
 from collections import Counter
 
 from urllib.request import Request, urlopen
@@ -582,11 +581,11 @@ if __name__ == '__main__':
         #wkPolyName = 'name'
 
         # Parameter #4
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801\test'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20231105'
 
         # Parameter #5
         #TNM Dataset Product
-        tnmResolution = '30M'
+        tnmResolution = '1M'
 
         if not arcpy.Exists(apiBoundaries):
             AddMsgAndPrint(f"\n{apiBoundaries} does NOT exist! EXITING!")
@@ -628,7 +627,7 @@ if __name__ == '__main__':
 
         metadataFile1path = f"{metadataPath}\\{metadataFile1}"
         f = open(metadataFile1path,'a+')
-        f.write(f"poly_code,poly_name,num_of_tiles,API_URL") # log headers
+        f.write("poly_code,poly_name,num_of_tiles,API_URL") # log headers
 
         # Metadata file#2; USGS_3DEP_1M_Metadata_Elevation_02082023.txt
         # huc_digit,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
@@ -640,7 +639,7 @@ if __name__ == '__main__':
         logFilePath = f"{metadataPath}\\{logFile}"
         h = open(logFilePath,'a+')
         h.write(f"Executing: USGS_1_Create_API_Metadata Script {today}\n\n")
-        h.write(f"User Selected Parameters:\n")
+        h.write("User Selected Parameters:\n")
         h.write(f"\tTNM Product: {tnmResolution} - {tnmProductAlias[tnmResolution]}\n")
         h.write(f"\tAPI Boundary Dataset: {apiBoundaries}\n")
         h.write(f"\tMetadata File Path: {metadataPath}\n")
@@ -701,7 +700,7 @@ if __name__ == '__main__':
 
             else:
                 AddMsgAndPrint(f"\n\tState: {apiPolyCode}: {apiPolyName} -- {wbd:,} of {totalBoundaries:,}")
-                polyType = f"state"
+                polyType = "state"
 
             # geometry multi-parts are irrelavant
             if apiPolyCode in uniquePolyCodes:
@@ -753,7 +752,7 @@ if __name__ == '__main__':
                         # ---------------  Attempt #1 - Normal Parameters
                         if n==0 or n==3:
 
-                            if n==3:AddMsgAndPrint(f"\t\t4th Attempt");time.sleep(12)
+                            if n==3:AddMsgAndPrint("\t\t4th Attempt");time.sleep(12)
 
                             with urllib.request.urlopen(tnmURLhuc) as conn:
                                 resp = conn.read()
@@ -761,7 +760,7 @@ if __name__ == '__main__':
 
                         # ---------------  Attempt #2 - spoof server by changing user-Agent
                         elif n==1:
-                            AddMsgAndPrint(f"\t\t2nd Attempt - Swithing user-agent")
+                            AddMsgAndPrint("\t\t2nd Attempt - Swithing user-agent")
                             time.sleep(9)
                             request = urllib.request.Request(tnmURLhuc,headers={'User-Agent': 'UX/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'})
 
@@ -771,14 +770,14 @@ if __name__ == '__main__':
 
                         # --------------- Attempt #3 - swtich HTTP:// protocols
                         else:
-                            AddMsgAndPrint(f"\t\t3rd Attempt - Switching Protocols")
+                            AddMsgAndPrint("\t\t3rd Attempt - Switching Protocols")
                             time.sleep(8)
                             if tnmAPIurl.find("https") == -1:
                                 tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to https:")
+                                AddMsgAndPrint("\t\t\tSwitching Protocols to https:")
                             else:
                                 tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint(f"\t\t\tSwitching Protocols to http:")
+                                AddMsgAndPrint("\t\t\tSwitching Protocols to http:")
                             tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
 
                             with urllib.request.urlopen(tnmURLhuc) as conn:
@@ -939,7 +938,7 @@ if __name__ == '__main__':
         f.close()
 
         #-------------------------------------------------- Check for and fix duplicate elements
-        AddMsgAndPrint(f"\nChecking DEM files for duplicate: 'sourceIDs', 'Product Titles' or 'Download URLs'")
+        AddMsgAndPrint("\nChecking DEM files for duplicate: 'sourceIDs', 'Product Titles' or 'Download URLs'")
         idxValuesToRemove = checkForDuplicateElements()
 
         if len(idxValuesToRemove):
@@ -955,7 +954,7 @@ if __name__ == '__main__':
                     mList.pop(idx)
 
         else:
-            AddMsgAndPrint(f"\tNo duplicate DEM elements found were found")
+            AddMsgAndPrint("\tNo duplicate DEM elements found were found")
 
         hucsWithData = len(set(polyCodeList))
         duplicateElements = len(idxValuesToRemove)
@@ -968,7 +967,7 @@ if __name__ == '__main__':
 
         #-------------------------------------------------- Write Elevation download file
         g = open(metadataFile2path,'a+')
-        g.write(f"poly_code,poly_name,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
+        g.write("poly_code,poly_name,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,downld_url") # log headers
 
         for i in range(0,len(polyCodeList)):
             g.write(f"\n{polyCodeList[i]},{polyNameList[i]},{titleList[i]},{pubDateList[i]},{lastModifiedDate[i]},{sizeList[i]},{fileFormatList[i]},{sourceIDList[i]},{metadataURLList[i]},{downloadURLList[i]}")
@@ -1014,7 +1013,3 @@ if __name__ == '__main__':
         except:
             pass
         errorMsg()
-
-
-
-

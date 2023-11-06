@@ -560,7 +560,6 @@ def mergeFootPrints(outDir,shapefiles):
         errorMsg()
 
 #### ===================================================================================
-
 if __name__ == '__main__':
 
     funStarts = tic()

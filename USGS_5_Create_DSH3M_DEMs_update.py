@@ -62,7 +62,8 @@ were made:
     2) remove singlemode option
     3) embed writing to file directly vs open and close constantly
 
-THINGS TO ADD:
+Enhancements:
+    - Create gridIndexOverlayDict using the elevation metdata tables 
     - Read Shapefile headers in a list to look up field position index instead of hard coding position
     - Pass the gridFolder to mergeGridDEMs
     - Copy grid shapefile and create spatial Metdata for grids using the states derived from USGS_3DEP_Step5_Mosaic_Elevation.txt
@@ -73,8 +74,8 @@ THINGS TO ADD:
 
 """
 
-import os, traceback, sys, time, glob,subprocess
-#import threading, multiprocessing
+import os, traceback, sys, time, glob
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor, as_completed #,ProcessPoolExecutor
 from datetime import datetime
 from osgeo import gdal
@@ -163,7 +164,7 @@ def createMultiResolutionOverlay(idx,grid):
 
     try:
         global headerValues
-        sourcePos = headerValues.index('source')
+        sourcePos = headerValues.index('source_res')
         
         driver = ogr.GetDriverByName('ESRI Shapefile')
 
@@ -197,7 +198,7 @@ def createMultiResolutionOverlay(idx,grid):
         # iterate through each grid, get extent and use it as a spatial filter
         # to get a list of elevation files that intersect the grid
         for gridCell in gridLyr:
-            rid = gridCell.GetField('rid')
+            rid = int(gridCell.GetField('rid'))
 
             # Get the polygon's geometry
             cellGeom = gridCell.GetGeometryRef()
@@ -226,7 +227,7 @@ def createMultiResolutionOverlay(idx,grid):
                 # List of attributes for 1 DEM
                 idxFeatValList = list()
 
-                sourceID = idxFeat.GetField("sourceID") #change back tosourceID
+                sourceID = idxFeat.GetField("sourceid") #change back tosourceID
                 if sourceID in uniqueSourceIDs:
                     continue
                 else:
@@ -242,11 +243,11 @@ def createMultiResolutionOverlay(idx,grid):
 
             # No DEMs intersected with this Grid
             if numOfSelectedFeats == 0:
-                AddMsgAndPrint(f"\t\t\tWARNING: There are no DEMs that intersect this grid")
+                AddMsgAndPrint("\t\t\tWARNING: There are no DEMs that intersect this grid")
                 continue
 
             # Sort all lists by resolution and last_update date
-            lastUpdatePos = headerValues.index('last_updat')
+            lastUpdatePos = headerValues.index('lastupdate')
             dateSorted = sorted(listOfDEMlists, key=itemgetter(sourcePos,lastUpdatePos), reverse=True)
             gridIndexOverlayDict[rid] = dateSorted
 
@@ -323,19 +324,19 @@ def createSoil3MDEM(item):
         messageList = list()
 
         # Positions of individual field names
-        last_update = item[headerValues.index("last_updat")]
+        last_update = item[headerValues.index("lastupdate")]
         fileFormat = item[headerValues.index("format")]
-        sourceID = item[headerValues.index("sourceID")]
-        DEMname = item[headerValues.index("DEMname")]
-        DEMpath = item[headerValues.index("DEMpath")]
-        noData = float(item[headerValues.index("noDataVal")]) # returned as string
-        EPSG = item[headerValues.index("EPSG")]
-        srsName = item[headerValues.index("srsName")]
-        top = item[headerValues.index("top")]
-        left = item[headerValues.index("left")]
-        right = item[headerValues.index("right")]
-        bottom = item[headerValues.index("bottom")]
-        source = item[headerValues.index("source")]
+        sourceID = item[headerValues.index("sourceid")]
+        DEMname = item[headerValues.index("dem_name")]
+        DEMpath = item[headerValues.index("dem_path")]
+        noData = float(item[headerValues.index("nodataval")]) # returned as string
+        EPSG = item[headerValues.index("epsg_code")]
+        srsName = item[headerValues.index("srs_name")]
+        top = item[headerValues.index("rds_top")]
+        left = item[headerValues.index("rds_left")]
+        right = item[headerValues.index("rds_right")]
+        bottom = item[headerValues.index("rds_bottom")]
+        source = item[headerValues.index("source_res")]
 
         if bDetails:
             messageList.append(f"\n\t\t\tProcessing DEM: {DEMname} -- {source}M")
@@ -553,7 +554,10 @@ def mergeGridDEMs(itemCollection):
         listsOfDEMs = itemCollection[1]  # list of lists
         messageList = list()
         
-        gridID = int(gridName.split('_')[0])
+        try:
+            gridID = int(gridName.split('_')[0])
+        except:
+            gridID = gridName
 
         messageList.append(f"Grid ID: {gridName} has {len(listsOfDEMs):,} DSH3M DEMs that will be merged")
         mergeStart = tic()
@@ -567,11 +571,11 @@ def mergeGridDEMs(itemCollection):
             mosaicList.append(raster[2])
 
         if os.name == 'nt':
-            gridFolder = r'D:\projects\DSHub\reampling\blending'
+            gridFolder = outputDir
         else:
             gridFolder = getEBSfolder(gridID)
 
-        mergeRaster = os.path.join(gridFolder,f"dsh3m_grid{gridName}.tif")
+        mergeRaster = os.path.join(gridFolder,f"dsh3m_grid{gridName}_ALL_MERGE.tif")
 
         if os.path.exists(mergeRaster):
             try:
@@ -581,8 +585,8 @@ def mergeGridDEMs(itemCollection):
                 else:
                     messageList.append(f"\t\t{'Merged DEM Exists:':<15} {os.path.basename(mergeRaster):<60}")
                     messageList.append(f"\t\tGathering Statists for {os.path.basename(mergeRaster)}")
-                    rasterStatList = getRasterInformation_MT((gridID,mergeRaster),csv=False)
-                    return (messageList,rasterStatList)
+                    #rasterStatList = getRasterInformation_MT((gridID,mergeRaster),csv=False)
+                    return (messageList,{gridName:mergeRaster})
             except:
                 messageList.append(f"\t\t{'Failed to Delete':<35} {mergeRaster:<60}")
                 return (messageList,False)
@@ -602,7 +606,12 @@ def mergeGridDEMs(itemCollection):
                                                  "BIGTIFF=YES","PROFILE=GeoTIFF"],
                                 multithread=True)
                                 #options=["COMPRESS=LZW", "TILED=YES"])
-                                #options="__RETURN_OPTION_LIST__")
+                                #options="__RETURN_OPTION_LIST__"
+                                #cutlineDSName=,
+                                # cutlineBlend = 33,
+                                #cutLine=,
+                                #cropToCutline=True,
+                                #cutLineLyr)
 
         g = gdal.Warp(mergeRaster,mosaicList,options=args)
         g = None
@@ -636,7 +645,7 @@ def runSagaBlend(itemCollection):
         
         
         if os.name == 'nt':
-            cmd = f"\"C:\Program Files\SAGA\saga_cmd\" grid_tools 3 -GRIDS:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -MATCH:3 -TARGET_DEFINITION:0 -BLEND_BND:0 -TARGET_OUT_GRID:\"{output_raster}\""
+            cmd = f"\"C:\Program Files\SAGA\saga_cmd\" grid_tools 3 -GRIDS:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -BLEND_BND:0 -MATCH:3 -TARGET_DEFINITION:0 -TARGET_OUT_GRID:\"{output_raster}\""
         else:
             cmd = f"saga_cmd grid_tools 3 -FILE_LIST:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -MATCH:3 -TARGET_DEFINITION:0 -BLEND_BND:0 -TARGET_OUT_GRID:\"{output_raster}\""
         
@@ -1116,7 +1125,7 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         h.write(f"\tVerbose Mode: {bDetails}\n")
         h.close()
 
-        """ -------------------------- STEP 1: Intersect Elevation Index and Grid  ----------------------------"""
+        """ ---------------- STEP 1: Intersect Elevation Index and Grid  -----------------"""
         # Get Headers from USGS index layer
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
         idx_ds = ogr.GetDriverByName('ESRI Shapefile').Open(elevResIndexShp,0)
@@ -1128,13 +1137,14 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
 
         # List of shapefile field names
         headerValues = [layerDefinition.GetFieldDefn(i).GetName() for i in range(fieldCount)]
-        sourcePos = headerValues.index('source')
+        sourcePos = headerValues.index('source_res')
         idx_ds = None
 
         # gridIndexOverlayDict = {87:[[AlldemAttributes1],[AlldemAttributes2],[AlldemAttributes1]]}
         # gridExtentDict = {87:[xmin,xmax,ymin,ymax]}
         AddMsgAndPrint("\nSTEP 1: Creating DSH3M Multi-resolution Overlay")
         gridIndexOverlayDict,gridExtentDict = createMultiResolutionOverlay(elevResIndexShp,gridShp)
+        return gridIndexOverlayDict,gridExtentDict
 
         if not gridIndexOverlayDict:
             AddMsgAndPrint("\n\tFailed to perform intersection between Elevation Index and Grid.  Exiting!")
@@ -1162,9 +1172,11 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         gridCounter = 1   # Progress tracker for grids
         dsh3mCounter = 0  # Progress tracker for dsh3m DEMs created
 
-        # key: gridID -- value: [[x,y,z....],[x,y,z....],[x,y,z....]]
-        dsh3mStartTime = tic()
+        step2startTime = tic()
+        gridStartTime = tic()
         AddMsgAndPrint("\nSTEP 2: Creating DSH3M DEMs")
+        
+        # key: gridID -- value: [[x,y,z....],[x,y,z....],[x,y,z....]]
         for gridID,items in gridIndexOverlayDict.items():
 
             # num of DEMs to convert to DSH3M for this grid
@@ -1177,8 +1189,6 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
             AddMsgAndPrint(f"\n\tGrid ID: {gridID} (Grid {gridCounter} of {totalNumOfGrids}) has {numOfSoil3MtoProcess:,} DEMs that need a DSH3M DEM created")
             for k, v in sorted(resCounts.items()):
                 AddMsgAndPrint(f"\t\t{k}M DEMs: {v}")
-
-            gridStartTime = tic()
 
             with open(msgLogFile,'a+') as f:
                 with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
@@ -1196,10 +1206,10 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
                         j=1
                         for message in msgs:
                             if j==1:
-                                f.write(f"{message} -- ({i:,} of {numOfSoil3MtoProcess:,}) -- (Grid {gridCounter} of {totalNumOfGrids})")
+                                f.write(f"\n{message} -- ({i:,} of {numOfSoil3MtoProcess:,}) -- (Grid {gridCounter} of {totalNumOfGrids})")
                                 print(f"{message} -- ({i:,} of {numOfSoil3MtoProcess:,}) -- (Grid {gridCounter} of {totalNumOfGrids})")
                             else:
-                                f.write(message)
+                                f.write(f"\n{message}")
                                 print(message)
                             j+=1
 
@@ -1232,21 +1242,22 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         if len(failedDEMs):
             AddMsgAndPrint(f"\n\tThere were {len(failedDEMs)} DEMs that failed to produce DSH3M DEMs")
 
-        dsh3mStopTime = toc(dsh3mStartTime)
-        AddMsgAndPrint(f"\n\tTotal Processing Time to create DSH3M DEMs: {dsh3mStopTime}")
+        step2stopTime = toc(step2startTime)
+        AddMsgAndPrint(f"\n\tTotal Processing Time to create DSH3M DEMs: {step2stopTime}")
         
-        """ -------------------------- Step3: Merge DSH3M DEMs by Resolution or not ------------------------------------------"""
+        """ ----------------------- Step3: Merge DSH3M DEMs by Grid and Resolution  ------------------------------"""
         AddMsgAndPrint("\nSTEP 3: Merging DSH3M DEMs")
         startMerge = tic()
         
-        # This step will merge DSH3M DEMs that had the same original source resolution; This is in preperation of applying
-        # the SAGA blending option.  It is best to blend between datasets of different resolution rather than blending
+        # This step will merge DSH3M DEMs of same resolution by grid; This is in preperation
+        # of conver.  It is best to blend between datasets of different resolution rather than blending
         # between files.
         
         # Reorganize dsh3mDict to group lists of dsh3m DEMs by original resolution
         # This way all dshm3m DEMs of same og resolution are merged together and blending is not applied
         # {gridID: [[sourceID,last_update,dsh3m_raster,source],[],[],...]}  --->
         # {gridID_1M: [[sourceID,last_update,dsh3m_raster,source],[],[],...]}
+        global dsh3mDataToMergebyRes
         dsh3mDataToMergebyRes = dict()
         
         for gridID,items in dsh3mDict.items():
@@ -1255,10 +1266,9 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
             
             if len(uniqueResList) > 1:
                 for origRes in uniqueResList:
-                    dsh3mDataToMergebyRes[f"{gridID}_{origRes}M"]=[item for item in items if item[3]==origRes]
+                    dsh3mDataToMergebyRes[f"{gridID}_{origRes}m"]=[item for item in items if item[3]==origRes]
             else:
                 dsh3mDataToMergebyRes[f"{gridID}"]=items
-            break
 
         gridCounter = 1   # Progress tracker for grids
         mergedGridsStats = list()
@@ -1274,7 +1284,7 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
 
              # use a set comprehension to start all tasks.  This creates a future object
-             futureMerge = {executor.submit(mergeGridDEMs, item): item for item in dsh3mDataToMergebyRes.items()}
+             futureMerge = {executor.submit(mergeGridDEMs, item): item for item in dsh3mDict.items()}
 
              # yield future objects as they are done.
              for mergeResults in as_completed(futureMerge):
@@ -1412,15 +1422,15 @@ if __name__ == '__main__':
 
         """---------------------------------  Setup ---------------------------------- """
         # Script Parameters
-        elevResIndexShp = r'D:\projects\DSHub\reampling\dsh3m\USGS_DSH3M_Pro.shp'
-        gridShp = r'D:\projects\DSHub\reampling\snapGrid\grid_122880m_1grid.shp'
-        outputDir = r'D:\projects\DSHub\reampling\blending'
+        elevResIndexShp = r'D:\projects\DSHub\reampling\dsh3m\USGS_Elevation_Metadata_Index_CONUS_5070_Windows.shp'
+        gridShp = r'D:\projects\DSHub\reampling\Temp\grid_30720m_1grid.shp'
+        outputDir = r'D:\projects\DSHub\reampling\blending\sagaBlendTesting'
         bReplace = False
         bReplaceMerge = False
         bDeleteDSH3Mdata = False
         bDetails = True
         
-        sagaBlendingDict = main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails)
+        gridIndexOverlayDict,gridExtentDict = main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails)
 
         # # PARAM#1 -- Path to the Elevation Resolution Index Layer from the original elevation data
         # elevResIndexShp = input("\nEnter full path to the Elevation Resolution Index Layer: ")

@@ -206,18 +206,18 @@ Things to consider/do:
 """
 
 ## ========================================== Import modules ===============================================================
-import sys, string, os, traceback, glob, csv, fnmatch
-import urllib, re, time, json, socket, zipfile
+import sys, os, traceback, glob, fnmatch
+import urllib, time, zipfile, psutil
 import numpy as np
 from datetime import datetime
 
-import threading, multiprocessing
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+import multiprocessing
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from osgeo import gdal
 from osgeo import osr
 
-from urllib.request import Request, urlopen, URLError
+from urllib.request import urlopen, URLError
 from urllib.error import HTTPError
 urllibEncode = urllib.parse.urlencode
 
@@ -603,7 +603,6 @@ def DownloadElevationTile(itemCollection):
 
         # path to where file will be downloaded to - zip or DEM
         local_file = f"{downloadFolder}{os.sep}{fileName}"
-        now = datetime.today().strftime('%m%d%Y %H:%M:%S')
 
         # ====================================================================
         def searchDirforDEM(filename,returnFile=False):
@@ -880,7 +879,7 @@ def del_zipFiles(zipFileDict):
 
     for item in zipFileDict.items():
 
-        sourceID = item[0]
+        #sourceID = item[0]
         local_zip = item[1]
         zipName = local_zip.split(os.sep)[-1]
 
@@ -930,7 +929,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
             numOfCores = int(psutil.cpu_count(logical = True) / 2)      # 32 workers
 
         """ ----------------------------- Step 1: Gather Statistic Information for all rasters ----------------------------- """
-        AddMsgAndPrint(f"\n\tGathering Individual DEM Statistical Information")
+        AddMsgAndPrint("\n\tGathering Individual DEM Statistical Information")
         with ThreadPoolExecutor(max_workers=numOfCores) as executor:
 
             # use a set comprehension to start all tasks.  This creates a future object
@@ -1067,12 +1066,15 @@ def getRasterInformation_MT(rasterItem):
         bandInfo = rds.GetRasterBand(1)
 
         # ------------------------- Raster Properties -----------------------------
-        columns = rasterInfoList.append(rdsInfo['size'][0])
-        rows = rasterInfoList.append(rdsInfo['size'][1])
-        bandCount = rasterInfoList.append(rds.RasterCount)
-        cellSize = rasterInfoList.append(rds.GetGeoTransform()[1])
-        rdsFormat = rasterInfoList.append(rdsInfo['driverLongName'])
-        bitDepth = rasterInfoList.append(rdsInfo['bands'][0]['type'])
+        columns = rdsInfo['size'][0]
+        rows = rdsInfo['size'][1]
+        bandCount = rds.RasterCount
+        cellSize = rds.GetGeoTransform()[1]
+        rdsFormat = rdsInfo['driverLongName']
+        bitDepth = rdsInfo['bands'][0]['type']
+        
+        for stat in (columns,rows,bandCount,cellSize,rdsFormat,bitDepth):
+            rasterInfoList.append(stat)
 
         try:
             noDataVal = rdsInfo['bands'][0]['noDataValue']
@@ -1127,211 +1129,35 @@ def getRasterInformation_MT(rasterItem):
 
         # Take stat info from JSON info above; This should work for 1M
         # May not work for 3M or 10M
-        stats = bandInfo.GetStatistics(True, True)
+        try:
+            stats = bandInfo.GetStatistics(True, True)
+        except:
+            stats = bandInfo.ComputeStatistics(0)
         minStat = stats[0]
         maxStat = stats[1]
         meanStat = stats[2]
         stDevStat = stats[3]
         blockXsize = bandInfo.GetBlockSize()[0]
         blockYsize = bandInfo.GetBlockSize()[1]
-
+        
         # stat info is included in JSON info but stats are not calculated;
         # calc statistics if min,max or mean are not greater than 0.0
         # this can add significant overhead to the process
-        if not minStat > noDataVal or not meanStat > noDataVal or not maxStat > noDataVal:
-            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} - Stats are not greater than {noDataVal} -- Calculating")
-            bandStats = bandInfo.ComputeStatistics(0)
-            minStat = bandStats[0]
-            maxStat = bandStats[1]
-            meanStat = bandStats[2]
-            stDevStat = bandStats[3]
-            blockXsize = bandInfo.GetBlockSize()[0]
-            blockYsize = bandInfo.GetBlockSize()[1]
+        # if not minStat > noDataVal or not meanStat > noDataVal or not maxStat > noDataVal:
+        #     AddMsgAndPrint(f"\t\t{os.path.basename(raster)} - Stats are not greater than {noDataVal} -- Calculating")
+        #     bandStats = bandInfo.ComputeStatistics(0)
+        #     minStat = bandStats[0]
+        #     maxStat = bandStats[1]
+        #     meanStat = bandStats[2]
+        #     stDevStat = bandStats[3]
+        #     blockXsize = bandInfo.GetBlockSize()[0]
+        #     blockYsize = bandInfo.GetBlockSize()[1]
 
         for stat in (minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize):
             rasterInfoList.append(stat)
 
         # close raster dataset
         rds = None
-
-        rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
-        return rasterStatDict
-
-    except:
-        AddMsgAndPrint(f"\t\tFailed: {os.path.basename(raster)}")
-        errorMsg()
-
-        # Return the info that was collected and pad the rest with 'None'
-        if len(rasterInfoList) > 0:
-            if len(rasterInfoList) < 20:
-                while len(rasterInfoList) < 20:
-                    rasterInfoList.append('None')
-            rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
-        else:
-            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
-        return rasterStatDict
-
-#### ===================================================================================
-def getRasterInformation_MT_OLD(rasterItem):
-
-    # Raster information will be added to dlStatusList
-    # sourceID,prod_title,path,numofFiles,unzipSize,timestamp,downloadstatus --
-    # add additional data:
-    # columns,rows,cellsize,bandcount,bitDepth,nodatavalue,
-
-    # query srid
-    # describe num of bands; what if it is more than 1
-
-    # Input example
-    # rasterItem = (sourceID, raster path)
-    # ('60d2c0ddd34e840986528ae4', 'E:\\DSHub\\Elevation\\1M\\USGS_1M_19_x44y517_ME_CrownofMaine_2018_A18.tif')
-
-    # Return example
-    # rasterStatDict
-    # '5eacfc1d82cefae35a250bec' = '10012,10012,1,1.0,GeoTIFF,Float32,-999999.0,PROJECTED,26919,NAD83 / UTM zone 19N,5150006.0,439994.0,450006.0,5139994.0,366.988,444.228,577.808,34.396,256,256'
-
-    # rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
-
-    try:
-        srcID = rasterItem[0]
-        raster = rasterItem[1]
-        rasterStatDict = dict()  # temp dict that will return raster information
-        rasterInfoList = list()
-
-        gdal.SetConfigOption('GDAL_PAM_ENABLED', 'TRUE')
-        gdal.UseExceptions()    # Enable exceptions
-
-        # Raster doesn't exist; download error
-        if not os.path.exists(raster):
-            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} DOES NOT EXIST. Could not get Raster Information")
-            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
-            return rasterStatDict
-
-        # Raster size is 0 bytes; download error
-        if not os.stat(raster).st_size > 0:
-            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} Is EMPTY. Could not get Raster Information")
-            rasterStatDict[srcID] = ','.join('#'*20).replace('#','None')
-            return rasterStatDict
-
-        rds = gdal.Open(raster)
-        rdsInfo = gdal.Info(rds,format="json",computeMinMax=True,stats=True,showMetadata=True)
-
-        # ------------------------- Raster Properties -----------------------------
-        columns = rasterInfoList.append(rdsInfo['size'][0])
-        rows = rasterInfoList.append(rdsInfo['size'][1])
-        bandCount = rasterInfoList.append(rds.RasterCount)
-        cellSize = rasterInfoList.append(rds.GetGeoTransform()[1])
-        rdsFormat = rasterInfoList.append(rdsInfo['driverLongName'])
-        bitDepth = rasterInfoList.append(rdsInfo['bands'][0]['type'])
-
-        try:
-            noDataVal = rdsInfo['bands'][0]['noDataValue']
-        except:
-            noDataVal = 'None'
-        rasterInfoList.append(noDataVal)
-
-        # -------------------- Raster Spatial Reference Information ------------------------
-        # What is returned when a raster is undefined??
-        prj = rds.GetProjection()  # GDAL returns projection in WKT
-        srs = osr.SpatialReference(prj)
-
-        # If no valid EPSG is found, an error will be thrown
-        try:
-            srs.AutoIdentifyEPSG()
-            epsg = srs.GetAttrValue('AUTHORITY',1)
-        except:
-            epsg = 'None'
-
-        # Returns 0 or 1; opposite would be IsGeographic
-        if srs.IsProjected():
-            srsType = 'PROJECTED'
-            srsName = srs.GetAttrValue('projcs')
-        else:
-            srsType = 'GEOGRAPHIC'
-            srsName = srs.GetAttrValue('geogcs')
-
-        rasterInfoList.append(srsType)
-        rasterInfoList.append(epsg)
-        rasterInfoList.append(srsName.replace(',','-'))  # replace commas with dashes
-
-        # -------------------- Coordinate Information ------------------------
-        # 'lowerLeft': [439994.0, 5139994.0]
-        #lowerLeft = rdsInfo['cornerCoordinates']['lowerLeft']
-        #lowerRight = rdsInfo['cornerCoordinates']['lowerRight']
-        #upperRight = rdsInfo['cornerCoordinates']['upperRight']
-        #upperLeft = rdsInfo['cornerCoordinates']['upperLeft']
-
-        right,top = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
-        left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
-        rasterInfoList.append(top)
-        rasterInfoList.append(left)
-        rasterInfoList.append(right)
-        rasterInfoList.append(bottom)
-
-        # ---------------------- Raster Statistics ------------------------
-        # ComputeStatistics vs. GetStatistics(0,1) vs. ComputeBandStats
-        # bandInfo = rds.GetRasterBand(1).ComputeStatistics(0) VS.
-        # bandInfo = rds.GetRasterBand(1).GetStatistics(0,1)
-        # bandInfo = rds.GetRasterBand(1).ComputeBandStats
-        # (Min, Max, Mean, StdDev)
-
-        # Take stat info from JSON info above; This should work for 1M
-        # May not work for 3M or 10M
-        try:
-            minStat = rdsInfo['bands'][0]['min']
-            meanStat = rdsInfo['bands'][0]['mean']
-            maxStat = rdsInfo['bands'][0]['max']
-            stDevStat = rdsInfo['bands'][0]['stdDev']
-            blockXsize = rdsInfo['bands'][0]['block'][0]
-            blockYsize = rdsInfo['bands'][0]['block'][1]
-
-            # stat info is included in JSON info but stats are not calculated;
-            # calc statistics if min,max or mean are not greater than 0.0
-            # this can add significant overhead to the process
-            if not minStat > 0 or not meanStat > 0 or not maxStat > 0:
-                AddMsgAndPrint(f"\t\t{os.path.basename(raster)} - Stats are set to 0 -- Calculating")
-                bandInfo = rds.GetRasterBand(1)
-                bandStats = bandInfo.ComputeStatistics(0)
-                minStat = bandStats[0]
-                maxStat = bandStats[1]
-                meanStat = bandStats[2]
-                stDevStat = bandStats[3]
-                blockXsize = bandInfo.GetBlockSize()[0]
-                blockYsize = bandInfo.GetBlockSize()[1]
-
-            for stat in (minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize):
-                rasterInfoList.append(stat)
-
-        # Stat info is not included in JSON info above.
-        # Force calculation of Raster Statistics
-        # this can add significant overhead to the process
-        except:
-            AddMsgAndPrint(f"\t\t{os.path.basename(raster)} Stats not present in info -- Forcing Calc'ing of raster info")
-            bandInfo = rds.GetRasterBand(1)
-
-            # Final Straw - check for empty rasters
-            try:
-                bandStats = bandInfo.ComputeStatistics(0)
-            except:
-                bandInfo = rds.GetRasterBand(1)
-                data = bandInfo.ReadAsArray()
-                realData = np.where(data > 0)
-                if not np.any(realData):
-                    AddMsgAndPrint(f"\t\t{os.path.basename(raster)} has no valid pixels")
-                    rasterInfoList.append('None','None','None','None','None','None')
-
-            minStat = bandStats[0]
-            maxStat = bandStats[1]
-            meanStat = bandStats[2]
-            stDevStat = bandStats[3]
-            blockXsize = bandInfo.GetBlockSize()[0]
-            blockYsize = bandInfo.GetBlockSize()[1]
-
-            for stat in (minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize):
-                rasterInfoList.append(stat)
-
-        #rasterInfoList = [columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal,srsType,epsg,srsName,
-        #                  top,left,right,bottom,minStat,meanStat,maxStat,stDevStat,blockXsize,blockYsize]
 
         rasterStatDict[srcID] = ','.join(str(e) for e in rasterInfoList)
         return rasterStatDict
@@ -1452,7 +1278,6 @@ def createRaster2pgSQLFile(masterElevFile):
     except:
         errorMsg()
 
-
 ## ===================================================================================
 def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
@@ -1490,7 +1315,7 @@ def createErrorLogFile(downloadFile,failedDownloadList,headerValues):
 
         # Not sure why
         if len(failedDownloadList) != numOfErrors:
-            AddMsgAndPrint(f"\t\tNumber of errors logged don't coincide--????")
+            AddMsgAndPrint("\t\tNumber of errors logged don't coincide--????")
 
         return errorFile
 
@@ -1535,7 +1360,6 @@ def main(dlFile,dlDir,bReplace):
         elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
         recCount = 0
         badLines = 0
-        uniqueSourceIDList = list()
 
         """ ---------------------------- Open Download File and Parse Information into dictionary ------------------------"""
         with open(downloadFile, 'r') as fp:
@@ -1554,7 +1378,6 @@ def main(dlFile,dlDir,bReplace):
                     continue
 
                 poly_code = items[headerValues.index("poly_code")]
-                #poly_name = items[headerValues.index("poly_name")]
                 prod_title = items[headerValues.index("prod_title")]
                 pub_date = items[headerValues.index("pub_date")]
                 last_updated = items[headerValues.index("lastupdate")]
@@ -1587,7 +1410,7 @@ def main(dlFile,dlDir,bReplace):
 
         h = open(msgLogFile,'a+')
         h.write(f"Executing: USGS_2_Download_Elevation_by_MetadataFile {today}\n\n")
-        h.write(f"User Selected Parameters:\n")
+        h.write("User Selected Parameters:\n")
         h.write(f"\tDownload File: {downloadFile}\n")
         h.write(f"\tFile has header: {bHeader}\n")
         h.write(f"\tReplace Data: {bReplaceData}\n")
@@ -1619,7 +1442,6 @@ def main(dlFile,dlDir,bReplace):
 
             # 01:[URL,sourceID]
             for polycode,items in urlDownloadDict.items():
-                i = 1
                 numOfPolyElevFiles = len(items) # Number of elev files in this poly_code (State or HUC)
 
                 AddMsgAndPrint(f"\n\tDownloading {numOfPolyElevFiles:,} elevation tiles for Code: {polycode}")
@@ -1737,7 +1559,7 @@ def main(dlFile,dlDir,bReplace):
         elif len(dlImgFileDict) == 0:
             AddMsgAndPrint("\nNo DEM files were downloaded")
         else:
-            AddMsgAndPrint("\nDownloaded {len(dlImgFileDict):,} out of {recCount:,} DEM files")
+            AddMsgAndPrint(f"\nDownloaded {len(dlImgFileDict):,} out of {recCount:,} DEM files")
 
         # Create Download Error File
         if len(failedDownloadList):
