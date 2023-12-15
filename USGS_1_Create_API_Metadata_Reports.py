@@ -581,11 +581,11 @@ if __name__ == '__main__':
         #wkPolyName = 'name'
 
         # Parameter #4
-        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20231105'
+        metadataPath = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\20231212_IFSAR'
 
         # Parameter #5
         #TNM Dataset Product
-        tnmResolution = '1M'
+        tnmResolution = '5M_AK'
 
         if not arcpy.Exists(apiBoundaries):
             AddMsgAndPrint(f"\n{apiBoundaries} does NOT exist! EXITING!")
@@ -611,8 +611,8 @@ if __name__ == '__main__':
                            '3M':'National Elevation Dataset (NED) 1/9 arc-second',
                            '10M':'National Elevation Dataset (NED) 1/3 arc-second',
                            '30M': 'National Elevation Dataset (NED) 1 arc-second',
-                           '5M_AK':'Alaska IFSAR 5 meter DEM',
-                           '5M_AK_OPR':'Original Product Resolution (OPR) Digital Elevation Model (DEM)',
+                           '5M_AK_IFSAR':'Alaska IFSAR 5 meter DEM',
+                           'AK_OPR':'Original Product Resolution (OPR) Digital Elevation Model (DEM)',
                            '5M_AK_ORI':'Ifsar Orthorectified Radar Image (ORI)',
                            '5M_AK_DSM':'Ifsar Digital Surface Model (DSM)',
                            '60M_AK':'National Elevation Dataset (NED) Alaska 2 arc-second'}
@@ -683,8 +683,10 @@ if __name__ == '__main__':
             apiPolyCode = row[0]
             apiPolyName = row[1]
 
-##            if not apiPolyCode in ['02','04','12','16','17']:
-##                continue
+            # Only process AK when product consists of 5M_AK*
+            if 'AK' in tnmResolution:
+                if not apiPolyCode in ['02']:
+                    continue
 
             # State Boundary vs HUC
             if not wkPolyCode == 'STATE_FIPS':
@@ -770,14 +772,13 @@ if __name__ == '__main__':
 
                         # --------------- Attempt #3 - swtich HTTP:// protocols
                         else:
-                            AddMsgAndPrint("\t\t3rd Attempt - Switching Protocols")
                             time.sleep(8)
                             if tnmAPIurl.find("https") == -1:
                                 tnmAPIurl = "https://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint("\t\t\tSwitching Protocols to https:")
+                                AddMsgAndPrint("\t\t3rd Attempt - Switching Protocols to https:")
                             else:
                                 tnmAPIurl = "http://tnmaccess.nationalmap.gov/api/v1/products?"
-                                AddMsgAndPrint("\t\t\tSwitching Protocols to http:")
+                                AddMsgAndPrint("\t\t3rd Attempt - Switching Protocols to http:")
                             tnmURLhuc = f"{tnmAPIurl}{paramsEncoded}"
 
                             with urllib.request.urlopen(tnmURLhuc) as conn:
@@ -835,8 +836,9 @@ if __name__ == '__main__':
                 # JSON results
                 elif 'total' in results:
 
-                    # the # of DEMs associated with the HUC
+                    # the # of DEMs associated with the poly
                     numOfHucDEMfiles = results['total']
+                    itemsCount = len(results['items'])
 
                     if numOfHucDEMfiles > 0:
 
@@ -867,6 +869,13 @@ if __name__ == '__main__':
                             else:
                                 uniqueSourceIDlist.append(sourceID)
 
+##                            # use sourceID to filter out duplicate DEMs from adjacent watersheds
+##                            if downloadURL in downloadURLList:
+##                                #AddMsgAndPrint(f"\t\t\tTile already exists {apiPolyCode} -- {sourceID}")
+##                                j+=1
+##                                numOfTotalOverlaps+=1
+##                                continue
+
                             # Ran into a situation where size was incorrectly populated as none
                             # https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NH_CT_RiverNorthL6_P2_2015/TIFF/USGS_one_meter_x31y491_NH_CT_RiverNorthL6_P2_2015.tif
                             if not size:
@@ -885,9 +894,20 @@ if __name__ == '__main__':
 
                             i+=1
 
-                        # DEMs NOT ACCOUNTED FOR - lOOP AGAIN
-                        # num of HUC DEMs is greater than 1000 rec limit AND counters for unique and
-                        # duplicate DEMs are less than total
+                        # Problem with California and 1M - very odd - I believe USGS API count is wrong
+                        if itemsCount == 0:
+                            AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {itemsCount}")
+                            if i != numOfHucDEMfiles:
+                                AddMsgAndPrint(f"\t\t\t\tMissing DEMs: {numOfHucDEMfiles - i}")
+                            else:
+                                AddMsgAndPrint(f"\t\t\t\tDEMs Accounted for (THERE IS A BUG SOMEWHERE)")
+
+                            AddMsgAndPrint(f"\t\t# of overlap DEMs: {j:,}")
+                            AddMsgAndPrint(f"\t\t# of {tnmResolution} DEMs to download: {i:,}")
+                            f.write(f"\n{apiPolyCode},{apiPolyName},{numOfHucDEMfiles},{tnmURLhuc}")
+                            bRecordsAccounted = True
+
+                        # lOOP AGAIN TO GET MORE DEMS
                         if numOfHucDEMfiles > maxProdsPerPage and ((i+j) < numOfHucDEMfiles):
                             AddMsgAndPrint(f"\t\t\tRequest: #{requestNumber} -- DEMs obtained: {k:,}")
                             recordStart+=maxProdsPerPage
@@ -906,7 +926,7 @@ if __name__ == '__main__':
                             f.write(f"\n{apiPolyCode},{apiPolyName},{numOfHucDEMfiles},{tnmURLhuc}")
                             bRecordsAccounted = True
 
-                        # DEMs ACCOUNTED FOR - NO NEED TO LOOP AGAIN
+                        # NO NEED TO LOOP AGAIN - All DEMs accounted for.
                         else:
 
                             # HUC's DEMs have been already accounted for by adjacent DEMs
@@ -930,7 +950,7 @@ if __name__ == '__main__':
 
                 else:
                     # I haven't seen an error like this
-                    AddMsgAndPrint(f"\t\tUnaccounted Scenario - HUC {apiPolyCode}: {apiPolyName}")
+                    AddMsgAndPrint(f"\t\tUnaccounted Scenario - Poly {apiPolyCode}: {apiPolyName}")
                     AddMsgAndPrint(f"\t\t\tResults: {results}")
                     unaccountedHUCs.append(apiPolyCode)
                     bRecordsAccounted = True

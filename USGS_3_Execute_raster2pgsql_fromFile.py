@@ -113,6 +113,16 @@ def print_progress_bar(index, total, label):
     sys.stdout.write('\r')
     sys.stdout.write(f"\t[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}%  {label}")
     sys.stdout.flush()
+    
+# def createTable():
+#     """
+# CREATE TABLE elevation.conus_elevation_30m_5070 (
+# 	rid serial4 NOT NULL,
+# 	rast public.raster NULL,
+# 	filename text NULL,
+# 	geom public.geometry NULL
+# );
+# """
 
 ## ===================================================================================
 def runRaster2pgsql(cmd):
@@ -279,7 +289,7 @@ if __name__ == '__main__':
                             r2pTracker+=1
     
                             if status == 'Error':
-                                fp.write(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
+                                f.write(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
                                 print(f"\n\tFailed: {msgs['Error']} -- ({r2pTracker:,} of {recCount:,})")
                                 failedCount+=1
     

@@ -1,8 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Oct 24 10:40:54 2023
-
 @author: Adolfo.Diaz
+
+---------------- UPDATES
+11/29/2023
+    - Added 3 subfunctions within the getRegionalSRS function
+    
+12/15/2023
+    - Added flexibility of passing all new header values (poly_name) over to the new metadata file
+    - Adjusted for Alaska IFSAR and OPR DEMs by setting them to EPSG 3338 without inquiring aobut the inputSRS
+      b/c many are set to an ESRI SRS.
 """
 import os, traceback, sys, time, fnmatch, glob, psutil
 import multiprocessing
@@ -118,8 +126,7 @@ def convertMasterDBfileToDict(elevMetdataFile):
                               '512\n']}
     """
     try:
-        AddMsgAndPrint("\nConverting input USGS Elevation Metadata File into a dictionary")
-
+        
         # List of header values from elevation metadata file
         headerValues = open(elevMetdataFile).readline().rstrip().split(',')
         numOfTotalRecs = len(open(elevMetdataFile).readlines())-1
@@ -174,8 +181,8 @@ def convertMasterDBfileToDict(elevMetdataFile):
             AddMsgAndPrint(f"\tThere are(is) {badLines:,} records with anomalies found")
 
         if len(masterDBfileDict) == 0:
-            AddMsgAndPrint(f"\t\tThere are no valid DEMs to create footprints for")
-            return False,False,False
+            AddMsgAndPrint("\t\tThere are no valid DEMs to project")
+            return False
 
         return masterDBfileDict
 
@@ -187,31 +194,12 @@ def convertMasterDBfileToDict(elevMetdataFile):
 def getRegionalSRS(itemCollection,headerValues):
     
     try:
-        # tuple collection
-        #sourceID = itemCollection[0]
-        demInfo = itemCollection[1]  # list of lists
-        
-        # Positions of individual field names
-        sourceID = demInfo[headerValues.index("sourceid")]
-        DEMname = demInfo[headerValues.index("dem_name")]
-        DEMpath = demInfo[headerValues.index("dem_path")]
-        cellSize = demInfo[headerValues.index("cellsize")]
-        noDataVal = demInfo[headerValues.index("nodataval")]
-        try:
-            EPSG = int(demInfo[headerValues.index("epsg_code")])
-        except:
-            EPSG = None
-        srsName = demInfo[headerValues.index("srs_name")]
-        top = float(demInfo[headerValues.index("rds_top")])
-        left = float(demInfo[headerValues.index("rds_left")])
-
-        rasterPath = os.path.join(DEMpath,DEMname)
         
         #====================================================================
         def getEPSG(raster):
             try:
                 rds = gdal.Open(raster)
-\
+
                 prj = rds.GetProjection()  # GDAL returns projection in WKT
                 srs = osr.SpatialReference(prj)
 
@@ -227,8 +215,10 @@ def getRegionalSRS(itemCollection,headerValues):
                 rds = None;del rds
                 return epsg,srsName.lower()
             except:
+                AddMsgAndPrint(f"\tFailed to execute getEPSG() for: {os.path.basename(raster)} \n\t {errorMsg(errorOption=2)}")
                 rds = None;del rds
-                return None,None
+                return None,None  
+            
         #====================================================================
         def getOutputSRS(topExtent):
             # CONUS
@@ -246,20 +236,107 @@ def getRegionalSRS(itemCollection,headerValues):
                 
             #print(f"\toutput EPSG = {outEPSG}")
             return outEPSG
-        #====================================================================    
         
-        # ------------------------ File is a 1M USGS File; use UTM zones
-        # 1 vs. 1.0
-        if cellSize in ["1.0","1"] or cellSize.find("1.0") >-1 or cellSize.find("0.99") >-1:
-            #print(f"\tsource resolution = {cellSize}; DEM: {DEMname}")
-            if EPSG == None:
-                EPSG,srsName = getEPSG(rasterPath)
-                if EPSG == None:
-                    AddMsgAndPrint(f"\tFailed to acquire EPSG from {DEMname}; Will NOT be projected")
-                    return [False,DEMname]
+        #==================================================================== 
+        def getExtent(raster):
+            # Some 1M files failed to get raster information produced
+            try:
+                rds = gdal.Open(raster)
+                rdsInfo = gdal.Info(rds,format="json")
                 
-            xyRes = 1
+                right,top = rdsInfo['cornerCoordinates']['upperRight']   # Eastern-Northern most extent
+                left,bottom = rdsInfo['cornerCoordinates']['lowerLeft']  # Western - Southern most extent
+                rds = None;del rds
+                return float(top),float(left)
+            except:
+                return None,None
+            
+        #==================================================================== 
+        def getCellSize(raster):
+            try:
+                rds = gdal.Open(raster)
+                cellSize = rds.GetGeoTransform()[1]
+                rds = None;del rds
+                return str(cellSize)
+            except:
+                return None
+            
+        # tuple collection
+        #sourceID = itemCollection[0]
+        demInfo = itemCollection[1]  # list of lists
+        
+        # Positions of individual field names
+        sourceID = demInfo[headerValues.index("sourceid")]
+        DEMname = demInfo[headerValues.index("dem_name")]
+        DEMpath = demInfo[headerValues.index("dem_path")]
+        rasterPath = os.path.join(DEMpath,DEMname)
+        cellSize = demInfo[headerValues.index("cellsize")]
+        noDataVal = demInfo[headerValues.index("nodataval")]
+        srsName = demInfo[headerValues.index("srs_name")]
+        EPSG = (demInfo[headerValues.index("epsg_code")])
+        
+        # Check Raster Path
+        # if not os.path.exists(rasterPath):
+        #     AddMsgAndPrint(f"\t{DEMname} does NOT exist; Will NOT be projected")
+        #     return [False,DEMname]
+        
+        # EPSG Information
+        try:
+            if not bAlaska:
+                int(EPSG)
+                
+                if srsName == None:
+                    EPSG,srsName = getEPSG(rasterPath)
+                    
+                    if EPSG == None or srsName == None:
+                        AddMsgAndPrint(f"\tFailed to acquire EPSG from {DEMname}; Will NOT be projected")
+                        return [False,DEMname]
+        except:
+            EPSG,srsName = getEPSG(rasterPath)
+            
+            if EPSG == None:
+                AddMsgAndPrint(f"\tFailed to acquire EPSG from {DEMname}; Will NOT be projected")
+                return [False,DEMname]
+            
+        # Check Extent Information
+        try:
+            top = float(demInfo[headerValues.index("rds_top")])
+            left = float(demInfo[headerValues.index("rds_left")])
+        except:
+            top,left = getExtent(rasterPath)
+            
+            if top == None:
+                AddMsgAndPrint(f"\tFailed to acquire TOP coordinate from {DEMname}; Will NOT be projected")
+                return [False,DEMname]
+            
+        # Check Cell Size Information
+        try:
+            float(cellSize)
+        except:
+            cellSize = getCellSize(rasterPath)
+            if cellSize == None:
+                AddMsgAndPrint(f"\tFailed to acquire Cell Size from {DEMname}; Will NOT be projected")
+                return [False,DEMname]
+            
+        # ------------------------ AK OPR USGS File; Multiple Coordinate systems and cell sizes
+        if bAlaska:
+            # Alaska had issues deciphering the EPSG so GDAL will simply  project it using DEM metadata
+            #if EPSG in ['1116','1133','3338','4019','4269','6318','6332','6333','6334','6335','6337','6394','7019','26903','26906','26908']:
             inputSRS = EPSG
+            
+            # cell size will be kept as the same
+            xyRes = cellSize
+            outputSRS = 3338
+            
+            # else:
+            #     return [False,DEMname]
+                
+        # ------------------------ File is a 1M USGS File; use UTM zones
+        elif cellSize in ["1.0","1"] or cellSize.find("1.0") >-1 or cellSize.find("0.99") >-1:
+            #print(f"\tsource resolution = {cellSize}; DEM: {DEMname}")
+
+            inputSRS = EPSG
+            xyRes = 1
             
             if srsName.find('zone') > -1:
                 #print(f"\t\t{srsName}")
@@ -270,6 +347,11 @@ def getRegionalSRS(itemCollection,headerValues):
                     # Hawaii
                     if top < 2500000:
                         outputSRS = 4326
+                        
+                        # used https://www.opendem.info/arc2meters.html to convert 1M to DD
+                        # using a latitude of 19.7 (center of big island)
+                        # A better method is needed as 1M in HI and PB grow
+                        xyRes = 0.00000955874839323294
                     # Alaska
                     else:
                         outputSRS = 3338
@@ -290,51 +372,58 @@ def getRegionalSRS(itemCollection,headerValues):
                     return [False,DEMname]
                     
             else:
-                AddMsgAndPrint(f"\tUTM Zone not detected in SRS Name {DEMname}; Will NOT be projected")
+                AddMsgAndPrint(f"\tUTM Zone not detected in SRS Name for {DEMname}; Will NOT be projected \n\tSRS Name: {srsName}")
                 return [False,DEMname]
                     
         # ------------------------ File is a 3M USGS File
         elif cellSize.find("4.11370") > -1 or cellSize.find("3.086419") > -1:
             #print("\tsource resolution = 3")
-            xyRes = 3
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
+            
+            if outputSRS == 4326:
+                # must remain in degrees
+                xyRes = cellSize
+            else:
+                xyRes = 3
             
         # ------------------------ File is a 10M USGS File
         elif cellSize.find("9.259259") >-1:
             #print("\tsource resolution = 10")
-            xyRes = 10
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
+            
+            if outputSRS == 4326:
+                # must remain in degrees
+                xyRes = cellSize
+            else:
+                xyRes = 10
         
         # ------------------------ File is a 30M USGS File
         elif cellSize.find("0.000277777") >-1:
             #print("\tsource resolution = 30")
-            xyRes = 30
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
             
+            if outputSRS == 4326:
+                # must remain in degrees
+                xyRes = cellSize
+            else:
+                xyRes = 30
+            
         else:
             print(f"\tcellSize is not accounted for: {cellSize}; Will not be projected.")
-            xyRes = 0
-            inputSRS = EPSG
-            outputSRS = 0
             return [False,DEMname]
             
         if os.name == 'nt':
-            outDir = r'D:\projects\DSHub\reampling\project_test'
-            outProjectRaster = f"{outDir}{os.sep}{DEMname.split('.')[0]}_{outputSRS}.tif"
+            outProjectRaster = f"{ntOutputDir}{os.sep}{DEMname.split('.')[0]}_{outputSRS}.tif"
         else:    
             outProjectRaster = f"{DEMpath}{os.sep}{DEMname.split('.')[0]}_{outputSRS}.tif"
-        #print(f"\toutput_raster: {outProjectRaster}")
-        #print(f"\tinputSRS: {inputSRS}")
-        #print(f"\toutputSRS: {outputSRS}")
-            
+
         return [sourceID,rasterPath,outProjectRaster,xyRes,inputSRS,outputSRS,noDataVal]
         
     except:
-        errorMsg()
-        AddMsgAndPrint(f"\tFailed to get projection info for {DEMname}")
+        AddMsgAndPrint(f"\tFailed to get projection info for {DEMname} \n\t {errorMsg(errorOption=2)}")
         return [False,DEMname]
         
 ## ================================================================================================================
@@ -369,32 +458,52 @@ def projectDEM(projectInfoList):
                 messageList.append(f"Projected DEM already exists: {os.path.basename(out_raster)} -- Skipping!")
                 return [messageList, [True,out_raster,sourceID]]
             
-        # Set source Coordinate system to EPSG from input record
-        inSpatialRef = osr.SpatialReference()
-        inSpatialRef.ImportFromEPSG(int(inputSRS))
+        if not bAlaska:
+            # Set source Coordinate system to EPSG from input record
+            inSpatialRef = osr.SpatialReference()
+            inSpatialRef.ImportFromEPSG(int(inputSRS))
 
         # Set output Coordinate system to 5070
         outSpatialRef = osr.SpatialReference()
         outSpatialRef.ImportFromEPSG(int(outputSRS))
+        
+        gdal.SetConfigOption("GDAL_NUM_THREADS","ALL_CPUS")
+        gdal.SetConfigOption("GDAL_CACHEMAX","512")
             
-        # Projection configuration
-        args = gdal.WarpOptions(format="GTiff",
-                                xRes=xRes,
-                                yRes=yRes,
-                                srcNodata=noData,
-                                dstNodata=-999999.0,
-                                srcSRS=inSpatialRef,
-                                dstSRS=outSpatialRef,
-                                resampleAlg=gdal.GRA_Bilinear,
-                                multithread=True,
-                                creationOptions=["COMPRESS=DEFLATE", 
-                                                 "TILED=YES",
-                                                 "PREDICTOR=2",
-                                                 "ZLEVEL=9",
-                                                 "PROFILE=GeoTIFF",
-                                                 "TFW=YES",
-                                                 "BLOCKXSIZE=256",
-                                                 "BLOCKYSIZE=256"])
+        # Projection configuration for Alaska - provide no inputSRS
+        if bAlaska:
+            args = gdal.WarpOptions(format="GTiff",
+                                    xRes=xRes,
+                                    yRes=yRes,
+                                    srcNodata=noData,
+                                    dstNodata=-999999.0,
+                                    dstSRS=outSpatialRef,
+                                    resampleAlg=gdal.GRA_Bilinear,
+                                    multithread=True,
+                                    creationOptions=["COMPRESS=DEFLATE", 
+                                                     "TILED=YES",
+                                                     "PREDICTOR=2",
+                                                     "ZLEVEL=9",
+                                                     "TFW=YES",
+                                                     "BLOCKXSIZE=256",
+                                                     "BLOCKYSIZE=256"])
+        else:
+            args = gdal.WarpOptions(format="GTiff",
+                                    xRes=xRes,
+                                    yRes=yRes,
+                                    srcNodata=noData,
+                                    dstNodata=-999999.0,
+                                    srcSRS=inSpatialRef,
+                                    dstSRS=outSpatialRef,
+                                    resampleAlg=gdal.GRA_Bilinear,
+                                    multithread=True,
+                                    creationOptions=["COMPRESS=DEFLATE", 
+                                                     "TILED=YES",
+                                                     "PREDICTOR=2",
+                                                     "ZLEVEL=9",
+                                                     "TFW=YES",
+                                                     "BLOCKXSIZE=256",
+                                                     "BLOCKYSIZE=256"])
 
         g = gdal.Warp(out_raster, input_raster, options=args)
         g = None # flush and close out
@@ -403,7 +512,9 @@ def projectDEM(projectInfoList):
         return [messageList,[True,out_raster,sourceID]]
         
     except:
-        messageList.append(f"Failed to Project DEM: {input_raster} \n\t {errorMsg(errorOption=2)}")
+        messageList.append(f"\n\tFailed to Project DEM: {input_raster} \n\t {errorMsg(errorOption=2)}")
+
+        
         return [messageList,[False,input_raster,sourceID]]
     
 ## ===================================================================================
@@ -447,7 +558,7 @@ def createMasterDBfile_MT(projectedDEMsDict,elevMetadataDict):
                     rastInfo = results[1]
                     counter +=1
 
-                    if rastInfo.find('#')>-1:
+                    if rastInfo.find('#')>-1 or rastInfo.find('None')>-1:
                         badStats+=1
                         print(f"\t\tFailed to retrieve DEM Statistical Information -- {counter:,} of {totalFiles:,}")
                     else:
@@ -467,20 +578,23 @@ def createMasterDBfile_MT(projectedDEMsDict,elevMetadataDict):
             g = open(dlMasterFilePath,'a+')
 
             # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-            header = ('poly_code,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
-                      'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
-                      'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
+            # header = ('poly_code,poly_name,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
+            #           'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
+            #           'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
             g.write(header)
 
         # else master elevation file exists
         else:
             g = open(dlMasterFilePath,'a+')
 
+        downldurlIdx = headerValues.index("downld_url")+1
+
         # Iterate through all of the sourceID files in the download file (elevMetadatDict) and combine with stat info
         for srcID,demInfo in elevMetadataDict.items():
 
-            # 10 item INFO: poly_code,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
-            firstPart = ','.join(str(e) for e in demInfo[0:9])
+            # Copy all headers up to and including downld_url
+            # 10 items from demInfo: poly_code,poly_name,prod_title,pub_date,last_updated,size,format,sourceID,metadata_url,download_url
+            firstPart = ','.join(str(e) for e in demInfo[0:downldurlIdx])
 
             # srcID must exist in dlImgFileDict (successully populated during download)
             if srcID in projectedDEMsDict:
@@ -660,8 +774,7 @@ def getRasterInformation_MT(rasterItem):
         return rasterStatDict
 
     except:
-        AddMsgAndPrint(f"\t\tFailed: {os.path.basename(raster)}")
-        errorMsg()
+        AddMsgAndPrint(f"\t\tFailed to acquire Stat Information for: {os.path.basename(raster)} \n\t {errorMsg(errorOption=2)}")
 
         # Return the info that was collected and pad the rest with 'None'
         if len(rasterInfoList) > 0:
@@ -736,7 +849,11 @@ def createRaster2pgSQLFile(masterElevFile):
                 return "pb"
             else:
                 return "unkown"
-                
+          
+        # Header value Index Positions
+        epsgIdx = headerValues.index("epsg_code")
+        demNameIdx = headerValues.index("dem_name")
+        
         """ ------------------- Open Master Elevation File and write raster2pgsql statements ---------------------"""
         with open(masterElevFile, 'r') as fp:
             for line in fp:
@@ -749,24 +866,24 @@ def createRaster2pgSQLFile(masterElevFile):
                 items = line.split(',')
 
                 # Raster2pgsql parameters
-                srid = items[19]
+                epsg = items[epsgIdx]
                 demPath = f"{items[10]}{os.sep}{items[9]}"
                 
                 try:
-                    region = getRegion(int(srid))
+                    region = getRegion(int(epsg))
                 except:
-                    invalidCommands.append(f"{demPath} --> raster2pgsql -s {srid}")
+                    invalidCommands.append(f"{demPath} --> raster2pgsql -s {epsg}")
                     continue
                     
                 tileSize = '256x256'
                 dbName = 'elevation'
-                dbTable = f"{region}_elevation_{resolution.lower()}_{srid}_meta"  # elevation_3m_5070
-                demName = items[9]
+                dbTable = f"{region}_elevation_{resolution.lower()}_{epsg}"  # conus_elevation_3m_5070
+                demName = items[demNameIdx]
                 password = 'itsnotflat'
-                localHost = '10.11.11.10'
+                localHost = '10.11.11.214'
                 port = '6432'
 
-                r2pgsqlCommand = f"raster2pgsql -s {srid} -b 1 -t {tileSize} -F -a -R {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
+                r2pgsqlCommand = f"raster2pgsql -s {epsg} -b 1 -t {tileSize} -F -a -R {demPath} {dbName}.{dbTable} | PGPASSWORD={password} psql -U {dbName} -d {dbName} -h {localHost} -p {port}"
 
                 # Add check to look for # in r2pgsqlCommand
                 if r2pgsqlCommand.find('#') > -1 or r2pgsqlCommand.find('None') > -1:
@@ -790,7 +907,8 @@ def createRaster2pgSQLFile(masterElevFile):
             for invalidCmd in invalidCommands:
                 AddMsgAndPrint(f"\t\t{invalidCmd}")
 
-        AddMsgAndPrint("\tSuccessfully created raster2pgsql file")
+        else:
+            AddMsgAndPrint("\tSuccessfully created raster2pgsql file")
         return r2pgsqlFilePath
 
     except:
@@ -802,10 +920,49 @@ if __name__ == '__main__':
     try:
         funStarts = tic()
         
-        # Parameters
-        elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\1M\20230728_windows\USGS_3DEP_1M_Step2_Elevation_Metadata_10.txt'
+        """ ---------------------------- Parameters ---------------------------------------------------"""
+        # Parameter #1: Path to elevation metadata file
+        elevationMetadataFile = input("\nEnter full path to USGS Elevation Metadata file that contains DEMs to project: ")
+        while not os.path.exists(elevationMetadataFile):
+            print(f"{elevationMetadataFile} does NOT exist. Try Again")
+            elevationMetadataFile = input("Enter full path to USGS Elevation Metadata file that contains DEMs to project: ")
+            
+        # Parameter #2: Replace Projected DEMS: yes or no
+        bReplace = input("\nDo you want to replace existing projected DEMs? (Yes/No): ")
+        while not bReplace.lower() in ("yes","no","y","n"):
+            print("Please Enter Yes or No")
+            bReplace = input("Do you want to replace existing data? (Yes/No): ")
+    
+        if bReplace.lower() in ("yes","y"):
+            bReplace = True
+        else:
+            bReplace = False
+            
+        # Parameter #2: Replace Projected DEMS: yes or no
+        bDeleteOGdems = input("\nDo you want to DELETE the original DEMs? (Yes/No): ")
+        while not bDeleteOGdems.lower() in ("yes","no","y","n"):
+            print("Please Enter Yes or No")
+            bDeleteOGdems = input("Do you want to DELETE the original DEMs? (Yes/No): ")
+    
+        if bDeleteOGdems.lower() in ("yes","y"):
+            bDeleteOGdems = True
+        else:
+            bDeleteOGdems = False
+            
+        elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\AK_TEST\USGS_3DEP_5M_AK_OPR_Step2_Elevation_Metadata.txt'
         bReplace = False
         bDeleteOGdems = False
+            
+        # Alaska DEMs from OPR will be treated different
+        bAlaska = False
+        if os.path.basename(elevationMetadataFile).find('AK') >-1:
+            bAlaska = True
+        
+        # Parameters
+        # elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801_windows\USGS_3DEP_30M_Step2_Elevation_Metadata_35.txt'
+        # bReplace = False
+        # bDeleteOGdems = False
+        ntOutputDir = r'D:\projects\DSHub\reampling\project_test'
         
         """ ---------------------------- Establish Console LOG FILE ---------------------------------------------------"""
         tempList = elevationMetadataFile.split(os.sep)[-1].split('_')
@@ -817,7 +974,7 @@ if __name__ == '__main__':
         msgLogFile = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step2C_Reproject_DEMs_ConsoleMsgs.txt"
     
         h = open(msgLogFile,'w')
-        h.write(f"Executing: USGS_ReprojectDEMs {today}\n\n")
+        h.write(f"Executing: USGS_2C_ProjectDEMS.py {today}\n\n")
         h.write("User Selected Parameters:\n")
         h.write(f"\tInput Elevation Metadata File: {elevationMetadataFile}\n")
         h.write(f"\tLog File Path: {msgLogFile}\n")
@@ -827,7 +984,8 @@ if __name__ == '__main__':
         h.close()
 
         # List of header values from elevation metadata file
-        headerValues = open(elevationMetadataFile).readline().rstrip().split(',')
+        header =  open(elevationMetadataFile).readline().rstrip()
+        headerValues = header.split(',')
         recCount = len(open(elevationMetadataFile).readlines())-1
     
         AddMsgAndPrint(f"There are {recCount:,} {resolution} DEM files in the elevation metadata file")
@@ -835,10 +993,11 @@ if __name__ == '__main__':
         """ -------------------------- STEP 1: Convert Metadata Elevation to python dict  -------------------"""
         # Convert input metadata elevation file to a dictionary
         # sourceID = [List of all attributes]
+        AddMsgAndPrint("\nStep1: Converting input USGS Elevation Metadata File into a dictionary")
         metadataDict = convertMasterDBfileToDict(elevationMetadataFile)
         
         """ -------------------------- STEP 2: Get Projection Info ------------------------------------------"""
-        AddMsgAndPrint(f"\nDetermining Projection Info for {len(metadataDict)} DEMs\n")
+        AddMsgAndPrint(f"\nStep2: Determining Projection Info for {len(metadataDict):,} DEMs")
         projectionInfoList = list()
         noProjectionInfoList = list()
     
@@ -854,12 +1013,15 @@ if __name__ == '__main__':
                      projectionInfoList.append(result)
                  else:
                      noProjectionInfoList.append(result[1])
-                     AddMsgAndPrint(f"Failed to get projection Info for: {result[1]}")
+                     AddMsgAndPrint(f"\tFailed to get projection Info for: {result[1]}")
     
              del getProjectInfo
-                     
+             
+        if len(noProjectionInfoList):
+            AddMsgAndPrint(f"\n\tThere were {len(noProjectionInfoList)} DEM files that will not be projected.")
+                           
         """ -------------------------- STEP 3: Project DEMs ------------------------------------------"""
-        AddMsgAndPrint(f"\nStarting Re-Projecting Process of {len(projectionInfoList)} DEMs:\n")
+        AddMsgAndPrint(f"\nStep3: Starting Re-Projecting Process of {len(projectionInfoList):,} DEMs:\n")
         projectTimeStart = tic()
         projectionFailedDict = dict()
         projectedDEMsDict = dict()    # {sourceID:projectedDEM}
@@ -879,11 +1041,17 @@ if __name__ == '__main__':
                          projectionFailedDict[result[1][2]] = result[1][1]
                      else:
                          projectedDEMsDict[result[1][2]] = result[1][1]
-                         
+                        
+                     i=0
                      for msg in result[0]:
-                        f.write(f"\n\t{msg} -- ({j:,} of {numOfDEMstoProject:,})")
-                        print(f"\t{msg} -- ({j:,} of {numOfDEMstoProject:,})")
-                        j+=1
+                        if i == 0:
+                            f.write(f"\n\t{msg} -- ({j:,} of {numOfDEMstoProject:,})")
+                            print(f"\t{msg} -- ({j:,} of {numOfDEMstoProject:,})")
+                        else:
+                            f.write(f"\n\t{msg}")
+                            print(f"\t{msg}")
+                        i+=1
+                     j+=1
                          
                  del projectDEMs
                      
@@ -893,7 +1061,7 @@ if __name__ == '__main__':
         bMasterFile = False
         if len(projectedDEMsDict):
             dlMasterTimeStart = tic()
-            AddMsgAndPrint("\nCreating Elevation Metadata File for Projected DEMs")
+            AddMsgAndPrint("\nStep 4: Creating Elevation Metadata File for Projected DEMs")
             dlMasterFilePath = f"{os.path.dirname(elevationMetadataFile)}{os.sep}USGS_3DEP_{resolution}_Step2C_Elevation_Metadata_reproject.txt"
             dlMasterFile = createMasterDBfile_MT(projectedDEMsDict,metadataDict)
             dlMasterTimeStop = toc(dlMasterTimeStart)
@@ -902,7 +1070,7 @@ if __name__ == '__main__':
         """ ----------------------------- Step 5: Create Raster2pgsql File ---------------------------------------------- """
         r2pgsqlTimeStart = tic()
         if bMasterFile:    
-            AddMsgAndPrint("\nCreating Raster2pgsql File\n")
+            AddMsgAndPrint("\nStep 5: Creating Raster2pgsql File\n")
             r2pgsqlFile = createRaster2pgSQLFile(dlMasterFilePath)
             #AddMsgAndPrint("\tIMPORTANT: Make sure dbTable variable (elevation_3m) is correct in Raster2pgsql file!!")
             r2pgsqlTimeStop = toc(r2pgsqlTimeStart)
@@ -913,11 +1081,11 @@ if __name__ == '__main__':
         """ ----------------------------- Step 6: Delete original files ---------------------------------------------- """
         if bDeleteOGdems:
             if len(projectionFailedDict) == 0:
-                AddMsgAndPrint("\nDeleting Original DEMs:")
+                AddMsgAndPrint("\nStep 6: Deleting Original DEMs:")
                 for k,v in metadataDict.items():
                     demName = v[headerValues.index("dem_name")]
                     demPath = v[headerValues.index("dem_path")]
-                    fileToDelete = f"{os.path.join(demPath,demName).split('.')[0]}*"
+                    fileToDelete = f"{os.path.join(demPath,demName).split('.')[0]}.*"
                     deletedFile = 0
                     invalidFiles = 0
                     
@@ -948,6 +1116,7 @@ if __name__ == '__main__':
         AddMsgAndPrint(f"\tCreating Raster2pgsql file Time: {r2pgsqlTimeStop}")
         
         # Summarize projection info
+        # prjLookUp = {}
         if len(projectionInfoList):
             AddMsgAndPrint("\nEPSG Summary:")
             epsgs = [f[5] for f in projectionInfoList]
@@ -960,11 +1129,6 @@ if __name__ == '__main__':
             AddMsgAndPrint(f"Raster2pgsql File Path: {r2pgsqlFile}")
             
     except:
-        errorMsg(errorOption=1)
-                     
-                     
-                     
-                     
-                     
-                     
+        pass
+        #errorMsg(errorOption=1)
                      

@@ -173,6 +173,9 @@ and return them.  This will be used to append to the DLStatus file.
       have to add this back in.
     - Remove option to download in single thread option.  All downloading will only happen in
       using multi-threading.
+      
+12/11/2023
+    - Added poly_name to metadata
 
 Things to consider/do:
   - rename key sql reserved words:
@@ -380,6 +383,7 @@ def getDownloadFolder2(filename):
     """
 
     try:
+        import random
         # ['USGS', '1M', '19', 'x44y515', 'ME', 'CrownofMaine', '2018', 'A18.tif']
         fileElements = filename.split('_')
 
@@ -392,7 +396,7 @@ def getDownloadFolder2(filename):
         threeM = ['ned19','imgned19']
         tenM = ['13']
         thirtyM = ['1']
-        ak_opr = ['opr','OPR']
+        ak_opr = ['ak','AK','opr','OPR']
 
         firstElement = fileElements[0]
 
@@ -487,9 +491,22 @@ def getDownloadFolder2(filename):
 
             res = '30m'
 
+        # ------------------------ File is an Alaska OPR USGS_OPR_AL_25Co_B5_2017_16R_FV_7230.tif
         elif firstElement in ak_opr:
-            pass
-
+            ld = ''
+            
+            for c in reversed(filename):
+                if c.isdigit():
+                    ld = c
+                    break
+                
+            # assign random drive
+            if ld is None:
+                dataDrives = [2,3,4,5,6,7,8,9]
+                ld = random.choice(dataDrives)
+                
+            res = 'ak_opr'
+                
         # ------------------------ oddball files that don't follow the majority convention
         # i.e. n65w158.zip
         else:
@@ -500,9 +517,10 @@ def getDownloadFolder2(filename):
                     ld = char
                     break
 
-            # assign arbitrary drive
+            # assign random drive
             if ld is None:
-                ld = 5
+                dataDrives = [2,3,4,5,6,7,8,9]
+                ld = random.choice(dataDrives)
             res = resolution.lower()
 
         # last digit
@@ -966,7 +984,7 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
             g = open(dlMasterFilePath,'a+')
 
             # rast_size, rast_columns, rast_rows, rast_top, rast_left, rast_right, rast_bottom
-            header = ('poly_code,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
+            header = ('poly_code,poly_name,prod_title,pub_date,lastupdate,rds_size,format,sourceid,meta_url,'
                       'downld_url,dem_name,dem_path,rds_column,rds_rows,bandcount,cellsize,rdsformat,bitdepth,nodataval,srs_type,'
                       'epsg_code,srs_name,rds_top,rds_left,rds_right,rds_bottom,rds_min,rds_mean,rds_max,rds_stdev,blk_xsize,blk_ysize')
             g.write(header)
@@ -1003,6 +1021,10 @@ def createMasterDBfile_MT(dlImgFileDict,elevMetadataDict):
         return dlMasterFilePath
 
     except:
+        # print("==================================")
+        # print(f"\tSourceID: {srcID}")
+        # print(f"\tdemInfo: {demInfo}")
+        # print(f"\tHeaderValues: {headerValues}")
         errorMsg()
         return False
 
@@ -1072,10 +1094,7 @@ def getRasterInformation_MT(rasterItem):
         cellSize = rds.GetGeoTransform()[1]
         rdsFormat = rdsInfo['driverLongName']
         bitDepth = rdsInfo['bands'][0]['type']
-        
-        for stat in (columns,rows,bandCount,cellSize,rdsFormat,bitDepth):
-            rasterInfoList.append(stat)
-
+    
         try:
             noDataVal = rdsInfo['bands'][0]['noDataValue']
         except:
@@ -1083,8 +1102,9 @@ def getRasterInformation_MT(rasterItem):
                 noDataVal = bandInfo.GetNoDataValue()
             except:
                 noDataVal = 'None'
-
-        rasterInfoList.append(noDataVal)
+                
+        for stat in (columns,rows,bandCount,cellSize,rdsFormat,bitDepth,noDataVal):
+            rasterInfoList.append(stat)
 
         # -------------------- Raster Spatial Reference Information ------------------------
         # What is returned when a raster is undefined??
@@ -1215,6 +1235,7 @@ def createRaster2pgSQLFile(masterElevFile):
     try:
         global resolution
         masterElevRecCount = len(open(masterElevFile).readlines()) - 1  # subtract header
+        headers = open(masterElevFile).readline().rstrip().split(',')
 
         recCount = 0
         r2pgsqlFilePath = f"{os.path.dirname(downloadFile)}{os.sep}USGS_3DEP_{resolution}_Step2_RASTER2PGSQL.txt"
@@ -1239,12 +1260,12 @@ def createRaster2pgSQLFile(masterElevFile):
                 items = line.split(',')
 
                 # Raster2pgsql parameters
-                srid = items[19]
-                tileSize = '507x507'
-                demPath = f"{items[10]}{os.sep}{items[9]}"
+                srid = items[headers.index('epsg_code')]
+                tileSize = '256x256'
+                demPath = f"{items[headers.index('dem_path')]}{os.sep}{items[headers.index('dem_name')]}"
                 dbName = 'elevation'
                 dbTable = f"elevation_{resolution.lower()}"  # elevation_3m
-                demName = items[9]
+                demName = items[headers.index('dem_name')]
                 password = 'itsnotflat'
                 localHost = '10.11.11.10'
                 port = '6432'
@@ -1353,9 +1374,13 @@ def main(dlFile,dlDir,bReplace):
         resolution = '_'.join(tempList[startPos:endPos])
         #resolution = downloadFile.split(os.sep)[-1].split('_')[2]
 
-        # ['polyCode','prod_title','pub_date','last_updated','size','format'] ...etc
+        # ['polyCode', 'poly_name', 'prod_title','pub_date','last_updated','size','format'] ...etc
         headerValues = open(downloadFile).readline().rstrip().split(',')
-
+        #try:
+        #headerValues.remove('poly_name')
+        # except:
+        #     pass
+        
         urlDownloadDict = dict()  # contains download URLs and sourceIDs grouped by poly_code; 07040006:[[ur1],[url2]]
         elevMetadataDict = dict() # contains all input info from input downloadFile.  sourceID:dlFile items
         recCount = 0
@@ -1363,6 +1388,7 @@ def main(dlFile,dlDir,bReplace):
 
         """ ---------------------------- Open Download File and Parse Information into dictionary ------------------------"""
         with open(downloadFile, 'r') as fp:
+
             for line in fp:
                 items = line.split(',')
 
@@ -1378,6 +1404,7 @@ def main(dlFile,dlDir,bReplace):
                     continue
 
                 poly_code = items[headerValues.index("poly_code")]
+                poly_name = items[headerValues.index("poly_name")]
                 prod_title = items[headerValues.index("prod_title")]
                 pub_date = items[headerValues.index("pub_date")]
                 last_updated = items[headerValues.index("lastupdate")]
@@ -1394,7 +1421,7 @@ def main(dlFile,dlDir,bReplace):
                     urlDownloadDict[poly_code] = [[downloadURL,sourceID,fileFormat]]
 
                 # Add info to elevMetadataDict
-                elevMetadataDict[sourceID] = [poly_code,prod_title,pub_date,last_updated,
+                elevMetadataDict[sourceID] = [poly_code,poly_name,prod_title,pub_date,last_updated,
                                               size,fileFormat,sourceID,metadata_url,downloadURL]
                 recCount+=1
 
