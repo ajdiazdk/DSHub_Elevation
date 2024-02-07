@@ -178,25 +178,25 @@ def createMultiResolutionOverlay(idx,grid):
         idx_ds = driver.Open(idx, 0) # 0 means read-only. 1 means writeable.
         grid_ds = driver.Open(grid, 0)
 
+        # Validate driver grid layer
+        if grid_ds is None:
+            AddMsgAndPrint(f"\tERROR: Could not open Driver Grid Layer: {grid} -- EXITING!")
+            return False,False
+        else:
+            gridLyr = grid_ds.GetLayer()
+            gridFeatCount = gridLyr.GetFeatureCount()
+            AddMsgAndPrint(f"\tNumber of Driver Grid Polygons in {os.path.basename(grid)}: {gridFeatCount:,}\n")
+
         # Validate Elevation Resolution Index
         if idx_ds is None:
-            AddMsgAndPrint(f"\tERROR: Could not open Elevation Resolution Index Layer: {elevResIndexShp} -- EXITING!")
+            AddMsgAndPrint(f"\tERROR: Could not open DSH3M Footprint Layer: {dsh3mFootPrintLry} -- EXITING!")
             return False,False
         else:
             idx_Lyr = idx_ds.GetLayer()
             idxFeatCount = idx_Lyr.GetFeatureCount()       # num of features
             layerDefinition = idx_Lyr.GetLayerDefn()
             numOfFields = layerDefinition.GetFieldCount()  # num of tabular fields
-            AddMsgAndPrint(f"\n\tNumber of Elevation Resolution Index features in {os.path.basename(idx)}: {idxFeatCount:,}")
-
-        # Validate grid layer
-        if grid_ds is None:
-            AddMsgAndPrint(f"\tERROR: Could not open Grid Layer: {grid} -- EXITING!")
-            return False,False
-        else:
-            gridLyr = grid_ds.GetLayer()
-            gridFeatCount = gridLyr.GetFeatureCount()
-            AddMsgAndPrint(f"\tNumber of Grid Polygons in {os.path.basename(grid)}: {gridFeatCount:,}\n")
+            AddMsgAndPrint(f"\n\tNumber of DSH3M Footprints in {os.path.basename(idx)}: {idxFeatCount:,}")
 
         gridExtentDict = dict()          # {332: [-491520.0, 1720320.0, -368640.0, 1843200.0]}
         gridIndexOverlayDict = dict()    # {332: [[attr1,attr2,...etc],[attr1,attr2,...etc]]}
@@ -331,13 +331,13 @@ def createSoil3MDEM(item):
 
         # Positions of individual field names
         last_update = item[headerValues.index("lastupdate")]
-        fileFormat = item[headerValues.index("format")]
+        #fileFormat = item[headerValues.index("format")]
         sourceID = item[headerValues.index("sourceid")]
         DEMname = item[headerValues.index("dem_name")]
         DEMpath = item[headerValues.index("dem_path")]
-        noData = float(item[headerValues.index("nodataval")]) # returned as string
+        #noData = float(item[headerValues.index("nodataval")]) # returned as string
         EPSG = item[headerValues.index("epsg_code")]
-        srsName = item[headerValues.index("srs_name")]
+        #srsName = item[headerValues.index("srs_name")]
         top = item[headerValues.index("rds_top")]
         left = item[headerValues.index("rds_left")]
         right = item[headerValues.index("rds_right")]
@@ -407,66 +407,81 @@ def createSoil3MDEM(item):
         coordTrans = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
         #messageList.append(f"\n\t Projecting from {inputSRS} to {outputSRS}")
 
-        # ----------------------- Project extent coords to 5070 --------------------------------
+        # ----------------------- Project extent coords to 5070 if not already done so --------------------------------
         # Create a geometry object of X,Y coordinates for LL, UL, UR, and LR in the source SRS
         # This represents the coords from the raster extent and will be projected to 5070
         # Degree coordinates are passed in lat/long (Y,X) format; all others are passed in as X,Y
-
-        if inputUnits == 'degree':
-            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(left)+")")
-            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(left)+")")
-            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(right)+")")
-            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(right)+")")
+        if EPSG != 5070:
+            if inputUnits == 'degree':
+                pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(left)+")")
+                pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(left)+")")
+                pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(top)+" " +str(right)+")")
+                pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(bottom)+" " +str(right)+")")
+            else:
+                pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
+                pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
+                pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
+                pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
+    
+            # Coordinates in native SRS
+            if bDetails:
+                messageList.append(f"\n{theTab}------------ {inputSRS} Exents ------------")
+                messageList.append(f"{theTab}LL Coords - {pointLL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymin)'}")
+                messageList.append(f"{theTab}UL Coords - {pointUL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymax)'}")
+                messageList.append(f"{theTab}UR Coords - {pointUR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymax)'}")
+                messageList.append(f"{theTab}LR Coords - {pointLR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymin)'}")
+    
+            # Project individual coordinates to 5070
+            # 'POINT (800676.587222594 1918952.70626254)'
+    
+            pointLL.Transform(coordTrans)
+            pointUL.Transform(coordTrans)
+            pointUR.Transform(coordTrans)
+            pointLR.Transform(coordTrans)
+    
+            # Coordinates in 5070
+            if bDetails:
+                messageList.append(f"\n{theTab}------------ {outputSRS} Exents ------------")
+                messageList.append(f"{theTab}LL Coords - {pointLL} (Xmin,Ymin)")
+                messageList.append(f"{theTab}UL Coords - {pointUL} (Xmin,Ymax)")
+                messageList.append(f"{theTab}UR Coords - {pointUR} (Xmax,Ymax)")
+                messageList.append(f"{theTab}LR Coords - {pointLR} (Xmax,Ymin)")
+    
+            # Convert the Transform object into a List of projected coordinates and extract
+            # [(1308220.3216564057, -526949.4675336559)]
+            prjLL = pointLL.GetPoints()[0]
+            prjUL = pointUL.GetPoints()[0]
+            prjUR = pointUR.GetPoints()[0]
+            prjLR = pointLR.GetPoints()[0]
+    
+            # ----------------------- Unsnapped 5070 Extent --------------------------------
+            # Truncate coordinates to remove precision otherwise mod%3 would never equal 0
+            # Get the highest Y-coord to determine the most northern (top) extent - Ymax
+            newTop = int(max(prjUL[1],prjUR[1]))
+    
+            # Get the lowest Y-coord to determine the most southern (bottom) extent - Ymin
+            newBottom = int(min(prjLL[1],prjLR[1]))
+    
+            # Get the lowest X-coord to determine the most western (left) extent - Xmin
+            newLeft = int(min(prjUL[0],prjLL[0]))
+    
+            # Get the highest X-coord to determine the most eastern (right) extent - Xmax
+            newRight = int(max(prjUR[0],prjLR[0]))
+            
         else:
-            pointLL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(bottom)+")")
-            pointUL = ogr.CreateGeometryFromWkt("POINT ("+str(left)+" " +str(top)+")")
-            pointUR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(top)+")")
-            pointLR = ogr.CreateGeometryFromWkt("POINT ("+str(right)+" " +str(bottom)+")")
-
-        # Coordinates in native SRS
-        if bDetails:
-            messageList.append(f"\n{theTab}------------ {inputSRS} Exents ------------")
-            messageList.append(f"{theTab}LL Coords - {pointLL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymin)'}")
-            messageList.append(f"{theTab}UL Coords - {pointUL} {'(lat,long)' if inputUnits == 'degree' else '(Xmin,Ymax)'}")
-            messageList.append(f"{theTab}UR Coords - {pointUR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymax)'}")
-            messageList.append(f"{theTab}LR Coords - {pointLR} {'(lat,long)' if inputUnits == 'degree' else '(Xmax,Ymin)'}")
-
-        # Project individual coordinates to 5070
-        # 'POINT (800676.587222594 1918952.70626254)'
-        pointLL.Transform(coordTrans)
-        pointUL.Transform(coordTrans)
-        pointUR.Transform(coordTrans)
-        pointLR.Transform(coordTrans)
-
-        # Coordinates in 5070
-        if bDetails:
-            messageList.append(f"\n{theTab}------------ {outputSRS} Exents ------------")
-            messageList.append(f"{theTab}LL Coords - {pointLL} (Xmin,Ymin)")
-            messageList.append(f"{theTab}UL Coords - {pointUL} (Xmin,Ymax)")
-            messageList.append(f"{theTab}UR Coords - {pointUR} (Xmax,Ymax)")
-            messageList.append(f"{theTab}LR Coords - {pointLR} (Xmax,Ymin)")
-
-        # Convert the Transform object into a List of projected coordinates and extract
-        # [(1308220.3216564057, -526949.4675336559)]
-        prjLL = pointLL.GetPoints()[0]
-        prjUL = pointUL.GetPoints()[0]
-        prjUR = pointUR.GetPoints()[0]
-        prjLR = pointLR.GetPoints()[0]
-
-        # ----------------------- Unsnapped 5070 Extent --------------------------------
-        # Truncate coordinates to remove precision otherwise mod%3 would never equal 0
-        # Get the highest Y-coord to determine the most northern (top) extent - Ymax
-        newTop = int(max(prjUL[1],prjUR[1]))
-
-        # Get the lowest Y-coord to determine the most southern (bottom) extent - Ymin
-        newBottom = int(min(prjLL[1],prjLR[1]))
-
-        # Get the lowest X-coord to determine the most western (left) extent - Xmin
-        newLeft = int(min(prjUL[0],prjLL[0]))
-
-        # Get the highest X-coord to determine the most eastern (right) extent - Xmax
-        newRight = int(max(prjUR[0],prjLR[0]))
-
+            messageList.append(f"\n{theTab} No Projection Needed")
+            if bDetails:
+                messageList.append(f"\n{theTab}------------ EPSG: 5070 Input Coordinates ------------")
+                messageList.append(f"{theTab}LL Coords - POINT ({left} {bottom}) (Left,Bottom)")
+                messageList.append(f"{theTab}UL Coords - POINT ({left} {top}) (Left,Top)")
+                messageList.append(f"{theTab}UR Coords - POINT ({right} {top}) (Right,Top)")
+                messageList.append(f"{theTab}LR Coords - POINT ({right} {bottom}) (Right,Bottom)")
+            
+            newTop = int(top)
+            newBottom = int(bottom)
+            newLeft = int(left)
+            newRight = int(right)
+            
         # ----------------------- Snapped 5070 Extent --------------------------------
         # update extent values so that they are snapped to a aoi3M cell.
         # new extent value will be divisible by 3.
@@ -595,7 +610,7 @@ def mergeGridDEMs(itemCollection):
         else:
             gridFolder = getEBSfolder(gridID)
 
-        mergeRaster = os.path.join(gridFolder,f"dsh3m_grid{gridName}_ALL_MERGE.tif")
+        mergeRaster = os.path.join(gridFolder,f"grid{gridName}_dsh3m.tif")
 
         if os.path.exists(mergeRaster):
             try:
@@ -662,27 +677,27 @@ def mergeGridDEMs(itemCollection):
         return (messageList,False)
     
 ## ===================================================================================
-def runSagaBlend(itemCollection):
+# def runSagaBlend(itemCollection):
     
-    try:
+#     try:
         
-        # tuple collection
-        gridID = itemCollection[0]
-        listsOfDEMs = itemCollection[1]  # list of lists
-        messageList = list()
+#         # tuple collection
+#         gridID = itemCollection[0]
+#         listsOfDEMs = itemCollection[1]  # list of lists
+#         messageList = list()
         
-        input_rasters = ';'.join(listsOfDEMs)
-        output_raster 
+#         input_rasters = ';'.join(listsOfDEMs)
+#         #output_raster 
         
         
-        if os.name == 'nt':
-            cmd = f"\"C:\Program Files\SAGA\saga_cmd\" grid_tools 3 -GRIDS:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -BLEND_BND:0 -MATCH:3 -TARGET_DEFINITION:0 -TARGET_OUT_GRID:\"{output_raster}\""
-        else:
-            cmd = f"saga_cmd grid_tools 3 -FILE_LIST:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -MATCH:3 -TARGET_DEFINITION:0 -BLEND_BND:0 -TARGET_OUT_GRID:\"{output_raster}\""
+#         if os.name == 'nt':
+#             cmd = f"\"C:\Program Files\SAGA\saga_cmd\" grid_tools 3 -GRIDS:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -BLEND_BND:0 -MATCH:3 -TARGET_DEFINITION:0 -TARGET_OUT_GRID:\"{output_raster}\""
+#         else:
+#             cmd = f"saga_cmd grid_tools 3 -FILE_LIST:{input_rasters} -TYPE:9 -RESAMPLING:0 -OVERLAP:5 -BLEND_DIST:300 -MATCH:3 -TARGET_DEFINITION:0 -BLEND_BND:0 -TARGET_OUT_GRID:\"{output_raster}\""
         
-    except:
-        messageList.append(errorMsg(errorOption=2))
-        return (messageList,False)
+#     except:
+#         messageList.append(errorMsg(errorOption=2))
+#         return (messageList,False)
 
 ## ===================================================================================
 def createElevMetadataFile_MT(dsh3mRasters,idxShp):
@@ -1104,7 +1119,7 @@ def createRaster2pgSQLFile(masterElevFile):
                 tileSize = '507x507'
                 demPath = f"{items[demPathPos]}{os.sep}{items[demNamePos]}"
                 dbName = 'elevation'
-                dbTable = f"elevation_DSH3M"  # elevation_3m
+                dbTable = "elevation_DSH3M"  # elevation_3m
                 demName = items[demNamePos]
                 password = 'itsnotflat'
                 localHost = '10.11.11.10'
@@ -1143,7 +1158,7 @@ def createRaster2pgSQLFile(masterElevFile):
         errorMsg()
 
 ## ===================================================================================
-def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails):
+def main(dsh3mFootPrintLry, gridDriverLyr, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails):
 
     try:
         
@@ -1171,8 +1186,8 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         h = open(msgLogFile,'a+')
         h.write(f"Executing: USGS_5_Create_DSH3M_DEMs {today}\n\n")
         h.write("User Selected Parameters:\n")
-        h.write(f"\tUSGS Elevation Index Layer: {elevResIndexShp}\n")
-        h.write(f"\tCONUS Grid Layer: {gridShp}\n")
+        h.write(f"\tUSGS Elevation Index Layer: {dsh3mFootPrintLry}\n")
+        h.write(f"\tCONUS Grid Layer: {gridDriverLyr}\n")
         h.write(f"\tOutput Metadata Path: {outputDir}\n")
         h.write(f"\tOverwrite DHS3M DEM Data: {bReplace}\n")
         h.write(f"\tDelete Intermediate DSH3M Files: {bDeleteDSH3Mdata}\n")
@@ -1183,7 +1198,7 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         """ ---------------- STEP 1: Intersect Elevation Index and Grid  -----------------"""
         # Get Headers from USGS index layer
         # ['huc_digit','prod_title','pub_date','last_updated','size','format'] ...etc
-        idx_ds = ogr.GetDriverByName('ESRI Shapefile').Open(elevResIndexShp,0)
+        idx_ds = ogr.GetDriverByName('ESRI Shapefile').Open(dsh3mFootPrintLry,0)
         idx_Lyr = idx_ds.GetLayer(0)
         layerDefinition = idx_Lyr.GetLayerDefn()
 
@@ -1198,7 +1213,7 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         # gridIndexOverlayDict = {87:[[AlldemAttributes1],[AlldemAttributes2],[AlldemAttributes1]]}
         # gridExtentDict = {87:[xmin,xmax,ymin,ymax]}
         AddMsgAndPrint("\nSTEP 1: Creating DSH3M Multi-resolution Overlay")
-        gridIndexOverlayDict,gridExtentDict = createMultiResolutionOverlay(elevResIndexShp,gridShp)
+        gridIndexOverlayDict,gridExtentDict = createMultiResolutionOverlay(dsh3mFootPrintLry,gridDriverLyr)
 
         if not gridIndexOverlayDict:
             AddMsgAndPrint("\n\tFailed to perform intersection between Elevation Index and Grid.  Exiting!")
@@ -1388,7 +1403,7 @@ def main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDS
         if len(dsh3mStatDict):
             AddMsgAndPrint("\nSTEP 5: Creating DSH3M Elevation Metadata")
             metadataFileStart = tic()
-            shpFile,shpFileCSV = createElevMetadataFile_MT(dsh3mStatDict,elevResIndexShp)
+            shpFile,shpFileCSV = createElevMetadataFile_MT(dsh3mStatDict,dsh3mFootPrintLry)
             if shpFile:
                 AddMsgAndPrint("\n\tDSH3M Elevation Metadata Shapefile Path: {shpFile}")
             else:
@@ -1476,29 +1491,29 @@ if __name__ == '__main__':
 
         """---------------------------------  Setup ---------------------------------- """
         # Script Parameters
-        elevResIndexShp = r'D:\projects\DSHub\reampling\blending\gridID_8438\gridID8438_metadata_Intersect.shp'
-        gridShp = r'D:\projects\DSHub\reampling\blending\gridID_8438\gridID_8438.shp'
-        outputDir = r'D:\projects\DSHub\reampling\blending\gridID_8438'
+        dsh3mFootPrintLry = r'D:\projects\DSHub\3mdsh_testing\indexes\grid402_metadata.shp'
+        gridDriverLyr = r'D:\projects\DSHub\3mdsh_testing\indexes\grid402.shp'
+        outputDir = r'D:\projects\DSHub\3mdsh_testing\dsh3m_DEMs'
         bReplace = False
         bReplaceMerge = False
-        bDeleteDSH3Mdata = True
+        bDeleteDSH3Mdata = False
         bDetails = True
         
-        mosaicElevationFile = main(elevResIndexShp, gridShp, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails)
+        mosaicElevationFile = main(dsh3mFootPrintLry, gridDriverLyr, outputDir, bReplace, bReplaceMerge, bDeleteDSH3Mdata, bDetails)
 
         # # PARAM#1 -- Path to the Elevation Resolution Index Layer from the original elevation data
-        # elevResIndexShp = input("\nEnter full path to the Elevation Resolution Index Layer: ")
-        # while not os.path.exists(elevResIndexShp):
-        #     print(f"{elevResIndexShp} does NOT exist. Try Again")
-        #     elevResIndexShp = input("\nEnter full path to the Elevation Resolution Index Layer: ")
+        # dsh3mFootPrintLry = input("\nEnter full path to the Elevation Resolution Index Layer: ")
+        # while not os.path.exists(dsh3mFootPrintLry):
+        #     print(f"{dsh3mFootPrintLry} does NOT exist. Try Again")
+        #     dsh3mFootPrintLry = input("\nEnter full path to the Elevation Resolution Index Layer: ")
 
         # # PARAM#2 -- Path to CONUS GRID - serves as the driver
-        # gridShp = input("\nEnter full path to the CONUS GRID: ")
-        # while not os.path.exists(gridShp):
-        #     print(f"{gridShp} does NOT exist. Try Again")
-        #     gridShp = input("\nEnter full path to the CONUS GRID: ")
+        # gridDriverLyr = input("\nEnter full path to the CONUS GRID: ")
+        # while not os.path.exists(gridDriverLyr):
+        #     print(f"{gridDriverLyr} does NOT exist. Try Again")
+        #     gridDriverLyr = input("\nEnter full path to the CONUS GRID: ")
 
-        # # PARAM#3 -- Metadata Path - serves as the driver
+        # # PARAM#3 -- Metadata Output Path
         # outputDir = input("\nEnter path to where metadata files will be written: ")
         # while not os.path.isdir(outputDir):Mas
         #     print(f"{outputDir} directory does NOT exist. Try Again")

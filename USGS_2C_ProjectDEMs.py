@@ -11,6 +11,14 @@ Created on Tue Oct 24 10:40:54 2023
     - Added flexibility of passing all new header values (poly_name) over to the new metadata file
     - Adjusted for Alaska IFSAR and OPR DEMs by setting them to EPSG 3338 without inquiring aobut the inputSRS
       b/c many are set to an ESRI SRS.
+      
+1/8/2024
+    - Added "targetAlignedPixels=True" option to projectDEM function to ensure pixels were aligned from file to file      
+    
+UPDATES:
+    - If there is a DEM that fails to be projected the EPSG summary becomes incorrect.  Need to remove
+      bad unprojected DEMs from projectionInfoList using the projectionFailedDict.  Iterate through the 
+      projectionFailedDict and remove the DEMs that failed from projectionInfoList.  This should fix things.
 """
 import os, traceback, sys, time, fnmatch, glob, psutil
 import multiprocessing
@@ -53,12 +61,13 @@ def errorMsg(errorOption=1):
         if errorOption==1:
             AddMsgAndPrint(theMsg)
         else:
-            return theMsg
+            return(theMsg)
 
     except:
-        AddMsgAndPrint("Unhandled error in unHandledException method")
-        pass
-
+        AddMsgAndPrint("Unhandled error in errorMsg()")
+        #AddMsgAndPrint("Unhandled error in unHandledException method")
+        #pass
+        
 ## ================================================================================================================
 def tic():
     """ Returns the current time """
@@ -143,12 +152,15 @@ def convertMasterDBfileToDict(elevMetdataFile):
         with open(elevMetdataFile, 'r') as fp:
             for line in fp:
                 items = line.split(',')
-                items[-1] = items[-1].strip('\n')  # remove the hard return of the line
-
+                items[-1] = items[-1].strip('\n')  # re"D:\projects\DSHub\3mdsh_testing\USGS_3DEP_3M_Step2_Elevation_Metadata.txt"move the hard return of the line
+                
                 # Skip header line and empty lines
                 if recCount == 0 or line == "\n":
                     recCount+=1
                     continue
+                
+                #REMOVE
+                items.pop(31);items.pop(31),items.pop(31)
 
                 # Skip if number of items are incorrect
                 if len(items) != len(headerValues):
@@ -376,7 +388,7 @@ def getRegionalSRS(itemCollection,headerValues):
                 return [False,DEMname]
                     
         # ------------------------ File is a 3M USGS File
-        elif cellSize.find("4.11370") > -1 or cellSize.find("3.086419") > -1:
+        elif cellSize.find("4.11370") > -1 or cellSize.find("3.086419") > -1 or cellSize.find("3086419") or cellSize.find("411370") > -1:  
             #print("\tsource resolution = 3")
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
@@ -388,7 +400,7 @@ def getRegionalSRS(itemCollection,headerValues):
                 xyRes = 3
             
         # ------------------------ File is a 10M USGS File
-        elif cellSize.find("9.259259") >-1:
+        elif cellSize.find("9.259259") >-1 or cellSize.find("9259259") >-1:  # w and w/o exponents
             #print("\tsource resolution = 10")
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
@@ -400,7 +412,7 @@ def getRegionalSRS(itemCollection,headerValues):
                 xyRes = 10
         
         # ------------------------ File is a 30M USGS File
-        elif cellSize.find("0.000277777") >-1:
+        elif cellSize.find("0.000277777") >-1 or cellSize.find("277777") >-1:
             #print("\tsource resolution = 30")
             inputSRS = EPSG
             outputSRS = getOutputSRS(top)
@@ -412,7 +424,7 @@ def getRegionalSRS(itemCollection,headerValues):
                 xyRes = 30
             
         else:
-            print(f"\tcellSize is not accounted for: {cellSize}; Will not be projected.")
+            print(f"\tCellSize is not accounted for: {cellSize}; Will not be projected.")
             return [False,DEMname]
             
         if os.name == 'nt':
@@ -447,10 +459,12 @@ def projectDEM(projectInfoList):
         # Delete out_raster if it exists and bReplace is True
         if os.path.exists(out_raster):
             if bReplace:
+                i=0
                 for file in glob.glob(f"{out_raster.split('.')[0]}*"):
                     try:
                         os.remove(file)
-                        messageList.append(f"Successfully Deleted {file}")
+                        if i==0:messageList.append(f"Successfully Deleted {file}")
+                        i+=1
                     except:
                         messageList.append(f"Failed to Delete {out_raster}; Will not project")
                         return [messageList, [False,input_raster,sourceID]]
@@ -478,6 +492,7 @@ def projectDEM(projectInfoList):
                                     srcNodata=noData,
                                     dstNodata=-999999.0,
                                     dstSRS=outSpatialRef,
+                                    targetAlignedPixels=True,
                                     resampleAlg=gdal.GRA_Bilinear,
                                     multithread=True,
                                     creationOptions=["COMPRESS=DEFLATE", 
@@ -488,13 +503,18 @@ def projectDEM(projectInfoList):
                                                      "BLOCKXSIZE=256",
                                                      "BLOCKYSIZE=256"])
         else:
+            print("----------------------------")
+            print(xRes)
+            print(noData)
+            print(inSpatialRef)
             args = gdal.WarpOptions(format="GTiff",
                                     xRes=xRes,
                                     yRes=yRes,
-                                    srcNodata=noData,
+                                    #srcNodata=noData,
                                     dstNodata=-999999.0,
                                     srcSRS=inSpatialRef,
                                     dstSRS=outSpatialRef,
+                                    targetAlignedPixels=True,
                                     resampleAlg=gdal.GRA_Bilinear,
                                     multithread=True,
                                     creationOptions=["COMPRESS=DEFLATE", 
@@ -853,6 +873,7 @@ def createRaster2pgSQLFile(masterElevFile):
         # Header value Index Positions
         epsgIdx = headerValues.index("epsg_code")
         demNameIdx = headerValues.index("dem_name")
+        demPathIdx = headerValues.index("dem_path")
         
         """ ------------------- Open Master Elevation File and write raster2pgsql statements ---------------------"""
         with open(masterElevFile, 'r') as fp:
@@ -867,7 +888,7 @@ def createRaster2pgSQLFile(masterElevFile):
 
                 # Raster2pgsql parameters
                 epsg = items[epsgIdx]
-                demPath = f"{items[10]}{os.sep}{items[9]}"
+                demPath = f"{items[demPathIdx]}{os.sep}{items[demNameIdx]}"
                 
                 try:
                     region = getRegion(int(epsg))
@@ -949,8 +970,6 @@ if __name__ == '__main__':
         else:
             bDeleteOGdems = False
             
-        elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\5M_AK\AK_TEST\USGS_3DEP_5M_AK_OPR_Step2_Elevation_Metadata.txt'
-        bReplace = False
         bDeleteOGdems = False
             
         # Alaska DEMs from OPR will be treated different
@@ -958,11 +977,7 @@ if __name__ == '__main__':
         if os.path.basename(elevationMetadataFile).find('AK') >-1:
             bAlaska = True
         
-        # Parameters
-        # elevationMetadataFile = r'E:\GIS_Projects\DS_Hub\Elevation\DSHub_Elevation\USGS_Text_Files\30M\20230801_windows\USGS_3DEP_30M_Step2_Elevation_Metadata_35.txt'
-        # bReplace = False
-        # bDeleteOGdems = False
-        ntOutputDir = r'D:\projects\DSHub\reampling\project_test'
+        ntOutputDir = r'D:\projects\DSHub\3mdsh_testing\prjTest'
         
         """ ---------------------------- Establish Console LOG FILE ---------------------------------------------------"""
         tempList = elevationMetadataFile.split(os.sep)[-1].split('_')
@@ -1013,7 +1028,7 @@ if __name__ == '__main__':
                      projectionInfoList.append(result)
                  else:
                      noProjectionInfoList.append(result[1])
-                     AddMsgAndPrint(f"\tFailed to get projection Info for: {result[1]}")
+                     #AddMsgAndPrint(f"\tFailed to get projection Info for: {result[1]}")
     
              del getProjectInfo
              
@@ -1089,12 +1104,14 @@ if __name__ == '__main__':
                     deletedFile = 0
                     invalidFiles = 0
                     
+                    i = 0
                     for file in glob.glob(fileToDelete):
                         if os.path.isfile(file):
                             try:
                                 os.remove(file)
-                                print(f"\tSuccessfully Deleted: {file}")
+                                if i==0:print(f"\n\tSuccessfully Deleted: {file}")
                                 deletedFile+=1
+                                i+=1
                             except:
                                 AddMsgAndPrint(f"\Failed to Delete: {file}")
                         else:
@@ -1129,6 +1146,8 @@ if __name__ == '__main__':
             AddMsgAndPrint(f"Raster2pgsql File Path: {r2pgsqlFile}")
             
     except:
-        pass
-        #errorMsg(errorOption=1)
+        try:
+            errorMsg(errorOption=1)
+        except:
+            errorMsg()
                      
